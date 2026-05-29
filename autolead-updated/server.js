@@ -209,7 +209,10 @@ function applyDisposition(agentId, numberId, disposition, extra) {
 
   // Common actions for all dispositions
   if (agent) {
-    agent.totalDialedToday = (agent.totalDialedToday || 0) + 1;
+    // Don't inflate dial counter for pool-return dispositions (number goes back undisposed)
+    if (disposition !== 'not_received' && disposition !== 'switch_off') {
+      agent.totalDialedToday = (agent.totalDialedToday || 0) + 1;
+    }
     agent.currentNumberId = null;
   }
   appState.dialedLog.push({
@@ -363,7 +366,7 @@ app.get('/api/admin/interested', (req, res) => {
       interestedAt: n.interestedAt
     };
   });
-  res.json({ interested });
+  res.json(interested);
 });
 
 app.get('/api/admin/followups', (req, res) => {
@@ -376,7 +379,7 @@ app.get('/api/admin/followups', (req, res) => {
       followupTime: n.followupTime
     };
   });
-  res.json({ followups });
+  res.json(followups);
 });
 
 app.get('/api/agent/interested/:agentId', (req, res) => {
@@ -385,7 +388,7 @@ app.get('/api/agent/interested/:agentId', (req, res) => {
     id: n.id, phone: n.phone, name: n.name || '',
     interestedAt: n.interestedAt
   }));
-  res.json({ interested });
+  res.json(interested);
 });
 
 app.get('/api/agent/followups/:agentId', (req, res) => {
@@ -395,7 +398,7 @@ app.get('/api/agent/followups/:agentId', (req, res) => {
     followupDate: n.followupDate,
     followupTime: n.followupTime
   }));
-  res.json({ followups });
+  res.json(followups);
 });
 
 app.delete('/api/admin/file/:fileId', (req, res) => {

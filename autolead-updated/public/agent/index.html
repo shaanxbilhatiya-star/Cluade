@@ -302,6 +302,12 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// ── XSS Protection ──────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ── Socket with aggressive reconnection ─────────────────────────────────────
 const socket = io({
   reconnection: true,
@@ -523,7 +529,7 @@ function showNumber(numberId, phone, name, totalDialedToday, resumed) {
   }
 
   const nameEl = document.getElementById('leadName');
-  if (name && name.trim()) { nameEl.textContent = '👤 ' + name.trim(); nameEl.className = 'lead-name'; }
+  if (name && name.trim()) { nameEl.textContent = '\u{1F464} ' + name.trim(); nameEl.className = 'lead-name'; }
   else                     { nameEl.textContent = 'Name not available'; nameEl.className = 'lead-name no-name'; }
 
   const el = document.getElementById('phoneDisplay');
@@ -736,8 +742,8 @@ function renderInterestedSection(leads) {
   container.innerHTML = leads.map(l => `
     <div class="lead-card">
       <div class="lead-card-info">
-        <div class="lead-card-phone">${formatPhone(l.phone)}</div>
-        <div class="lead-card-name">${l.name || 'No name'}</div>
+        <div class="lead-card-phone">${escapeHtml(formatPhone(l.phone))}</div>
+        <div class="lead-card-name">${escapeHtml(l.name) || 'No name'}</div>
       </div>
       <div class="lead-card-badge">Interested</div>
     </div>
@@ -755,10 +761,10 @@ function renderFollowupsSection(leads) {
   container.innerHTML = leads.map(l => `
     <div class="followup-card">
       <div class="lead-card-info">
-        <div class="lead-card-phone">${formatPhone(l.phone)}</div>
-        <div class="lead-card-name">${l.name || 'No name'}</div>
+        <div class="lead-card-phone">${escapeHtml(formatPhone(l.phone))}</div>
+        <div class="lead-card-name">${escapeHtml(l.name) || 'No name'}</div>
       </div>
-      <div class="followup-datetime">${l.followupDate || ''} ${l.followupTime || ''}</div>
+      <div class="followup-datetime">${escapeHtml(l.followupDate || '')} ${escapeHtml(l.followupTime || '')}</div>
     </div>
   `).join('');
 }

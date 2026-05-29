@@ -313,6 +313,12 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// ── XSS Protection ──────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 const socket = io();
 socket.emit('join-admin');
 
@@ -366,7 +372,7 @@ function renderStats(data) {
       const pct = f.total ? Math.round((f.dialed / f.total) * 100) : 0;
       return `<div class="file-item">
         <div class="file-info">
-          <span class="file-name">📄 ${f.name}</span>
+          <span class="file-name">📄 ${escapeHtml(f.name)}</span>
           <span class="file-meta">${f.dialed}/${f.total} dialed · ${f.remaining} left</span>
           <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
         </div>
@@ -410,7 +416,7 @@ function renderStats(data) {
         : `<span class="login-absent">—</span>`;
 
       return `<tr>
-        <td style="font-weight:600">${a.name}</td>
+        <td style="font-weight:600">${escapeHtml(a.name)}</td>
         <td>${loginCell}</td>
         <td><span class="status-dot ${statusDot}"></span>${statusText}</td>
         <td><span class="dialed-count">${a.totalDialedToday}</span></td>
@@ -426,7 +432,7 @@ function renderStats(data) {
     bs.style.display = 'block';
     bal.innerHTML = breakAgents.map(a => {
       const remaining = Math.max(0, (a.breakAllowedMs || 3600000) - (a.totalBreakMs || 0));
-      return `<div class="break-agent-pill">☕ ${a.name} — <span id="pill-timer-${a.id}">${formatMs(remaining)}</span> left</div>`;
+      return `<div class="break-agent-pill">☕ ${escapeHtml(a.name)} — <span id="pill-timer-${a.id}">${formatMs(remaining)}</span> left</div>`;
     }).join('');
   } else {
     bs.style.display = 'none';
@@ -523,10 +529,10 @@ function renderInterestedLeads(leads) {
     return;
   }
   tbody.innerHTML = leads.map(l => `<tr>
-    <td><span class="phone-number">${formatPhone(l.phone)}</span></td>
-    <td>${l.name || '—'}</td>
-    <td style="font-weight:500">${l.agentName || l.interestedBy || '—'}</td>
-    <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatTimestamp(l.interestedAt)}</td>
+    <td><span class="phone-number">${escapeHtml(formatPhone(l.phone))}</span></td>
+    <td>${escapeHtml(l.name) || '&#8212;'}</td>
+    <td style="font-weight:500">${escapeHtml(l.agentName || l.interestedBy) || '&#8212;'}</td>
+    <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${escapeHtml(formatTimestamp(l.interestedAt))}</td>
   </tr>`).join('');
 }
 
@@ -550,11 +556,11 @@ function renderFollowups(followups) {
     return;
   }
   tbody.innerHTML = followups.map(f => `<tr>
-    <td><span class="phone-number">${formatPhone(f.phone)}</span></td>
-    <td>${f.name || '—'}</td>
-    <td style="font-weight:500">${f.agentName || f.followupLockedBy || '—'}</td>
-    <td style="font-family:var(--mono);font-size:13px">${formatDate(f.followupDate)}</td>
-    <td style="font-family:var(--mono);font-size:13px">${f.followupTime || '—'}</td>
+    <td><span class="phone-number">${escapeHtml(formatPhone(f.phone))}</span></td>
+    <td>${escapeHtml(f.name) || '&#8212;'}</td>
+    <td style="font-weight:500">${escapeHtml(f.agentName || f.followupLockedBy) || '&#8212;'}</td>
+    <td style="font-family:var(--mono);font-size:13px">${escapeHtml(formatDate(f.followupDate))}</td>
+    <td style="font-family:var(--mono);font-size:13px">${escapeHtml(f.followupTime) || '&#8212;'}</td>
   </tr>`).join('');
 }
 
@@ -605,12 +611,12 @@ function renderEids(eids) {
     return;
   }
   el.innerHTML = eids.map(e => `
-    <div class="eid-row" id="eid-row-${e.eid}">
+    <div class="eid-row" id="eid-row-${escapeHtml(e.eid)}">
       <div class="eid-info">
-        <span class="eid-code">${e.eid}</span>
-        <span class="eid-name">${e.name}</span>
+        <span class="eid-code">${escapeHtml(e.eid)}</span>
+        <span class="eid-name">${escapeHtml(e.name)}</span>
       </div>
-      <button class="eid-remove" onclick="removeEid('${e.eid}')">✕ Remove</button>
+      <button class="eid-remove" onclick="removeEid('${escapeHtml(e.eid)}')">&#10005; Remove</button>
     </div>
   `).join('');
 }
