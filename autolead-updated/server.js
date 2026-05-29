@@ -925,6 +925,68 @@ io.on('connection', (socket) => {
   });
 });
 
+// ─── Disposition Stats Endpoint ─────────────────────────────────────────────────
+app.get('/api/stats/dispositions', (req, res) => {
+  const period = req.query.period || 'daily';
+  const agentId = req.query.agentId || null;
+
+  // Calculate IST "now" for date filtering
+  const now = new Date();
+  const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+  const istTodayStr = istNow.toISOString().slice(0, 10); // YYYY-MM-DD in IST
+
+  let daysBack = 0;
+  switch (period) {
+    case 'daily': daysBack = 0; break;
+    case 'weekly': daysBack = 7; break;
+    case 'monthly': daysBack = 30; break;
+    case 'yearly': daysBack = 365; break;
+    default: daysBack = 0;
+  }
+
+  // Calculate the cutoff date in IST
+  let cutoffDate;
+  if (daysBack === 0) {
+    // Daily: only today in IST
+    cutoffDate = new Date(istTodayStr + 'T00:00:00.000+05:30');
+  } else {
+    const cutoffIST = new Date(istNow);
+    cutoffIST.setDate(cutoffIST.getDate() - daysBack);
+    const cutoffStr = cutoffIST.toISOString().slice(0, 10);
+    cutoffDate = new Date(cutoffStr + 'T00:00:00.000+05:30');
+  }
+
+  // Filter dialedLog entries
+  const filteredLogs = appState.dialedLog.filter(entry => {
+    if (!entry.timestamp) return false;
+    const entryDate = new Date(entry.timestamp);
+    if (entryDate < cutoffDate) return false;
+    if (agentId && entry.agentId !== agentId) return false;
+    return true;
+  });
+
+  // Count dispositions
+  const stats = {
+    period: period,
+    totalCalls: filteredLogs.length,
+    dead: 0,
+    not_received: 0,
+    not_interested: 0,
+    followup: 0,
+    switch_off: 0,
+    interested: 0
+  };
+
+  filteredLogs.forEach(entry => {
+    const d = entry.disposition;
+    if (d && stats.hasOwnProperty(d)) {
+      stats[d]++;
+    }
+  });
+
+  res.json(stats);
+});
+
 // ─── Admin EID Management ──────────────────────────────────────────────────────
 
 // List all allowed EIDs

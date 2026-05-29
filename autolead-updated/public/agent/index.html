@@ -205,6 +205,21 @@
   .manual-add-form input:focus, .manual-add-form select:focus { border-color: var(--accent-light); background: #fff; }
   .btn-add-interested { padding: 12px; border-radius: 10px; border: none; background: var(--green); color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s; }
   .btn-add-interested:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+  /* My Stats Section */
+  .stats-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .stats-tab { padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--border-strong); background: var(--bg); color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .stats-tab:hover { border-color: var(--accent-light); color: var(--accent); }
+  .stats-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .stats-content { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  .stats-total-card { text-align: center; margin-bottom: 16px; padding: 16px; background: var(--accent-glow); border-radius: 10px; border: 1px solid rgba(108,43,217,.15); }
+  .stats-total-val { font-family: var(--mono); font-size: 42px; font-weight: 700; color: var(--accent); }
+  .stats-total-lbl { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+  .stats-dispo-grid { display: flex; flex-direction: column; gap: 8px; }
+  .stats-dispo-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+  .stats-dispo-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .stats-dispo-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+  .stats-dispo-count { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -337,6 +352,55 @@
   <div id="completedSection" style="display:none;width:100%;margin-top:18px;">
     <div class="section-title" style="color:var(--accent)">&#10004; Documentation Completed</div>
     <div class="lead-cards" id="completedCards"></div>
+  </div>
+
+  <!-- My Stats Section -->
+  <div id="myStatsSection" style="display:none;width:100%;margin-top:18px;">
+    <div class="section-title" style="color:var(--accent)">&#128202; My Stats</div>
+    <div class="stats-tabs">
+      <button class="stats-tab active" data-period="daily" onclick="switchStatsPeriod('daily')">Daily</button>
+      <button class="stats-tab" data-period="weekly" onclick="switchStatsPeriod('weekly')">Weekly</button>
+      <button class="stats-tab" data-period="monthly" onclick="switchStatsPeriod('monthly')">Monthly</button>
+      <button class="stats-tab" data-period="yearly" onclick="switchStatsPeriod('yearly')">Yearly</button>
+    </div>
+    <div class="stats-content" id="myStatsContent">
+      <div class="stats-total-card">
+        <div class="stats-total-val" id="myStatsTotalCalls">0</div>
+        <div class="stats-total-lbl">Total Calls</div>
+      </div>
+      <div class="stats-dispo-grid">
+        <div class="stats-dispo-item">
+          <span class="stats-dispo-dot" style="background:var(--danger)"></span>
+          <span class="stats-dispo-name">Call Not Connected</span>
+          <span class="stats-dispo-count" id="myStatsDead">0</span>
+        </div>
+        <div class="stats-dispo-item">
+          <span class="stats-dispo-dot" style="background:var(--warn)"></span>
+          <span class="stats-dispo-name">Call Not Received</span>
+          <span class="stats-dispo-count" id="myStatsNotReceived">0</span>
+        </div>
+        <div class="stats-dispo-item">
+          <span class="stats-dispo-dot" style="background:var(--muted)"></span>
+          <span class="stats-dispo-name">Not Interested</span>
+          <span class="stats-dispo-count" id="myStatsNotInterested">0</span>
+        </div>
+        <div class="stats-dispo-item">
+          <span class="stats-dispo-dot" style="background:#2563eb"></span>
+          <span class="stats-dispo-name">Followup</span>
+          <span class="stats-dispo-count" id="myStatsFollowup">0</span>
+        </div>
+        <div class="stats-dispo-item">
+          <span class="stats-dispo-dot" style="background:#f59e0b"></span>
+          <span class="stats-dispo-name">Switch OFF</span>
+          <span class="stats-dispo-count" id="myStatsSwitchOff">0</span>
+        </div>
+        <div class="stats-dispo-item">
+          <span class="stats-dispo-dot" style="background:var(--green)"></span>
+          <span class="stats-dispo-name">Interested</span>
+          <span class="stats-dispo-count" id="myStatsInterested">0</span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -910,6 +974,7 @@ async function refreshLeadSections() {
     renderFollowupsSection(followups);
     renderCompletedSection(completed);
   } catch (e) { /* silent */ }
+  fetchMyStats();
 }
 
 function renderInterestedSection(leads) {
@@ -1019,6 +1084,32 @@ function renderCompletedSection(leads) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── My Stats Section ──────────────────────────────────────────────────────────
+let currentStatsPeriod = 'daily';
+
+function switchStatsPeriod(period) {
+  currentStatsPeriod = period;
+  document.querySelectorAll('.stats-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.stats-tab[data-period="' + period + '"]').classList.add('active');
+  fetchMyStats();
+}
+
+async function fetchMyStats() {
+  if (!agentId) return;
+  try {
+    const r = await fetch('/api/stats/dispositions?period=' + currentStatsPeriod + '&agentId=' + agentId);
+    const d = await r.json();
+    document.getElementById('myStatsTotalCalls').textContent = d.totalCalls || 0;
+    document.getElementById('myStatsDead').textContent = d.dead || 0;
+    document.getElementById('myStatsNotReceived').textContent = d.not_received || 0;
+    document.getElementById('myStatsNotInterested').textContent = d.not_interested || 0;
+    document.getElementById('myStatsFollowup').textContent = d.followup || 0;
+    document.getElementById('myStatsSwitchOff').textContent = d.switch_off || 0;
+    document.getElementById('myStatsInterested').textContent = d.interested || 0;
+    document.getElementById('myStatsSection').style.display = 'block';
+  } catch (e) { /* silent */ }
 }
 
 setInterval(() => { if (agentId) socket.emit('ping-alive', { agentId }); }, 30000);

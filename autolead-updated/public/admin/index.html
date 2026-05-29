@@ -181,6 +181,19 @@
 
   /* Overdue stat in stats grid */
   .stat-value.red { color: var(--danger); }
+
+  /* Disposition Stats Panel */
+  .admin-stats-tabs { display: flex; gap: 4px; }
+  .admin-stats-tab { padding: 5px 14px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--surface); color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .admin-stats-tab:hover { border-color: var(--accent2); color: var(--accent); }
+  .admin-stats-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .dispo-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+  .dispo-stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; position: relative; }
+  .dispo-stat-card.dispo-stat-total { background: rgba(124,58,237,.06); border-color: rgba(124,58,237,.2); grid-column: span 1; }
+  .dispo-stat-indicator { width: 8px; height: 8px; border-radius: 50%; position: absolute; top: 12px; left: 12px; }
+  .dispo-stat-val { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--accent); }
+  .dispo-stat-card.dispo-stat-total .dispo-stat-val { font-size: 36px; }
+  .dispo-stat-lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -366,6 +379,57 @@
           <tr><td colspan="5" class="empty">No followups yet</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Disposition Stats Panel -->
+  <div class="panel dispo-stats-panel" style="margin-bottom:20px">
+    <div class="panel-header" style="background:rgba(124,58,237,.04)">
+      <h2 style="color:var(--accent)">&#128202; Disposition Stats (All Agents)</h2>
+      <div class="admin-stats-tabs">
+        <button class="admin-stats-tab active" data-period="daily" onclick="switchAdminStatsPeriod('daily')">Daily</button>
+        <button class="admin-stats-tab" data-period="weekly" onclick="switchAdminStatsPeriod('weekly')">Weekly</button>
+        <button class="admin-stats-tab" data-period="monthly" onclick="switchAdminStatsPeriod('monthly')">Monthly</button>
+        <button class="admin-stats-tab" data-period="yearly" onclick="switchAdminStatsPeriod('yearly')">Yearly</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="dispo-stats-grid">
+        <div class="dispo-stat-card dispo-stat-total">
+          <div class="dispo-stat-val" id="adminStatsTotalCalls">0</div>
+          <div class="dispo-stat-lbl">Total Calls</div>
+        </div>
+        <div class="dispo-stat-card">
+          <div class="dispo-stat-indicator" style="background:var(--danger)"></div>
+          <div class="dispo-stat-val" id="adminStatsDead">0</div>
+          <div class="dispo-stat-lbl">Call Not Connected</div>
+        </div>
+        <div class="dispo-stat-card">
+          <div class="dispo-stat-indicator" style="background:var(--warn)"></div>
+          <div class="dispo-stat-val" id="adminStatsNotReceived">0</div>
+          <div class="dispo-stat-lbl">Call Not Received</div>
+        </div>
+        <div class="dispo-stat-card">
+          <div class="dispo-stat-indicator" style="background:var(--muted)"></div>
+          <div class="dispo-stat-val" id="adminStatsNotInterested">0</div>
+          <div class="dispo-stat-lbl">Not Interested</div>
+        </div>
+        <div class="dispo-stat-card">
+          <div class="dispo-stat-indicator" style="background:#2563eb"></div>
+          <div class="dispo-stat-val" id="adminStatsFollowup">0</div>
+          <div class="dispo-stat-lbl">Followup</div>
+        </div>
+        <div class="dispo-stat-card">
+          <div class="dispo-stat-indicator" style="background:#f59e0b"></div>
+          <div class="dispo-stat-val" id="adminStatsSwitchOff">0</div>
+          <div class="dispo-stat-lbl">Switch OFF</div>
+        </div>
+        <div class="dispo-stat-card">
+          <div class="dispo-stat-indicator" style="background:var(--green)"></div>
+          <div class="dispo-stat-val" id="adminStatsInterested">0</div>
+          <div class="dispo-stat-lbl">Interested</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -607,6 +671,7 @@ setInterval(async () => {
   fetchInterestedLeads();
   fetchFollowups();
   fetchCompletedLeads();
+  fetchAdminDispoStats();
 }, 10000);
 
 // ── Interested Leads ──────────────────────────────────────────────────────────
@@ -914,6 +979,33 @@ function formatDate(dateStr) {
 fetchInterestedLeads();
 fetchFollowups();
 fetchCompletedLeads();
+
+// ── Disposition Stats (Admin) ──────────────────────────────────────────────────
+let adminStatsPeriod = 'daily';
+
+function switchAdminStatsPeriod(period) {
+  adminStatsPeriod = period;
+  document.querySelectorAll('.admin-stats-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.admin-stats-tab[data-period="' + period + '"]').classList.add('active');
+  fetchAdminDispoStats();
+}
+
+async function fetchAdminDispoStats() {
+  try {
+    const r = await fetch('/api/stats/dispositions?period=' + adminStatsPeriod);
+    const d = await r.json();
+    document.getElementById('adminStatsTotalCalls').textContent = d.totalCalls || 0;
+    document.getElementById('adminStatsDead').textContent = d.dead || 0;
+    document.getElementById('adminStatsNotReceived').textContent = d.not_received || 0;
+    document.getElementById('adminStatsNotInterested').textContent = d.not_interested || 0;
+    document.getElementById('adminStatsFollowup').textContent = d.followup || 0;
+    document.getElementById('adminStatsSwitchOff').textContent = d.switch_off || 0;
+    document.getElementById('adminStatsInterested').textContent = d.interested || 0;
+  } catch (e) { /* silent */ }
+}
+
+// Fetch on load
+fetchAdminDispoStats();
 
 // ── EID Management ────────────────────────────────────────────────────────────
 async function loadEids() {
