@@ -106,7 +106,19 @@ setInterval(() => {
 // ─── Number helpers ───────────────────────────────────────────────────────────
 function getNextNumber(agentId) {
   appState = checkDailyReset(appState);
-  const undialed = appState.numbers.find(n => !n.dialedBy && !n.assignedTo);
+  const now = new Date();
+  const undialed = appState.numbers.find(n => {
+    if (n.dialedBy || n.assignedTo) return false;
+    // Skip dead numbers
+    if (n.disposition === 'dead') return false;
+    // Skip not_interested numbers still within 30-day block
+    if (n.disposition === 'not_interested' && n.blockedUntil && new Date(n.blockedUntil) > now) return false;
+    // Skip followup numbers locked by another agent
+    if (n.disposition === 'followup' && n.followupLockedBy && n.followupLockedBy !== agentId) return false;
+    // Skip interested numbers
+    if (n.disposition === 'interested') return false;
+    return true;
+  });
   if (!undialed) return null;
   undialed.assignedTo = agentId;
   saveState(appState);
@@ -142,6 +154,72 @@ function releaseNumber(agentId, numberId) {
   if (num) { num.assignedTo = null; saveState(appState); }
   const agent = appState.agents[agentId];
   if (agent) agent.currentNumberId = null;
+}
+
+// ─── Disposition System ───────────────────────────────────────────────────────
+const VALID_DISPOSITIONS = ['dead', 'not_received', 'not_interested', 'followup', 'switch_off', 'interested'];
+
+function applyDisposition(agentId, numberId, disposition, extra) {
+  appState = checkDailyReset(appState);
+  const num = appState.numbers.find(n => n.id === numberId);
+  if (!num) return;
+  const agent = appState.agents[agentId];
+  const now = new Date().toISOString();
+
+  switch (disposition) {
+    case 'dead':
+      num.disposition = 'dead';
+      num.dialedBy = agentId;
+      num.dialedAt = now;
+      num.assignedTo = null;
+      break;
+    case 'not_received':
+      num.assignedTo = null;
+      num.dialedBy = null;
+      break;
+    case 'not_interested':
+      num.disposition = 'not_interested';
+      num.blockedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      num.dialedBy = agentId;
+      num.dialedAt = now;
+      num.assignedTo = null;
+      break;
+    case 'followup':
+      num.disposition = 'followup';
+      num.followupDate = extra && extra.followupDate ? extra.followupDate : null;
+      num.followupTime = extra && extra.followupTime ? extra.followupTime : null;
+      num.followupLockedBy = agentId;
+      num.dialedBy = agentId;
+      num.dialedAt = now;
+      num.assignedTo = null;
+      break;
+    case 'switch_off':
+      num.assignedTo = null;
+      num.dialedBy = null;
+      break;
+    case 'interested':
+      num.disposition = 'interested';
+      num.interestedBy = agentId;
+      num.interestedAt = now;
+      num.dialedBy = agentId;
+      num.dialedAt = now;
+      num.assignedTo = null;
+      break;
+  }
+
+  // Common actions for all dispositions
+  if (agent) {
+    agent.totalDialedToday = (agent.totalDialedToday || 0) + 1;
+    agent.currentNumberId = null;
+  }
+  appState.dialedLog.push({
+    phone: num.phone, agentId,
+    agentName: agent ? agent.name : agentId,
+    timestamp: now,
+    disposition: disposition
+  });
+  saveState(appState);
+  broadcastAdminStats();
 }
 
 // ─── Break helpers ────────────────────────────────────────────────────────────
@@ -219,7 +297,7 @@ function getAdminStats() {
     };
   });
 
-  return { total, dialed, assigned, remaining, agentStats, fileStats, today: getTodayStr() };
+  return { total, dialed, assigned, remaining, agentStats, fileStats, today: getTodayStr(), interestedCount: appState.numbers.filter(n => n.disposition === 'interested').length, followupCount: appState.numbers.filter(n => n.disposition === 'followup').length };
 }
 
 // ─── Express Setup ─────────────────────────────────────────────────────────────
@@ -256,6 +334,69 @@ app.post('/api/admin/upload', upload.single('file'), (req, res) => {
 });
 
 app.get('/api/admin/stats', (req, res) => res.json(getAdminStats()));
+
+// ─── Disposition API Endpoints ────────────────────────────────────────────────
+app.post('/api/agent/disposition', (req, res) => {
+  const { agentId, numberId, disposition, followupDate, followupTime } = req.body;
+  if (!agentId || !numberId || !disposition) {
+    return res.status(400).json({ error: 'agentId, numberId, and disposition are required' });
+  }
+  if (!VALID_DISPOSITIONS.includes(disposition)) {
+    return res.status(400).json({ error: 'Invalid disposition. Must be one of: ' + VALID_DISPOSITIONS.join(', ') });
+  }
+  applyDisposition(agentId, numberId, disposition, { followupDate, followupTime });
+  const nextNum = getNextNumber(agentId);
+  const agent = appState.agents[agentId];
+  if (nextNum && agent) {
+    agent.currentNumberId = nextNum.id;
+    saveState(appState);
+  }
+  res.json({ success: true, nextNumber: nextNum ? { numberId: nextNum.id, phone: nextNum.phone, name: nextNum.name || '' } : null });
+});
+
+app.get('/api/admin/interested', (req, res) => {
+  const interested = appState.numbers.filter(n => n.disposition === 'interested').map(n => {
+    const agent = appState.agents[n.interestedBy];
+    return {
+      id: n.id, phone: n.phone, name: n.name || '',
+      interestedBy: agent ? agent.name : n.interestedBy,
+      interestedAt: n.interestedAt
+    };
+  });
+  res.json({ interested });
+});
+
+app.get('/api/admin/followups', (req, res) => {
+  const followups = appState.numbers.filter(n => n.disposition === 'followup').map(n => {
+    const agent = appState.agents[n.followupLockedBy];
+    return {
+      id: n.id, phone: n.phone, name: n.name || '',
+      followupLockedBy: agent ? agent.name : n.followupLockedBy,
+      followupDate: n.followupDate,
+      followupTime: n.followupTime
+    };
+  });
+  res.json({ followups });
+});
+
+app.get('/api/agent/interested/:agentId', (req, res) => {
+  const agentId = req.params.agentId;
+  const interested = appState.numbers.filter(n => n.disposition === 'interested' && n.interestedBy === agentId).map(n => ({
+    id: n.id, phone: n.phone, name: n.name || '',
+    interestedAt: n.interestedAt
+  }));
+  res.json({ interested });
+});
+
+app.get('/api/agent/followups/:agentId', (req, res) => {
+  const agentId = req.params.agentId;
+  const followups = appState.numbers.filter(n => n.disposition === 'followup' && n.followupLockedBy === agentId).map(n => ({
+    id: n.id, phone: n.phone, name: n.name || '',
+    followupDate: n.followupDate,
+    followupTime: n.followupTime
+  }));
+  res.json({ followups });
+});
 
 app.delete('/api/admin/file/:fileId', (req, res) => {
   const fid = req.params.fileId;
@@ -494,6 +635,32 @@ io.on('connection', (socket) => {
     }
     if (currentNumberId) releaseNumber(agentId, currentNumberId);
     saveState(appState);
+    broadcastAdminStats();
+  });
+
+  socket.on('agent-disposition', ({ agentId, numberId, disposition, followupDate, followupTime }) => {
+    appState = checkDailyReset(appState);
+    const agent = appState.agents[agentId];
+    if (!agent) return socket.emit('error', 'Agent not found');
+    if (!VALID_DISPOSITIONS.includes(disposition)) return socket.emit('error', 'Invalid disposition');
+
+    applyDisposition(agentId, numberId, disposition, { followupDate, followupTime });
+
+    const num = getNextNumber(agentId);
+    if (!num) {
+      socketCurrentNumber = null;
+      if (agent) agent.currentNumberId = null;
+      saveState(appState);
+      socket.emit('no-numbers', { totalDialedToday: agent.totalDialedToday || 0 });
+    } else {
+      socketCurrentNumber = num.id;
+      agent.currentNumberId = num.id;
+      saveState(appState);
+      socket.emit('show-number', {
+        numberId: num.id, phone: num.phone, name: num.name || '',
+        totalDialedToday: agent.totalDialedToday || 0
+      });
+    }
     broadcastAdminStats();
   });
 

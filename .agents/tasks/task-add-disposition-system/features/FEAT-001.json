@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add disposition system to server.js - new applyDisposition function, update getNextNumber to skip dead/blocked/followup numbers, add REST API endpoints for disposition submission and querying interested/followup leads, update admin stats broadcast.",
+  "status": "in_progress",
+  "steps": [
+    "In /projects/sandbox/Cluade/autolead-updated/server.js, create an applyDisposition(agentId, numberId, disposition, extra) function that handles all 6 dispositions: (1) 'dead' - set num.disposition='dead', num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo; (2) 'not_received' - clear num.assignedTo, clear num.dialedBy, so it goes back to pool; (3) 'not_interested' - set num.disposition='not_interested', num.blockedUntil=ISO date 30 days from now, num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo; (4) 'followup' - set num.disposition='followup', num.followupDate=extra.followupDate, num.followupTime=extra.followupTime, num.followupLockedBy=agentId, num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo; (5) 'switch_off' - same behavior as not_received, clear assignedTo and dialedBy; (6) 'interested' - set num.disposition='interested', num.interestedBy=agentId, num.interestedAt=now ISO, num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo. For all dispositions, increment agent.totalDialedToday, clear agent.currentNumberId, add to dialedLog, save state, broadcast admin stats.",
+    "Update getNextNumber(agentId) in server.js to skip numbers that match any of: (a) num.disposition === 'dead', (b) num.disposition === 'not_interested' AND num.blockedUntil AND new Date(num.blockedUntil) > new Date(), (c) num.disposition === 'followup' AND num.followupLockedBy !== agentId, (d) num.disposition === 'interested'. The filter should be: find first number where !num.dialedBy && !num.assignedTo AND none of the skip conditions apply.",
+    "Add POST /api/agent/disposition endpoint that accepts { agentId, numberId, disposition, followupDate?, followupTime? }. Validate disposition is one of the 6 valid values. Call applyDisposition and return success. Then get next number for agent and return it in response (or null if none).",
+    "Add GET /api/admin/interested endpoint that returns all numbers where disposition === 'interested', including phone, name, interestedBy (resolve to agent name), interestedAt.",
+    "Add GET /api/admin/followups endpoint that returns all numbers where disposition === 'followup', including phone, name, followupLockedBy (resolve to agent name), followupDate, followupTime.",
+    "Add GET /api/agent/interested/:agentId endpoint that returns numbers where disposition === 'interested' AND interestedBy === agentId.",
+    "Add GET /api/agent/followups/:agentId endpoint that returns numbers where disposition === 'followup' AND followupLockedBy === agentId.",
+    "Update getAdminStats() to include interestedCount (numbers with disposition=interested) and followupCount (numbers with disposition=followup) in the returned stats object.",
+    "Add a socket event 'agent-disposition' that accepts { agentId, numberId, disposition, followupDate?, followupTime? }, calls applyDisposition, then gets next number and emits 'show-number' or 'no-numbers' back to the socket (same pattern as 'agent-next' handler)."
+  ],
+  "acceptance_criteria": [
+    "node -c server.js passes without syntax errors",
+    "POST /api/agent/disposition with valid data applies the correct disposition to the number",
+    "getNextNumber skips dead numbers, 30-day blocked numbers, followup numbers locked by other agents, and interested numbers",
+    "GET /api/admin/interested returns all interested leads",
+    "GET /api/admin/followups returns all followup leads",
+    "GET /api/agent/interested/:agentId returns only that agent's interested leads",
+    "GET /api/agent/followups/:agentId returns only that agent's followups",
+    "Admin stats include interestedCount and followupCount"
+  ],
+  "verification": [
+    "cd /projects/sandbox/Cluade/autolead-updated && node -c server.js"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
