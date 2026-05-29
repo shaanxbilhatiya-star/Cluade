@@ -101,8 +101,6 @@
   .action-btn { width: 100%; padding: 17px; border-radius: 14px; border: none; font-family: var(--sans); font-size: 17px; font-weight: 700; cursor: pointer; transition: all .2s; margin-bottom: 0; }
   #btnStart { background: var(--accent); color: #fff; box-shadow: 0 4px 16px var(--accent-glow); }
   #btnStart:hover { background: var(--accent-light); transform: translateY(-2px); }
-  #btnNext { background: var(--accent); color: #fff; box-shadow: 0 4px 16px var(--accent-glow); display: none; }
-  #btnNext:hover { background: var(--accent-light); transform: translateY(-2px); }
   #btnBreak { background: var(--warn-bg); color: var(--warn); border: 1.5px solid var(--warn-border); display: none; margin-top: 10px; }
   #btnBreak:hover { background: #fef3c7; }
   #btnBreak:disabled { opacity: .4; cursor: not-allowed; }
@@ -120,6 +118,55 @@
 
   /* Toasts */
   #resumeToast { background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--green); font-weight: 600; text-align: center; margin-bottom: 14px; display: none; width: 100%; }
+
+  /* Disposition Panel */
+  #dispositionPanel { display: none; width: 100%; margin-bottom: 10px; }
+  .dispo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dispo-btn { padding: 14px 10px; border-radius: 12px; border: none; font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s; text-align: center; line-height: 1.3; }
+  .dispo-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  .dispo-btn.dispo-dead { background: #fef2f2; color: var(--danger); border: 1.5px solid #fecaca; }
+  .dispo-btn.dispo-not-received { background: #fffbeb; color: var(--warn); border: 1.5px solid var(--warn-border); }
+  .dispo-btn.dispo-not-interested { background: #f8fafc; color: var(--muted); border: 1.5px solid var(--border-strong); }
+  .dispo-btn.dispo-followup { background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; }
+  .dispo-btn.dispo-switch-off { background: #fffbeb; color: var(--warn); border: 1.5px solid var(--warn-border); }
+  .dispo-btn.dispo-interested { background: var(--green-bg); color: var(--green); border: 1.5px solid var(--green-border); }
+
+  /* Followup Modal */
+  #followupModal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; align-items: center; justify-content: center; }
+  #followupModal.active { display: flex; }
+  .modal-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); }
+  .modal-content { position: relative; background: var(--surface); border-radius: 16px; padding: 32px; width: 90%; max-width: 380px; box-shadow: 0 8px 40px rgba(0,0,0,.18); z-index: 1; }
+  .modal-content h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .modal-content .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-content .field { margin-bottom: 16px; }
+  .modal-content .field label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px; }
+  .modal-content .field input { width: 100%; padding: 12px 16px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border-strong); color: var(--text); font-family: var(--sans); font-size: 15px; outline: none; transition: border-color .2s; }
+  .modal-content .field input:focus { border-color: #2563eb; background: #fff; }
+  .btn-confirm-followup { width: 100%; padding: 14px; border-radius: 10px; border: none; background: #2563eb; color: #fff; font-family: var(--sans); font-size: 15px; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: 4px; }
+  .btn-confirm-followup:hover { background: #1d4ed8; transform: translateY(-1px); }
+  .btn-cancel-followup { width: 100%; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border-strong); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: all .2s; }
+  .btn-cancel-followup:hover { background: var(--bg); color: var(--text); }
+
+  /* Interested Leads Section */
+  #interestedSection { display: none; width: 100%; margin-top: 18px; }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .section-title.green { color: var(--green); }
+  .section-title.blue { color: #2563eb; }
+  .lead-cards { display: flex; flex-direction: column; gap: 8px; }
+  .lead-card { background: var(--surface); border: 1px solid var(--green-border); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  .lead-card .lead-card-info { display: flex; flex-direction: column; gap: 2px; }
+  .lead-card .lead-card-phone { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--accent); }
+  .lead-card .lead-card-name { font-size: 12px; color: var(--muted); }
+  .lead-card .lead-card-badge { font-size: 11px; font-weight: 700; color: var(--green); background: var(--green-bg); border: 1px solid var(--green-border); padding: 3px 8px; border-radius: 6px; }
+
+  /* Followups Section */
+  #followupsSection { display: none; width: 100%; margin-top: 18px; }
+  .followup-card { background: var(--surface); border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  .followup-card .lead-card-info { display: flex; flex-direction: column; gap: 2px; }
+  .followup-card .lead-card-phone { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--accent); }
+  .followup-card .lead-card-name { font-size: 12px; color: var(--muted); }
+  .followup-card .followup-datetime { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; }
+  .empty-section { font-size: 13px; color: var(--muted); text-align: center; padding: 16px; }
 </style>
 </head>
 <body>
@@ -200,7 +247,18 @@
   </div>
 
   <button class="action-btn" id="btnStart" onclick="startDialing()">▶ Start Dialing</button>
-  <button class="action-btn" id="btnNext" onclick="nextNumber()">✓ Dialed — Next Number →</button>
+
+  <div id="dispositionPanel">
+    <div class="dispo-grid">
+      <button class="dispo-btn dispo-dead" onclick="submitDisposition('dead')">☠️ Call Not Connected</button>
+      <button class="dispo-btn dispo-not-received" onclick="submitDisposition('not_received')">📵 Call Not Received</button>
+      <button class="dispo-btn dispo-not-interested" onclick="submitDisposition('not_interested')">🚫 Not Interested</button>
+      <button class="dispo-btn dispo-followup" onclick="submitDisposition('followup')">📅 Followup</button>
+      <button class="dispo-btn dispo-switch-off" onclick="submitDisposition('switch_off')">📴 Switch OFF</button>
+      <button class="dispo-btn dispo-interested" onclick="submitDisposition('interested')">⭐ Interested</button>
+    </div>
+  </div>
+
   <button class="action-btn" id="btnBreak" onclick="takeBreak()">☕ Take a Break</button>
   <button class="action-btn" id="btnEndBreak" onclick="endBreak()">▶ End Break — Resume Dialing</button>
 
@@ -208,6 +266,37 @@
     <div class="no-nums-icon">✅</div>
     <div class="no-nums-title">All Done!</div>
     <p class="no-nums-sub">No more numbers to dial right now.<br>Check back tomorrow or ask your admin.</p>
+  </div>
+
+  <!-- Interested Leads Section -->
+  <div id="interestedSection">
+    <div class="section-title green">⭐ My Interested Leads</div>
+    <div class="lead-cards" id="interestedCards"></div>
+  </div>
+
+  <!-- Followups Section -->
+  <div id="followupsSection">
+    <div class="section-title blue">📅 My Followups</div>
+    <div class="lead-cards" id="followupsCards"></div>
+  </div>
+</div>
+
+<!-- Followup Modal -->
+<div id="followupModal">
+  <div class="modal-backdrop" onclick="closeFollowupModal()"></div>
+  <div class="modal-content">
+    <h3>Schedule Followup</h3>
+    <p class="modal-sub">Set a date and time to follow up with this lead</p>
+    <div class="field">
+      <label>Followup Date</label>
+      <input type="date" id="followupDate">
+    </div>
+    <div class="field">
+      <label>Followup Time</label>
+      <input type="time" id="followupTime">
+    </div>
+    <button class="btn-confirm-followup" onclick="confirmFollowup()">Confirm Followup</button>
+    <button class="btn-cancel-followup" onclick="closeFollowupModal()">Cancel</button>
   </div>
 </div>
 
@@ -357,6 +446,8 @@ function applyAgentState(d, fromRestore) {
     socket.emit('agent-start', { agentId });
   }
   // else: agent was idle — show idle state, no auto-start
+
+  refreshLeadSections();
 }
 
 // ── Register ─────────────────────────────────────────────────────────────────
@@ -418,7 +509,7 @@ function showNumber(numberId, phone, name, totalDialedToday, resumed) {
   document.getElementById('numberDisplay').style.display    = 'block';
   document.getElementById('noNumbers').style.display        = 'none';
   document.getElementById('btnStart').style.display         = 'none';
-  document.getElementById('btnNext').style.display          = 'block';
+  document.getElementById('dispositionPanel').style.display = 'block';
   document.getElementById('resumedBadge').style.display     = resumed ? 'inline-block' : 'none';
 
   if (!breakExhausted && !onBreak) {
@@ -444,6 +535,7 @@ function showNumber(numberId, phone, name, totalDialedToday, resumed) {
 
 socket.on('show-number', ({ numberId, phone, name, totalDialedToday, resumed }) => {
   showNumber(numberId, phone, name, totalDialedToday, resumed);
+  refreshLeadSections();
 });
 
 socket.on('no-numbers', (data) => {
@@ -451,12 +543,13 @@ socket.on('no-numbers', (data) => {
     document.getElementById('countToday').textContent = data.totalDialedToday;
   currentNumberId  = null;
   dialerWasActive  = false;
-  document.getElementById('numberDisplay').style.display = 'none';
-  document.getElementById('idleOverlay').style.display   = 'none';
-  document.getElementById('btnStart').style.display      = 'none';
-  document.getElementById('btnNext').style.display       = 'none';
-  document.getElementById('btnBreak').style.display      = 'none';
-  document.getElementById('noNumbers').style.display     = 'block';
+  document.getElementById('numberDisplay').style.display     = 'none';
+  document.getElementById('idleOverlay').style.display       = 'none';
+  document.getElementById('btnStart').style.display          = 'none';
+  document.getElementById('dispositionPanel').style.display  = 'none';
+  document.getElementById('btnBreak').style.display          = 'none';
+  document.getElementById('noNumbers').style.display         = 'block';
+  refreshLeadSections();
 });
 
 socket.on('error', (msg) => {
@@ -471,14 +564,14 @@ socket.on('force-stop', () => {
 });
 
 function showIdle() {
-  document.getElementById('numberDisplay').style.display = 'none';
-  document.getElementById('idleOverlay').style.display   = 'block';
-  document.getElementById('noNumbers').style.display     = 'none';
-  document.getElementById('btnStart').style.display      = 'block';
-  document.getElementById('btnNext').style.display       = 'none';
-  document.getElementById('btnBreak').style.display      = 'none';
-  document.getElementById('breakCard').style.display     = 'none';
-  document.getElementById('btnEndBreak').style.display   = 'none';
+  document.getElementById('numberDisplay').style.display     = 'none';
+  document.getElementById('idleOverlay').style.display       = 'block';
+  document.getElementById('noNumbers').style.display         = 'none';
+  document.getElementById('btnStart').style.display          = 'block';
+  document.getElementById('dispositionPanel').style.display  = 'none';
+  document.getElementById('btnBreak').style.display          = 'none';
+  document.getElementById('breakCard').style.display         = 'none';
+  document.getElementById('btnEndBreak').style.display       = 'none';
 }
 
 // ── Break ─────────────────────────────────────────────────────────────────────
@@ -511,8 +604,8 @@ socket.on('break-ended', (data) => {
   updateBreakUsedDisplay();
   hideBreakMode();
   if (currentNumberId) {
-    document.getElementById('numberDisplay').style.display = 'block';
-    document.getElementById('btnNext').style.display       = 'block';
+    document.getElementById('numberDisplay').style.display     = 'block';
+    document.getElementById('dispositionPanel').style.display  = 'block';
     if (!breakExhausted) {
       document.getElementById('btnBreak').style.display  = 'block';
       document.getElementById('btnBreak').disabled       = false;
@@ -528,13 +621,13 @@ socket.on('break-ended', (data) => {
 });
 
 function showBreakMode() {
-  document.getElementById('breakCard').style.display     = 'block';
-  document.getElementById('btnBreak').style.display      = 'none';
-  document.getElementById('btnNext').style.display       = 'none';
-  document.getElementById('numberDisplay').style.display = 'none';
-  document.getElementById('idleOverlay').style.display   = 'none';
-  document.getElementById('btnStart').style.display      = 'none';
-  document.getElementById('btnEndBreak').style.display   = 'block';
+  document.getElementById('breakCard').style.display         = 'block';
+  document.getElementById('btnBreak').style.display          = 'none';
+  document.getElementById('dispositionPanel').style.display  = 'none';
+  document.getElementById('numberDisplay').style.display     = 'none';
+  document.getElementById('idleOverlay').style.display       = 'none';
+  document.getElementById('btnStart').style.display          = 'none';
+  document.getElementById('btnEndBreak').style.display       = 'block';
 }
 
 function hideBreakMode() {
@@ -581,6 +674,93 @@ function formatPhone(p) {
   if (s.length === 10) return s.replace(/(\d{5})(\d{5})/, '$1 $2');
   if (s.length === 12) return s.replace(/(\d{2})(\d{5})(\d{5})/, '+$1 $2 $3');
   return p;
+}
+
+// ── Disposition ───────────────────────────────────────────────────────────────
+function submitDisposition(disposition) {
+  if (disposition === 'followup') {
+    showFollowupModal();
+    return;
+  }
+  document.getElementById('dispositionPanel').style.display = 'none';
+  socket.emit('agent-disposition', { agentId, numberId: currentNumberId, disposition });
+  currentNumberId = null;
+}
+
+function showFollowupModal() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('followupDate').setAttribute('min', today);
+  document.getElementById('followupDate').value = today;
+  document.getElementById('followupTime').value = '';
+  document.getElementById('followupModal').classList.add('active');
+}
+
+function closeFollowupModal() {
+  document.getElementById('followupModal').classList.remove('active');
+}
+
+function confirmFollowup() {
+  const followupDate = document.getElementById('followupDate').value;
+  const followupTime = document.getElementById('followupTime').value;
+  if (!followupDate) { alert('Please select a date'); return; }
+  if (!followupTime) { alert('Please select a time'); return; }
+  closeFollowupModal();
+  document.getElementById('dispositionPanel').style.display = 'none';
+  socket.emit('agent-disposition', { agentId, numberId: currentNumberId, disposition: 'followup', followupDate, followupTime });
+  currentNumberId = null;
+}
+
+// ── Interested & Followups sections ──────────────────────────────────────────
+async function refreshLeadSections() {
+  if (!agentId) return;
+  try {
+    const [intRes, fuRes] = await Promise.all([
+      fetch('/api/agent/interested/' + agentId),
+      fetch('/api/agent/followups/' + agentId)
+    ]);
+    const interested = await intRes.json();
+    const followups = await fuRes.json();
+    renderInterestedSection(interested);
+    renderFollowupsSection(followups);
+  } catch (e) { /* silent */ }
+}
+
+function renderInterestedSection(leads) {
+  const section = document.getElementById('interestedSection');
+  const container = document.getElementById('interestedCards');
+  if (!leads || leads.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  container.innerHTML = leads.map(l => `
+    <div class="lead-card">
+      <div class="lead-card-info">
+        <div class="lead-card-phone">${formatPhone(l.phone)}</div>
+        <div class="lead-card-name">${l.name || 'No name'}</div>
+      </div>
+      <div class="lead-card-badge">Interested</div>
+    </div>
+  `).join('');
+}
+
+function renderFollowupsSection(leads) {
+  const section = document.getElementById('followupsSection');
+  const container = document.getElementById('followupsCards');
+  if (!leads || leads.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  container.innerHTML = leads.map(l => `
+    <div class="followup-card">
+      <div class="lead-card-info">
+        <div class="lead-card-phone">${formatPhone(l.phone)}</div>
+        <div class="lead-card-name">${l.name || 'No name'}</div>
+      </div>
+      <div class="followup-datetime">${l.followupDate || ''} ${l.followupTime || ''}</div>
+    </div>
+  `).join('');
 }
 
 setInterval(() => { if (agentId) socket.emit('ping-alive', { agentId }); }, 30000);
