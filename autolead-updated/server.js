@@ -178,6 +178,7 @@ function releaseNumber(agentId, numberId) {
 
 // ─── Disposition System ───────────────────────────────────────────────────────
 const VALID_DISPOSITIONS = ['dead', 'not_received', 'not_interested', 'followup', 'switch_off', 'interested'];
+const VALID_LOAN_TYPES = ['BL_Business', 'LAP_Business', 'LAP_Salaried', 'PL_Business', 'PL_Salaried'];
 
 function applyDisposition(agentId, numberId, disposition, extra) {
   appState = checkDailyReset(appState);
@@ -228,7 +229,7 @@ function applyDisposition(agentId, numberId, disposition, extra) {
       num.interestedBy = agentId;
       num.interestedAt = now;
       num.leadName = extra && extra.leadName ? extra.leadName : '';
-      num.loanType = extra && extra.loanType ? extra.loanType : '';
+      num.loanType = extra && extra.loanType && VALID_LOAN_TYPES.includes(extra.loanType) ? extra.loanType : '';
       num.documentationComplete = false;
       num.documentationCompletedAt = null;
       num.dialedBy = agentId;
@@ -491,6 +492,13 @@ app.post('/api/agent/add-interested', (req, res) => {
   }
   if (!appState.agents[agentId]) {
     return res.status(404).json({ error: 'Agent not found' });
+  }
+  if (loanType && !VALID_LOAN_TYPES.includes(loanType)) {
+    return res.status(400).json({ error: 'Invalid loan type' });
+  }
+  const existingNumber = appState.numbers.find(n => n.phone === phone);
+  if (existingNumber) {
+    return res.status(409).json({ error: 'This phone number already exists in the system' });
   }
   const now = new Date().toISOString();
   const newEntry = {

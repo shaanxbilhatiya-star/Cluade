@@ -865,6 +865,7 @@ async function addInterestedManually() {
   const leadName = document.getElementById('manualLeadName').value.trim();
   const loanType = document.getElementById('manualLoanType').value;
   if (!phone) { alert('Please enter a phone number'); return; }
+  if (!/^\d{10}$/.test(phone)) { alert('Please enter a valid 10-digit phone number'); return; }
   if (!leadName) { alert('Please enter the lead name'); return; }
   try {
     const r = await fetch('/api/agent/add-interested', {

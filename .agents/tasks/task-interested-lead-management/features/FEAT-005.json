@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-005",
+  "type": "fix",
+  "description": "Address code review findings: duplicate check on add-interested, loanType validation, fix misleading form success messages, and phone validation on agent manual add.",
+  "status": "in_progress",
+  "steps": [
+    "1. In server.js POST /api/agent/add-interested, add duplicate phone check before creating entry - return 409 if phone exists",
+    "2. Add VALID_LOAN_TYPES constant and validate loanType in add-interested (400 if invalid) and default in applyDisposition interested case",
+    "3. Update all 5 loan form HTML success messages to clarify no submission occurs",
+    "4. In agent panel addInterestedManually(), add 10-digit phone format validation"
+  ],
+  "acceptance_criteria": [
+    "POST /api/agent/add-interested returns 409 if phone already exists in appState.numbers",
+    "POST /api/agent/add-interested returns 400 if loanType is provided and not in VALID_LOAN_TYPES",
+    "applyDisposition 'interested' case defaults loanType to empty string if not valid",
+    "All 5 loan form HTML files show corrected success message",
+    "Agent panel phone validation rejects non-10-digit inputs"
+  ],
+  "verification": [
+    "Run 'node -c /projects/sandbox/Cluade/autolead-updated/server.js' to confirm no syntax errors"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}
