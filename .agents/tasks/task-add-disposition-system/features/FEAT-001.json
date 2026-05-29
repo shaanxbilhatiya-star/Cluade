@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Add disposition system to server.js - new applyDisposition function, update getNextNumber to skip dead/blocked/followup numbers, add REST API endpoints for disposition submission and querying interested/followup leads, update admin stats broadcast.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "In /projects/sandbox/Cluade/autolead-updated/server.js, create an applyDisposition(agentId, numberId, disposition, extra) function that handles all 6 dispositions: (1) 'dead' - set num.disposition='dead', num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo; (2) 'not_received' - clear num.assignedTo, clear num.dialedBy, so it goes back to pool; (3) 'not_interested' - set num.disposition='not_interested', num.blockedUntil=ISO date 30 days from now, num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo; (4) 'followup' - set num.disposition='followup', num.followupDate=extra.followupDate, num.followupTime=extra.followupTime, num.followupLockedBy=agentId, num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo; (5) 'switch_off' - same behavior as not_received, clear assignedTo and dialedBy; (6) 'interested' - set num.disposition='interested', num.interestedBy=agentId, num.interestedAt=now ISO, num.dialedBy=agentId, num.dialedAt=now, clear num.assignedTo. For all dispositions, increment agent.totalDialedToday, clear agent.currentNumberId, add to dialedLog, save state, broadcast admin stats.",
     "Update getNextNumber(agentId) in server.js to skip numbers that match any of: (a) num.disposition === 'dead', (b) num.disposition === 'not_interested' AND num.blockedUntil AND new Date(num.blockedUntil) > new Date(), (c) num.disposition === 'followup' AND num.followupLockedBy !== agentId, (d) num.disposition === 'interested'. The filter should be: find first number where !num.dialedBy && !num.assignedTo AND none of the skip conditions apply.",
@@ -28,5 +28,5 @@
     "cd /projects/sandbox/Cluade/autolead-updated && node -c server.js"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Implementation complete. All 6 dispositions handled in applyDisposition(). getNextNumber() updated with skip logic. REST endpoints and socket event added. Syntax check passes cleanly."
 }
