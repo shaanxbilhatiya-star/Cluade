@@ -26,7 +26,7 @@
 
   .main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
 
-  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 28px; }
   .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
   .stat-label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
   .stat-value { font-family: var(--mono); font-size: 36px; font-weight: 700; }
@@ -105,6 +105,19 @@
   .break-agents-list { display: flex; flex-wrap: wrap; gap: 8px; }
   .break-agent-pill { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--warn); display: flex; align-items: center; gap: 6px; }
 
+  /* Interested & Followups panels */
+  .panel-interested { margin-bottom: 20px; }
+  .panel-followups { margin-bottom: 20px; }
+  .panel-interested .panel-header { background: rgba(5,150,105,.06); }
+  .panel-interested .panel-header h2 { color: var(--green); }
+  .panel-followups .panel-header { background: rgba(139,92,246,.06); }
+  .panel-followups .panel-header h2 { color: var(--accent2); }
+  .leads-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .leads-table th { padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .leads-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .leads-table tr:last-child td { border-bottom: none; }
+  .phone-number { font-family: var(--mono); font-weight: 700; color: var(--accent); }
+
   @media(max-width:900px){ .stats-grid{grid-template-columns:1fr 1fr} .grid-2{grid-template-columns:1fr} }
 
   /* Login time column */
@@ -156,6 +169,14 @@
     <div class="stat-card">
       <span class="stat-label">Remaining</span>
       <span class="stat-value accent" id="statRemaining">0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Interested</span>
+      <span class="stat-value green" id="statInterested">0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Followups</span>
+      <span class="stat-value blue" id="statFollowups">0</span>
     </div>
   </div>
 
@@ -222,6 +243,53 @@
     </div>
   </div><!-- end grid-2 -->
 
+  <!-- Interested Leads Panel -->
+  <div class="panel panel-interested">
+    <div class="panel-header">
+      <h2>Interested Leads</h2>
+      <span style="font-size:12px;color:var(--muted)" id="interestedCountBadge">0 leads</span>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <table class="leads-table">
+        <thead>
+          <tr>
+            <th>Phone</th>
+            <th>Name</th>
+            <th>Agent</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="interestedTable">
+          <tr><td colspan="4" class="empty">No interested leads yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Followups Panel -->
+  <div class="panel panel-followups">
+    <div class="panel-header">
+      <h2>Followups</h2>
+      <span style="font-size:12px;color:var(--muted)" id="followupsCountBadge">0 followups</span>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <table class="leads-table">
+        <thead>
+          <tr>
+            <th>Phone</th>
+            <th>Name</th>
+            <th>Agent</th>
+            <th>Date</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="followupsTable">
+          <tr><td colspan="5" class="empty">No followups yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- EID Whitelist Management Panel -->
   <div class="panel eid-panel">
     <div class="panel-header">
@@ -285,6 +353,8 @@ function renderStats(data) {
   document.getElementById('statTotal').textContent = data.total;
   document.getElementById('statDialed').textContent = data.dialed;
   document.getElementById('statRemaining').textContent = data.remaining;
+  document.getElementById('statInterested').textContent = data.interestedCount || 0;
+  document.getElementById('statFollowups').textContent = data.followupCount || 0;
   document.getElementById('todayBadge').textContent = data.today;
 
   // Files
@@ -429,7 +499,93 @@ setInterval(async () => {
   const r = await fetch('/api/admin/stats');
   const d = await r.json();
   renderStats(d);
+  fetchInterestedLeads();
+  fetchFollowups();
 }, 10000);
+
+// ── Interested Leads ──────────────────────────────────────────────────────────
+async function fetchInterestedLeads() {
+  try {
+    const r = await fetch('/api/admin/interested');
+    const leads = await r.json();
+    renderInterestedLeads(leads);
+  } catch (e) {
+    console.error('Failed to fetch interested leads:', e);
+  }
+}
+
+function renderInterestedLeads(leads) {
+  const tbody = document.getElementById('interestedTable');
+  const badge = document.getElementById('interestedCountBadge');
+  badge.textContent = leads.length + ' lead' + (leads.length !== 1 ? 's' : '');
+  if (!leads || leads.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">No interested leads yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = leads.map(l => `<tr>
+    <td><span class="phone-number">${formatPhone(l.phone)}</span></td>
+    <td>${l.name || '—'}</td>
+    <td style="font-weight:500">${l.agentName || l.interestedBy || '—'}</td>
+    <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatTimestamp(l.interestedAt)}</td>
+  </tr>`).join('');
+}
+
+// ── Followups ─────────────────────────────────────────────────────────────────
+async function fetchFollowups() {
+  try {
+    const r = await fetch('/api/admin/followups');
+    const followups = await r.json();
+    renderFollowups(followups);
+  } catch (e) {
+    console.error('Failed to fetch followups:', e);
+  }
+}
+
+function renderFollowups(followups) {
+  const tbody = document.getElementById('followupsTable');
+  const badge = document.getElementById('followupsCountBadge');
+  badge.textContent = followups.length + ' followup' + (followups.length !== 1 ? 's' : '');
+  if (!followups || followups.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No followups yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = followups.map(f => `<tr>
+    <td><span class="phone-number">${formatPhone(f.phone)}</span></td>
+    <td>${f.name || '—'}</td>
+    <td style="font-weight:500">${f.agentName || f.followupLockedBy || '—'}</td>
+    <td style="font-family:var(--mono);font-size:13px">${formatDate(f.followupDate)}</td>
+    <td style="font-family:var(--mono);font-size:13px">${f.followupTime || '—'}</td>
+  </tr>`).join('');
+}
+
+// ── Formatting helpers ────────────────────────────────────────────────────────
+function formatPhone(phone) {
+  if (!phone) return '—';
+  const str = String(phone);
+  if (str.length === 10) return str.slice(0,5) + ' ' + str.slice(5);
+  if (str.length > 10) return str.slice(0, str.length-10) + ' ' + str.slice(str.length-10, str.length-5) + ' ' + str.slice(str.length-5);
+  return str;
+}
+
+function formatTimestamp(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' }) + ' ' + d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true });
+  } catch(e) { return iso; }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  } catch(e) { return dateStr; }
+}
+
+// Load interested and followups on startup
+fetchInterestedLeads();
+fetchFollowups();
 
 // ── EID Management ────────────────────────────────────────────────────────────
 async function loadEids() {
