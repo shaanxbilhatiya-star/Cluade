@@ -220,12 +220,26 @@
   .stats-dispo-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .stats-dispo-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
   .stats-dispo-count { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--accent); }
+
+  /* Logo */
+  .logo-img { height: 28px; background: #fff; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border, #e2e8f0); }
+
+  /* Agent Tabs */
+  .agent-tabs { display: flex; gap: 4px; width: 100%; margin-top: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 6px; overflow-x: auto; }
+  .agent-tab { flex: 1; padding: 10px 8px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; text-align: center; white-space: nowrap; }
+  .agent-tab:hover { background: var(--bg); color: var(--text); }
+  .agent-tab.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
+  .tab-content { display: none; width: 100%; margin-top: 14px; }
+  .tab-content.active { display: block; }
 </style>
 </head>
 <body>
 
 <div class="top-bar">
-  <span class="brand">AutoLead</span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <img src="/logo.png" alt="Ruralift" class="logo-img">
+    <span class="brand">AutoLead</span>
+  </div>
   <span class="badge">AGENT</span>
 </div>
 
@@ -321,41 +335,29 @@
     <p class="no-nums-sub">No more numbers to dial right now.<br>Check back tomorrow or ask your admin.</p>
   </div>
 
-  <!-- Interested Leads Section -->
-  <div id="interestedSection">
+  <!-- Tab Bar -->
+  <div class="agent-tabs" id="agentTabBar" style="display:none">
+    <button class="agent-tab active" data-tab="interested" onclick="switchAgentTab('interested')">Interested</button>
+    <button class="agent-tab" data-tab="completed" onclick="switchAgentTab('completed')">Completed</button>
+    <button class="agent-tab" data-tab="stats" onclick="switchAgentTab('stats')">Stats</button>
+    <button class="agent-tab" data-tab="followups" onclick="switchAgentTab('followups')">Followups</button>
+    <button class="agent-tab" data-tab="addlead" onclick="switchAgentTab('addlead')">Add Lead</button>
+  </div>
+
+  <!-- Tab: Interested Leads -->
+  <div class="tab-content active" id="tabInterested">
     <div class="section-title green">⭐ My Interested Leads</div>
     <div class="lead-cards" id="interestedCards"></div>
-    <div class="manual-add-section">
-      <div class="section-title">+ Add Interested Lead Manually</div>
-      <div class="manual-add-form">
-        <input type="text" id="manualPhone" placeholder="Phone number (10 digits)">
-        <input type="text" id="manualLeadName" placeholder="Lead name" autocomplete="off">
-        <select id="manualLoanType">
-          <option value="BL_Business">BL - Business Loan</option>
-          <option value="LAP_Business">LAP - Business</option>
-          <option value="LAP_Salaried">LAP - Salaried</option>
-          <option value="PL_Business">PL - Business</option>
-          <option value="PL_Salaried">PL - Salaried</option>
-        </select>
-        <button class="btn-add-interested" onclick="addInterestedManually()">+ Add Lead</button>
-      </div>
-    </div>
   </div>
 
-  <!-- Followups Section -->
-  <div id="followupsSection">
-    <div class="section-title blue">📅 My Followups</div>
-    <div class="lead-cards" id="followupsCards"></div>
-  </div>
-
-  <!-- Documentation Completed Section -->
-  <div id="completedSection" style="display:none;width:100%;margin-top:18px;">
+  <!-- Tab: Documentation Completed -->
+  <div class="tab-content" id="tabCompleted">
     <div class="section-title" style="color:var(--accent)">&#10004; Documentation Completed</div>
     <div class="lead-cards" id="completedCards"></div>
   </div>
 
-  <!-- My Stats Section -->
-  <div id="myStatsSection" style="display:none;width:100%;margin-top:18px;">
+  <!-- Tab: My Stats -->
+  <div class="tab-content" id="tabStats">
     <div class="section-title" style="color:var(--accent)">&#128202; My Stats</div>
     <div class="stats-tabs">
       <button class="stats-tab active" data-period="daily" onclick="switchStatsPeriod('daily')">Daily</button>
@@ -399,6 +401,31 @@
           <span class="stats-dispo-name">Interested</span>
           <span class="stats-dispo-count" id="myStatsInterested">0</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Followups -->
+  <div class="tab-content" id="tabFollowups">
+    <div class="section-title blue">📅 My Followups</div>
+    <div class="lead-cards" id="followupsCards"></div>
+  </div>
+
+  <!-- Tab: Add Lead -->
+  <div class="tab-content" id="tabAddlead">
+    <div class="manual-add-section">
+      <div class="section-title">+ Add Interested Lead Manually</div>
+      <div class="manual-add-form">
+        <input type="text" id="manualPhone" placeholder="Phone number (10 digits)">
+        <input type="text" id="manualLeadName" placeholder="Lead name" autocomplete="off">
+        <select id="manualLoanType">
+          <option value="BL_Business">BL - Business Loan</option>
+          <option value="LAP_Business">LAP - Business</option>
+          <option value="LAP_Salaried">LAP - Salaried</option>
+          <option value="PL_Business">PL - Business</option>
+          <option value="PL_Salaried">PL - Salaried</option>
+        </select>
+        <button class="btn-add-interested" onclick="addInterestedManually()">+ Add Lead</button>
       </div>
     </div>
   </div>
@@ -978,9 +1005,9 @@ async function refreshLeadSections() {
 }
 
 function renderInterestedSection(leads) {
-  const section = document.getElementById('interestedSection');
   const container = document.getElementById('interestedCards');
-  section.style.display = 'block';
+  // Show tabs whenever we have data
+  document.getElementById('agentTabBar').style.display = 'flex';
   if (!leads || leads.length === 0) {
     container.innerHTML = '<div class="empty-section">No interested leads yet</div>';
     return;
@@ -1038,13 +1065,11 @@ setInterval(() => {
 }, 1000);
 
 function renderFollowupsSection(leads) {
-  const section = document.getElementById('followupsSection');
   const container = document.getElementById('followupsCards');
   if (!leads || leads.length === 0) {
-    section.style.display = 'none';
+    container.innerHTML = '<div class="empty-section">No followups yet</div>';
     return;
   }
-  section.style.display = 'block';
   container.innerHTML = leads.map(l => `
     <div class="followup-card">
       <div class="lead-card-info">
@@ -1057,13 +1082,11 @@ function renderFollowupsSection(leads) {
 }
 
 function renderCompletedSection(leads) {
-  const section = document.getElementById('completedSection');
   const container = document.getElementById('completedCards');
   if (!leads || leads.length === 0) {
-    section.style.display = 'none';
+    container.innerHTML = '<div class="empty-section">No completed leads yet</div>';
     return;
   }
-  section.style.display = 'block';
   container.innerHTML = leads.map(l => {
     const completedDate = l.documentationCompletedAt ? new Date(l.documentationCompletedAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '';
     const statusBadge = l.adminStatus ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(124,58,237,.08);color:var(--accent);border:1px solid rgba(124,58,237,.15)">${escapeHtml(l.adminStatus)}</span>` : '';
@@ -1108,8 +1131,16 @@ async function fetchMyStats() {
     document.getElementById('myStatsFollowup').textContent = d.followup || 0;
     document.getElementById('myStatsSwitchOff').textContent = d.switch_off || 0;
     document.getElementById('myStatsInterested').textContent = d.interested || 0;
-    document.getElementById('myStatsSection').style.display = 'block';
   } catch (e) { /* silent */ }
+}
+
+// ── Agent Tab Switching ───────────────────────────────────────────────────────
+function switchAgentTab(tabName) {
+  document.querySelectorAll('.agent-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.agent-tab[data-tab="' + tabName + '"]').classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tabEl = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+  if (tabEl) tabEl.classList.add('active');
 }
 
 setInterval(() => { if (agentId) socket.emit('ping-alive', { agentId }); }, 30000);

@@ -1,3 +1,9 @@
+// NOTE: All timers are timestamp-based and survive server restarts:
+// - Break timer: uses breakStartedAt (epoch ms) in state.json
+// - 48h interested timer: uses interestedAt (ISO string) in state.json
+// - Daily reset: uses lastReset (YYYY-MM-DD) in state.json
+// Server can restart at any time without losing timer state.
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -478,8 +484,29 @@ app.post('/api/admin/transfer-interested', (req, res) => {
   if (!numberId || !newAgentId) {
     return res.status(400).json({ error: 'numberId and newAgentId are required' });
   }
+  // Allow transfer to registered agents OR valid EID-based agents from allowedEids
   if (!appState.agents[newAgentId]) {
-    return res.status(404).json({ error: 'Target agent not found' });
+    // Check if it's a valid EID from allowedEids (format: emp_XXXXXX)
+    const eidMatch = newAgentId.match(/^emp_(\d+)$/);
+    if (!eidMatch || !appState.allowedEids[eidMatch[1]]) {
+      return res.status(404).json({ error: 'Target agent not found' });
+    }
+    // Create a placeholder agent entry so the lead can be assigned
+    const eid = eidMatch[1];
+    appState.agents[newAgentId] = {
+      name: appState.allowedEids[eid],
+      employeeId: eid,
+      active: false,
+      totalDialedToday: 0,
+      date: getTodayStr(),
+      currentIndex: null,
+      onBreak: false,
+      breakStartedAt: null,
+      totalBreakMs: 0,
+      currentNumberId: null,
+      firstLoginToday: null,
+      firstLoginDate: null
+    };
   }
   const num = appState.numbers.find(n => n.id === numberId);
   if (!num) return res.status(404).json({ error: 'Number not found' });
@@ -530,11 +557,23 @@ app.post('/api/agent/add-interested', (req, res) => {
 });
 
 app.get('/api/admin/agents-list', (req, res) => {
-  const agents = Object.entries(appState.agents).map(([id, a]) => ({
-    id,
-    name: a.name
-  }));
-  res.json(agents);
+  // Merge registered agents with allowedEids that haven't logged in yet
+  const agentMap = {};
+
+  // First, add all registered agents
+  for (const [id, a] of Object.entries(appState.agents)) {
+    agentMap[id] = { id, name: a.name };
+  }
+
+  // Then, add virtual entries for EIDs not yet registered
+  for (const [eid, name] of Object.entries(appState.allowedEids)) {
+    const virtualId = 'emp_' + eid;
+    if (!agentMap[virtualId]) {
+      agentMap[virtualId] = { id: virtualId, name };
+    }
+  }
+
+  res.json(Object.values(agentMap));
 });
 
 // ─── New Endpoints: Remove Interested, Update Interested, Completed Leads ────

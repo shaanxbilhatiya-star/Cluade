@@ -120,6 +120,8 @@
 
   @media(max-width:900px){ .stats-grid{grid-template-columns:1fr 1fr} .grid-2{grid-template-columns:1fr} }
 
+  .logo-img { height: 28px; background: #fff; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border, #e2e8f0); }
+
   /* Login time column */
   .login-time { font-family: var(--mono, monospace); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px; }
   .login-ok   { color: var(--green, #059669); background: #ecfdf5; border: 1px solid #a7f3d0; }
@@ -198,7 +200,10 @@
 </head>
 <body>
 <header>
-  <span style="font-size:16px;font-weight:700;letter-spacing:1px;">AutoLead</span>
+  <div style="display:flex;align-items:center;gap:10px">
+    <img src="/logo.png" alt="Ruralift" class="logo-img">
+    <span style="font-size:16px;font-weight:700;letter-spacing:1px;">AutoLead</span>
+  </div>
   <div style="display:flex;align-items:center;gap:14px">
     <span class="today-badge" id="todayBadge">—</span>
     <span class="badge">ADMIN</span>
