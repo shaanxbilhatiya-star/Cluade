@@ -24,6 +24,13 @@ function getTodayStr() {
   return ist.toISOString().slice(0, 10);
 }
 
+function getTomorrowStr() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+  ist.setDate(ist.getDate() + 1);
+  return ist.toISOString().slice(0, 10);
+}
+
 function loadState() {
   if (fs.existsSync(DATA_FILE)) {
     try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch {}
@@ -66,6 +73,16 @@ function checkDailyReset(state) {
       state.agents[id].firstLoginToday = null;
       state.agents[id].firstLoginDate  = null;
     }
+    // Clear retry numbers whose retryAfter date has arrived (today >= retryAfter)
+    state.numbers.forEach(n => {
+      if ((n.disposition === 'not_received' || n.disposition === 'switch_off') && n.retryAfter && today >= n.retryAfter) {
+        n.disposition = null;
+        n.retryAfter = null;
+        n.dialedBy = null;
+        n.dialedAt = null;
+        n.assignedTo = null;
+      }
+    });
     state.lastReset = today;
     saveState(state);
   }
@@ -107,6 +124,7 @@ setInterval(() => {
 function getNextNumber(agentId) {
   appState = checkDailyReset(appState);
   const now = new Date();
+  const today = getTodayStr();
   const undialed = appState.numbers.find(n => {
     if (n.dialedBy || n.assignedTo) return false;
     // Skip dead numbers
@@ -117,6 +135,8 @@ function getNextNumber(agentId) {
     if (n.disposition === 'followup' && n.followupLockedBy && n.followupLockedBy !== agentId) return false;
     // Skip interested numbers
     if (n.disposition === 'interested') return false;
+    // Skip not_received/switch_off numbers whose retry date has not arrived yet
+    if ((n.disposition === 'not_received' || n.disposition === 'switch_off') && n.retryAfter && today < n.retryAfter) return false;
     return true;
   });
   if (!undialed) return null;
@@ -174,8 +194,11 @@ function applyDisposition(agentId, numberId, disposition, extra) {
       num.assignedTo = null;
       break;
     case 'not_received':
+      num.disposition = 'not_received';
+      num.dialedBy = agentId;
+      num.dialedAt = now;
       num.assignedTo = null;
-      num.dialedBy = null;
+      num.retryAfter = getTomorrowStr();
       break;
     case 'not_interested':
       num.disposition = 'not_interested';
@@ -194,8 +217,11 @@ function applyDisposition(agentId, numberId, disposition, extra) {
       num.assignedTo = null;
       break;
     case 'switch_off':
+      num.disposition = 'switch_off';
+      num.dialedBy = agentId;
+      num.dialedAt = now;
       num.assignedTo = null;
-      num.dialedBy = null;
+      num.retryAfter = getTomorrowStr();
       break;
     case 'interested':
       num.disposition = 'interested';
@@ -209,10 +235,7 @@ function applyDisposition(agentId, numberId, disposition, extra) {
 
   // Common actions for all dispositions
   if (agent) {
-    // Don't inflate dial counter for pool-return dispositions (number goes back undisposed)
-    if (disposition !== 'not_received' && disposition !== 'switch_off') {
-      agent.totalDialedToday = (agent.totalDialedToday || 0) + 1;
-    }
+    agent.totalDialedToday = (agent.totalDialedToday || 0) + 1;
     agent.currentNumberId = null;
   }
   appState.dialedLog.push({
@@ -300,7 +323,7 @@ function getAdminStats() {
     };
   });
 
-  return { total, dialed, assigned, remaining, agentStats, fileStats, today: getTodayStr(), interestedCount: appState.numbers.filter(n => n.disposition === 'interested').length, followupCount: appState.numbers.filter(n => n.disposition === 'followup').length };
+  return { total, dialed, assigned, remaining, agentStats, fileStats, today: getTodayStr(), interestedCount: appState.numbers.filter(n => n.disposition === 'interested').length, followupCount: appState.numbers.filter(n => n.disposition === 'followup').length, comingBackTomorrow: appState.numbers.filter(n => (n.disposition === 'not_received' || n.disposition === 'switch_off') && n.retryAfter && getTodayStr() < n.retryAfter).length };
 }
 
 // ─── Express Setup ─────────────────────────────────────────────────────────────

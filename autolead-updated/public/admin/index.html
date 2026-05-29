@@ -178,6 +178,10 @@
       <span class="stat-label">Followups</span>
       <span class="stat-value blue" id="statFollowups">0</span>
     </div>
+    <div class="stat-card">
+      <span class="stat-label">Coming Back Tomorrow</span>
+      <span class="stat-value amber" id="statComingBack">0</span>
+    </div>
   </div>
 
   <!-- Break summary bar -->
@@ -361,6 +365,7 @@ function renderStats(data) {
   document.getElementById('statRemaining').textContent = data.remaining;
   document.getElementById('statInterested').textContent = data.interestedCount || 0;
   document.getElementById('statFollowups').textContent = data.followupCount || 0;
+  document.getElementById('statComingBack').textContent = data.comingBackTomorrow || 0;
   document.getElementById('todayBadge').textContent = data.today;
 
   // Files
