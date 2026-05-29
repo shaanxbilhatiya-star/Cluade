@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Agent Panel UI: Add 'Interested Lead' modal (prompt for leadName + loanType when marking interested), enhance the My Interested Leads section with 48h countdown, Open Form button, Copy WhatsApp Checklist button, Mark Documentation Complete button, and add manual 'Add Interested Lead' form.",
+  "status": "in_progress",
+  "steps": [
+    "1. In public/agent/index.html, add a new modal (#interestedModal) similar to the followup modal. It should appear when agent clicks the 'Interested' disposition button. The modal contains: (a) text input for Lead Name (required), (b) dropdown select for Loan Type with options: BL_Business, LAP_Business, LAP_Salaried, PL_Business, PL_Salaried, (c) Confirm button, (d) Cancel button.",
+    "2. Modify the submitDisposition() function: when disposition is 'interested', show the interestedModal instead of immediately submitting. The modal's confirm button calls a new function confirmInterested() which emits the socket event with { agentId, numberId: currentNumberId, disposition: 'interested', leadName, loanType }.",
+    "3. Rewrite the #interestedSection to show a richer card for each interested lead. Each card should display: lead name, phone number, loan type, a live countdown timer showing time remaining out of 48h (calculated from interestedAt), and three action buttons.",
+    "4. Add 'Open Form' button to each interested lead card. On click, it opens the corresponding form HTML in a new tab. The URL pattern is '/' + loanType + '.html' (e.g., /BL_Business.html). Use window.open().",
+    "5. Add 'Copy WhatsApp Checklist' button to each interested lead card. On click, it generates the Hinglish document checklist message based on loanType and copies it to clipboard using navigator.clipboard.writeText(). Show a brief 'Copied!' confirmation. The message content should be based on loan type (see step 8 for the message generation logic).",
+    "6. Add 'Mark Complete' button to each interested lead card. On click, call POST /api/agent/mark-documentation-complete with { agentId, numberId }. On success, refresh the section. If already complete, show a green checkmark badge instead of the button.",
+    "7. Add a 'Add Interested Lead Manually' section below the interested cards. This has: phone input, name input, loan type dropdown, and an 'Add' button. On submit, call POST /api/agent/add-interested with { agentId, phone, leadName, loanType }. On success, refresh the section and clear inputs.",
+    "8. Add a generateWhatsAppMessage(loanType) function that returns the document checklist message in Hinglish. The messages per loan type are: BL_Business: 'Namaste! Aapke Business Loan ke liye yeh documents chahiye:\\n\\n1. PAN Card\\n2. Aadhar Card\\n3. Last 12 months bank statement\\n4. Business proof (GST/Udyam/Trade License)\\n5. Last 2 years ITR with computation\\n6. Office/Shop address proof\\n7. Business vintage proof\\n\\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!', LAP_Business: 'Namaste! Aapke LAP (Loan Against Property) - Business ke liye yeh documents chahiye:\\n\\n1. PAN Card\\n2. Aadhar Card\\n3. Last 12 months bank statement\\n4. Business proof (GST/Udyam/Trade License)\\n5. Last 2 years ITR with computation\\n6. Property documents (Sale deed, Registry)\\n7. Property tax receipt\\n8. Map/Naksha of property\\n9. NOC from society (if applicable)\\n\\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!', LAP_Salaried: 'Namaste! Aapke LAP (Loan Against Property) - Salaried ke liye yeh documents chahiye:\\n\\n1. PAN Card\\n2. Aadhar Card\\n3. Last 6 months bank statement (salary account)\\n4. Last 6 months salary slips\\n5. Form 16 / Last 2 years ITR\\n6. Employment ID card\\n7. Property documents (Sale deed, Registry)\\n8. Property tax receipt\\n9. Map/Naksha of property\\n10. NOC from society (if applicable)\\n\\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!', PL_Business: 'Namaste! Aapke Personal Loan - Business profile ke liye yeh documents chahiye:\\n\\n1. PAN Card\\n2. Aadhar Card\\n3. Last 12 months bank statement\\n4. Business proof (GST/Udyam/Trade License)\\n5. Last 2 years ITR with computation\\n6. Office address proof\\n\\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!', PL_Salaried: 'Namaste! Aapke Personal Loan - Salaried ke liye yeh documents chahiye:\\n\\n1. PAN Card\\n2. Aadhar Card\\n3. Last 3 months bank statement (salary account)\\n4. Last 3 months salary slips\\n5. Form 16 / Latest ITR\\n6. Employment ID card / Offer letter\\n\\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!'",
+    "9. Add CSS styles for the new modal, the enhanced interested lead cards (with countdown timer, action buttons), and the manual add form. Follow existing design patterns (var(--accent), var(--green), var(--surface), border-radius: 12px, etc.).",
+    "10. Update the refreshLeadSections() function to use the new expanded API response and re-render the countdown timers. Add a setInterval (every 1 second) that updates only the countdown timer text for each interested lead card without re-fetching from the server."
+  ],
+  "acceptance_criteria": [
+    "Clicking 'Interested' disposition button shows a modal prompting for lead name and loan type before confirming",
+    "The interested leads section shows each lead with: name, phone, loan type, live 48h countdown timer",
+    "Each interested lead card has an 'Open Form' button that opens the correct loan form HTML in a new tab",
+    "Each interested lead card has a 'Copy WhatsApp' button that copies the correct document checklist to clipboard",
+    "Each interested lead card has a 'Mark Complete' button (or green checkmark if already complete)",
+    "The 'Add Interested Lead Manually' form works and adds a new lead to the section",
+    "The HTML file passes basic syntax validation (no unclosed tags, valid JS)"
+  ],
+  "verification": [
+    "Run a basic HTML syntax check or open the file in a browser to confirm no console errors",
+    "Verify the file is well-formed by checking that the script section has balanced braces and the HTML has proper structure"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

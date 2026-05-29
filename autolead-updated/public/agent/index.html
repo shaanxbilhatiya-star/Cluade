@@ -167,6 +167,44 @@
   .followup-card .lead-card-name { font-size: 12px; color: var(--muted); }
   .followup-card .followup-datetime { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; }
   .empty-section { font-size: 13px; color: var(--muted); text-align: center; padding: 16px; }
+
+  /* Interested Modal */
+  #interestedModal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; align-items: center; justify-content: center; }
+  #interestedModal.active { display: flex; }
+  .modal-content .field select { width: 100%; padding: 12px 16px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border-strong); color: var(--text); font-family: var(--sans); font-size: 15px; outline: none; transition: border-color .2s; }
+  .modal-content .field select:focus { border-color: var(--green); background: #fff; }
+  .btn-confirm-interested { width: 100%; padding: 14px; border-radius: 10px; border: none; background: var(--green); color: #fff; font-family: var(--sans); font-size: 15px; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: 4px; }
+  .btn-confirm-interested:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-cancel-interested { width: 100%; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border-strong); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: all .2s; }
+  .btn-cancel-interested:hover { background: var(--bg); color: var(--text); }
+
+  /* Enhanced Interested Lead Cards */
+  .interested-card { background: var(--surface); border: 1px solid var(--green-border); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  .interested-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+  .interested-card-info { display: flex; flex-direction: column; gap: 2px; }
+  .interested-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .interested-card-phone { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); }
+  .interested-card-loan { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; margin-top: 2px; display: inline-block; }
+  .interested-card-timer { font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+  .interested-card-timer.active-timer { color: var(--green); background: var(--green-bg); border: 1px solid var(--green-border); }
+  .interested-card-timer.expired-timer { color: var(--danger); background: #fef2f2; border: 1px solid #fecaca; }
+  .interested-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .interested-card-actions button { padding: 8px 12px; border-radius: 8px; border: none; font-family: var(--sans); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .interested-card-actions button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  .btn-open-form { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe !important; }
+  .btn-copy-wa { background: #ecfdf5; color: var(--green); border: 1px solid var(--green-border) !important; }
+  .btn-mark-complete { background: var(--accent-glow); color: var(--accent); border: 1px solid #e9d5ff !important; }
+  .btn-completed-badge { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border) !important; cursor: default !important; }
+  .btn-completed-badge:hover { transform: none !important; }
+
+  /* Manual Add Interested Lead Form */
+  .manual-add-section { width: 100%; margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  .manual-add-section .section-title { margin-bottom: 12px; }
+  .manual-add-form { display: flex; flex-direction: column; gap: 10px; }
+  .manual-add-form input, .manual-add-form select { width: 100%; padding: 10px 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border-strong); color: var(--text); font-family: var(--sans); font-size: 14px; outline: none; transition: border-color .2s; }
+  .manual-add-form input:focus, .manual-add-form select:focus { border-color: var(--accent-light); background: #fff; }
+  .btn-add-interested { padding: 12px; border-radius: 10px; border: none; background: var(--green); color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .btn-add-interested:hover { filter: brightness(1.08); transform: translateY(-1px); }
 </style>
 </head>
 <body>
@@ -272,6 +310,21 @@
   <div id="interestedSection">
     <div class="section-title green">⭐ My Interested Leads</div>
     <div class="lead-cards" id="interestedCards"></div>
+    <div class="manual-add-section">
+      <div class="section-title">+ Add Interested Lead Manually</div>
+      <div class="manual-add-form">
+        <input type="text" id="manualPhone" placeholder="Phone number (10 digits)">
+        <input type="text" id="manualLeadName" placeholder="Lead name" autocomplete="off">
+        <select id="manualLoanType">
+          <option value="BL_Business">BL - Business Loan</option>
+          <option value="LAP_Business">LAP - Business</option>
+          <option value="LAP_Salaried">LAP - Salaried</option>
+          <option value="PL_Business">PL - Business</option>
+          <option value="PL_Salaried">PL - Salaried</option>
+        </select>
+        <button class="btn-add-interested" onclick="addInterestedManually()">+ Add Lead</button>
+      </div>
+    </div>
   </div>
 
   <!-- Followups Section -->
@@ -297,6 +350,31 @@
     </div>
     <button class="btn-confirm-followup" onclick="confirmFollowup()">Confirm Followup</button>
     <button class="btn-cancel-followup" onclick="closeFollowupModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Interested Modal -->
+<div id="interestedModal">
+  <div class="modal-backdrop" onclick="closeInterestedModal()"></div>
+  <div class="modal-content">
+    <h3>Mark as Interested</h3>
+    <p class="modal-sub">Enter lead details to mark as interested</p>
+    <div class="field">
+      <label>Lead Name</label>
+      <input type="text" id="interestedLeadName" placeholder="e.g. Amit Kumar" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Loan Type</label>
+      <select id="interestedLoanType">
+        <option value="BL_Business">BL - Business Loan</option>
+        <option value="LAP_Business">LAP - Business</option>
+        <option value="LAP_Salaried">LAP - Salaried</option>
+        <option value="PL_Business">PL - Business</option>
+        <option value="PL_Salaried">PL - Salaried</option>
+      </select>
+    </div>
+    <button class="btn-confirm-interested" onclick="confirmInterested()">Confirm Interested</button>
+    <button class="btn-cancel-interested" onclick="closeInterestedModal()">Cancel</button>
   </div>
 </div>
 
@@ -688,6 +766,10 @@ function submitDisposition(disposition) {
     showFollowupModal();
     return;
   }
+  if (disposition === 'interested') {
+    showInterestedModal();
+    return;
+  }
   document.getElementById('dispositionPanel').style.display = 'none';
   socket.emit('agent-disposition', { agentId, numberId: currentNumberId, disposition });
   currentNumberId = null;
@@ -716,7 +798,92 @@ function confirmFollowup() {
   currentNumberId = null;
 }
 
+// ── Interested Modal ─────────────────────────────────────────────────────────
+function showInterestedModal() {
+  document.getElementById('interestedLeadName').value = '';
+  document.getElementById('interestedLoanType').value = 'BL_Business';
+  document.getElementById('interestedModal').classList.add('active');
+}
+
+function closeInterestedModal() {
+  document.getElementById('interestedModal').classList.remove('active');
+}
+
+function confirmInterested() {
+  const leadName = document.getElementById('interestedLeadName').value.trim();
+  const loanType = document.getElementById('interestedLoanType').value;
+  if (!leadName) { alert('Please enter the lead name'); return; }
+  closeInterestedModal();
+  document.getElementById('dispositionPanel').style.display = 'none';
+  socket.emit('agent-disposition', { agentId, numberId: currentNumberId, disposition: 'interested', leadName, loanType });
+  currentNumberId = null;
+}
+
+// ── WhatsApp Checklist Messages ──────────────────────────────────────────────
+function generateWhatsAppMessage(loanType) {
+  const messages = {
+    BL_Business: 'Namaste! Aapke Business Loan ke liye yeh documents chahiye:\n\n1. PAN Card\n2. Aadhar Card\n3. Last 12 months bank statement\n4. Business proof (GST/Udyam/Trade License)\n5. Last 2 years ITR with computation\n6. Office/Shop address proof\n7. Business vintage proof\n\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!',
+    LAP_Business: 'Namaste! Aapke LAP (Loan Against Property) - Business ke liye yeh documents chahiye:\n\n1. PAN Card\n2. Aadhar Card\n3. Last 12 months bank statement\n4. Business proof (GST/Udyam/Trade License)\n5. Last 2 years ITR with computation\n6. Property documents (Sale deed, Registry)\n7. Property tax receipt\n8. Map/Naksha of property\n9. NOC from society (if applicable)\n\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!',
+    LAP_Salaried: 'Namaste! Aapke LAP (Loan Against Property) - Salaried ke liye yeh documents chahiye:\n\n1. PAN Card\n2. Aadhar Card\n3. Last 6 months bank statement (salary account)\n4. Last 6 months salary slips\n5. Form 16 / Last 2 years ITR\n6. Employment ID card\n7. Property documents (Sale deed, Registry)\n8. Property tax receipt\n9. Map/Naksha of property\n10. NOC from society (if applicable)\n\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!',
+    PL_Business: 'Namaste! Aapke Personal Loan - Business profile ke liye yeh documents chahiye:\n\n1. PAN Card\n2. Aadhar Card\n3. Last 12 months bank statement\n4. Business proof (GST/Udyam/Trade License)\n5. Last 2 years ITR with computation\n6. Office address proof\n\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!',
+    PL_Salaried: 'Namaste! Aapke Personal Loan - Salaried ke liye yeh documents chahiye:\n\n1. PAN Card\n2. Aadhar Card\n3. Last 3 months bank statement (salary account)\n4. Last 3 months salary slips\n5. Form 16 / Latest ITR\n6. Employment ID card / Offer letter\n\nPlease yeh sab documents jaldi se share karein. Dhanyavaad!'
+  };
+  return messages[loanType] || messages['BL_Business'];
+}
+
+// ── Interested Lead Actions ──────────────────────────────────────────────────
+function openLoanForm(loanType) {
+  window.open('/' + loanType + '.html', '_blank');
+}
+
+function copyWhatsAppChecklist(loanType, btnEl) {
+  const msg = generateWhatsAppMessage(loanType);
+  navigator.clipboard.writeText(msg).then(() => {
+    const original = btnEl.textContent;
+    btnEl.textContent = 'Copied!';
+    setTimeout(() => { btnEl.textContent = original; }, 2000);
+  }).catch(() => {
+    alert('Could not copy to clipboard');
+  });
+}
+
+async function markDocumentationComplete(numberId) {
+  try {
+    const r = await fetch('/api/agent/mark-documentation-complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentId, numberId })
+    });
+    const d = await r.json();
+    if (d.error) { alert(d.error); return; }
+    refreshLeadSections();
+  } catch (e) { alert('Failed to mark complete'); }
+}
+
+async function addInterestedManually() {
+  const phone = document.getElementById('manualPhone').value.trim();
+  const leadName = document.getElementById('manualLeadName').value.trim();
+  const loanType = document.getElementById('manualLoanType').value;
+  if (!phone) { alert('Please enter a phone number'); return; }
+  if (!leadName) { alert('Please enter the lead name'); return; }
+  try {
+    const r = await fetch('/api/agent/add-interested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentId, phone, leadName, loanType })
+    });
+    const d = await r.json();
+    if (d.error) { alert(d.error); return; }
+    document.getElementById('manualPhone').value = '';
+    document.getElementById('manualLeadName').value = '';
+    document.getElementById('manualLoanType').value = 'BL_Business';
+    refreshLeadSections();
+  } catch (e) { alert('Failed to add lead'); }
+}
+
 // ── Interested & Followups sections ──────────────────────────────────────────
+let interestedLeadsData = [];
+
 async function refreshLeadSections() {
   if (!agentId) return;
   try {
@@ -726,7 +893,8 @@ async function refreshLeadSections() {
     ]);
     const interested = await intRes.json();
     const followups = await fuRes.json();
-    renderInterestedSection(interested);
+    interestedLeadsData = interested || [];
+    renderInterestedSection(interestedLeadsData);
     renderFollowupsSection(followups);
   } catch (e) { /* silent */ }
 }
@@ -734,21 +902,63 @@ async function refreshLeadSections() {
 function renderInterestedSection(leads) {
   const section = document.getElementById('interestedSection');
   const container = document.getElementById('interestedCards');
+  section.style.display = 'block';
   if (!leads || leads.length === 0) {
-    section.style.display = 'none';
+    container.innerHTML = '<div class="empty-section">No interested leads yet</div>';
     return;
   }
-  section.style.display = 'block';
-  container.innerHTML = leads.map(l => `
-    <div class="lead-card">
-      <div class="lead-card-info">
-        <div class="lead-card-phone">${escapeHtml(formatPhone(l.phone))}</div>
-        <div class="lead-card-name">${escapeHtml(l.name) || 'No name'}</div>
+  container.innerHTML = leads.map(l => {
+    const timerText = getCountdownText(l.interestedAt, l.hoursRemaining);
+    const timerClass = (l.hoursRemaining !== undefined && l.hoursRemaining <= 0) ? 'expired-timer' : 'active-timer';
+    const completeBtn = l.documentationComplete
+      ? `<button class="btn-completed-badge">&#10003; Complete</button>`
+      : `<button class="btn-mark-complete" onclick="markDocumentationComplete('${escapeHtml(l.id)}')">&#128203; Mark Complete</button>`;
+    return `
+    <div class="interested-card" data-lead-id="${escapeHtml(l.id)}" data-interested-at="${escapeHtml(l.interestedAt || '')}">
+      <div class="interested-card-header">
+        <div class="interested-card-info">
+          <div class="interested-card-name">${escapeHtml(l.name) || 'No name'}</div>
+          <div class="interested-card-phone">${escapeHtml(formatPhone(l.phone))}</div>
+          <div class="interested-card-loan">${escapeHtml(l.loanType || 'N/A')}</div>
+        </div>
+        <div class="interested-card-timer ${timerClass}" data-timer-for="${escapeHtml(l.id)}">${timerText}</div>
       </div>
-      <div class="lead-card-badge">Interested</div>
-    </div>
-  `).join('');
+      <div class="interested-card-actions">
+        <button class="btn-open-form" onclick="openLoanForm('${escapeHtml(l.loanType || 'BL_Business')}')">&#128196; Open Form</button>
+        <button class="btn-copy-wa" onclick="copyWhatsAppChecklist('${escapeHtml(l.loanType || 'BL_Business')}', this)">&#128172; Copy WhatsApp</button>
+        ${completeBtn}
+      </div>
+    </div>`;
+  }).join('');
 }
+
+function getCountdownText(interestedAt, hoursRemaining) {
+  if (!interestedAt) return '--:--:--';
+  const deadline = new Date(interestedAt).getTime() + (48 * 60 * 60 * 1000);
+  const now = Date.now();
+  const remaining = deadline - now;
+  if (remaining <= 0) return 'EXPIRED';
+  const hrs = Math.floor(remaining / 3600000);
+  const mins = Math.floor((remaining % 3600000) / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  return hrs + 'h ' + String(mins).padStart(2, '0') + 'm ' + String(secs).padStart(2, '0') + 's';
+}
+
+// Update countdown timers every second without re-fetching
+setInterval(() => {
+  if (!interestedLeadsData || interestedLeadsData.length === 0) return;
+  interestedLeadsData.forEach(l => {
+    const el = document.querySelector('[data-timer-for="' + l.id + '"]');
+    if (!el) return;
+    const text = getCountdownText(l.interestedAt, l.hoursRemaining);
+    el.textContent = text;
+    if (text === 'EXPIRED') {
+      el.className = 'interested-card-timer expired-timer';
+    } else {
+      el.className = 'interested-card-timer active-timer';
+    }
+  });
+}, 1000);
 
 function renderFollowupsSection(leads) {
   const section = document.getElementById('followupsSection');
