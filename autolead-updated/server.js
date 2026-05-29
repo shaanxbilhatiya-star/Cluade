@@ -230,6 +230,8 @@ function applyDisposition(agentId, numberId, disposition, extra) {
       num.interestedAt = now;
       num.leadName = extra && extra.leadName ? extra.leadName : '';
       num.loanType = extra && extra.loanType && VALID_LOAN_TYPES.includes(extra.loanType) ? extra.loanType : '';
+      num.remarks = extra && extra.remarks ? extra.remarks : '';
+      num.loanAmount = extra && extra.loanAmount ? extra.loanAmount : '';
       num.documentationComplete = false;
       num.documentationCompletedAt = null;
       num.dialedBy = agentId;
@@ -368,14 +370,14 @@ app.get('/api/admin/stats', (req, res) => res.json(getAdminStats()));
 
 // ─── Disposition API Endpoints ────────────────────────────────────────────────
 app.post('/api/agent/disposition', (req, res) => {
-  const { agentId, numberId, disposition, followupDate, followupTime, leadName, loanType } = req.body;
+  const { agentId, numberId, disposition, followupDate, followupTime, leadName, loanType, remarks, loanAmount } = req.body;
   if (!agentId || !numberId || !disposition) {
     return res.status(400).json({ error: 'agentId, numberId, and disposition are required' });
   }
   if (!VALID_DISPOSITIONS.includes(disposition)) {
     return res.status(400).json({ error: 'Invalid disposition. Must be one of: ' + VALID_DISPOSITIONS.join(', ') });
   }
-  applyDisposition(agentId, numberId, disposition, { followupDate, followupTime, leadName, loanType });
+  applyDisposition(agentId, numberId, disposition, { followupDate, followupTime, leadName, loanType, remarks, loanAmount });
   const nextNum = getNextNumber(agentId);
   const agent = appState.agents[agentId];
   if (nextNum && agent) {
@@ -387,15 +389,17 @@ app.post('/api/agent/disposition', (req, res) => {
 
 app.get('/api/admin/interested', (req, res) => {
   const now = Date.now();
-  const interested = appState.numbers.filter(n => n.disposition === 'interested').map(n => {
+  const interested = appState.numbers.filter(n => n.disposition === 'interested' && !n.documentationComplete).map(n => {
     const agent = appState.agents[n.interestedBy];
     const elapsedMs = now - new Date(n.interestedAt).getTime();
     const hoursElapsed = elapsedMs / (1000 * 60 * 60);
     const hoursRemaining = Math.max(0, 48 - hoursElapsed);
-    const overdue = hoursRemaining <= 0 && !n.documentationComplete;
+    const overdue = hoursRemaining <= 0;
     return {
       id: n.id, phone: n.phone, name: n.leadName || n.name || '',
       loanType: n.loanType || '',
+      remarks: n.remarks || '',
+      loanAmount: n.loanAmount || '',
       interestedBy: agent ? agent.name : n.interestedBy,
       interestedByAgentId: n.interestedBy,
       interestedAt: n.interestedAt,
@@ -424,13 +428,15 @@ app.get('/api/admin/followups', (req, res) => {
 app.get('/api/agent/interested/:agentId', (req, res) => {
   const agentId = req.params.agentId;
   const now = Date.now();
-  const interested = appState.numbers.filter(n => n.disposition === 'interested' && n.interestedBy === agentId).map(n => {
+  const interested = appState.numbers.filter(n => n.disposition === 'interested' && n.interestedBy === agentId && !n.documentationComplete).map(n => {
     const elapsedMs = now - new Date(n.interestedAt).getTime();
     const hoursElapsed = elapsedMs / (1000 * 60 * 60);
     const hoursRemaining = Math.max(0, 48 - hoursElapsed);
     return {
       id: n.id, phone: n.phone, name: n.leadName || n.name || '',
       loanType: n.loanType || '',
+      remarks: n.remarks || '',
+      loanAmount: n.loanAmount || '',
       interestedAt: n.interestedAt,
       documentationComplete: n.documentationComplete || false,
       documentationCompletedAt: n.documentationCompletedAt || null,
@@ -529,6 +535,110 @@ app.get('/api/admin/agents-list', (req, res) => {
     name: a.name
   }));
   res.json(agents);
+});
+
+// ─── New Endpoints: Remove Interested, Update Interested, Completed Leads ────
+
+// Agent removes an interested lead (marks as dead)
+app.post('/api/agent/remove-interested', (req, res) => {
+  const { agentId, numberId } = req.body;
+  if (!agentId || !numberId) {
+    return res.status(400).json({ error: 'agentId and numberId are required' });
+  }
+  const num = appState.numbers.find(n => n.id === numberId);
+  if (!num) return res.status(404).json({ error: 'Number not found' });
+  if (num.disposition !== 'interested') return res.status(400).json({ error: 'Number is not marked as interested' });
+  if (num.interestedBy !== agentId) return res.status(403).json({ error: 'This lead is not assigned to you' });
+  num.disposition = 'dead';
+  saveState(appState);
+  broadcastAdminStats();
+  res.json({ success: true });
+});
+
+// Admin removes an interested or completed lead (marks as dead)
+app.post('/api/admin/remove-interested', (req, res) => {
+  const { numberId } = req.body;
+  if (!numberId) {
+    return res.status(400).json({ error: 'numberId is required' });
+  }
+  const num = appState.numbers.find(n => n.id === numberId);
+  if (!num) return res.status(404).json({ error: 'Number not found' });
+  num.disposition = 'dead';
+  saveState(appState);
+  broadcastAdminStats();
+  res.json({ success: true });
+});
+
+// Admin updates interested lead fields (loanType, remarks, loanAmount, status)
+app.post('/api/admin/update-interested', (req, res) => {
+  const { numberId, loanType, remarks, loanAmount, status } = req.body;
+  if (!numberId) {
+    return res.status(400).json({ error: 'numberId is required' });
+  }
+  const num = appState.numbers.find(n => n.id === numberId);
+  if (!num) return res.status(404).json({ error: 'Number not found' });
+  if (loanType !== undefined) {
+    if (loanType && !VALID_LOAN_TYPES.includes(loanType)) {
+      return res.status(400).json({ error: 'Invalid loan type' });
+    }
+    num.loanType = loanType;
+  }
+  if (remarks !== undefined) num.remarks = remarks;
+  if (loanAmount !== undefined) num.loanAmount = loanAmount;
+  if (status !== undefined) num.adminStatus = status;
+  saveState(appState);
+  broadcastAdminStats();
+  res.json({ success: true });
+});
+
+// Admin updates lead status (for completed leads)
+app.post('/api/admin/update-lead-status', (req, res) => {
+  const { numberId, adminStatus } = req.body;
+  if (!numberId || !adminStatus) {
+    return res.status(400).json({ error: 'numberId and adminStatus are required' });
+  }
+  const validStatuses = ['Completed', 'In Process', 'Rejected', 'Approved', 'On Hold'];
+  if (!validStatuses.includes(adminStatus)) {
+    return res.status(400).json({ error: 'Invalid status. Must be one of: ' + validStatuses.join(', ') });
+  }
+  const num = appState.numbers.find(n => n.id === numberId);
+  if (!num) return res.status(404).json({ error: 'Number not found' });
+  num.adminStatus = adminStatus;
+  saveState(appState);
+  broadcastAdminStats();
+  res.json({ success: true });
+});
+
+// Get all documentation-completed leads (admin)
+app.get('/api/admin/completed', (req, res) => {
+  const completed = appState.numbers.filter(n => n.disposition === 'interested' && n.documentationComplete).map(n => {
+    const agent = appState.agents[n.interestedBy];
+    return {
+      id: n.id, phone: n.phone, name: n.leadName || n.name || '',
+      loanType: n.loanType || '',
+      remarks: n.remarks || '',
+      loanAmount: n.loanAmount || '',
+      interestedBy: agent ? agent.name : n.interestedBy,
+      interestedByAgentId: n.interestedBy,
+      documentationCompletedAt: n.documentationCompletedAt || null,
+      adminStatus: n.adminStatus || ''
+    };
+  });
+  res.json(completed);
+});
+
+// Get agent's documentation-completed leads
+app.get('/api/agent/completed/:agentId', (req, res) => {
+  const agentId = req.params.agentId;
+  const completed = appState.numbers.filter(n => n.disposition === 'interested' && n.documentationComplete && n.interestedBy === agentId).map(n => ({
+    id: n.id, phone: n.phone, name: n.leadName || n.name || '',
+    loanType: n.loanType || '',
+    remarks: n.remarks || '',
+    loanAmount: n.loanAmount || '',
+    documentationCompletedAt: n.documentationCompletedAt || null,
+    adminStatus: n.adminStatus || ''
+  }));
+  res.json(completed);
 });
 
 app.delete('/api/admin/file/:fileId', (req, res) => {
@@ -771,13 +881,13 @@ io.on('connection', (socket) => {
     broadcastAdminStats();
   });
 
-  socket.on('agent-disposition', ({ agentId, numberId, disposition, followupDate, followupTime, leadName, loanType }) => {
+  socket.on('agent-disposition', ({ agentId, numberId, disposition, followupDate, followupTime, leadName, loanType, remarks, loanAmount }) => {
     appState = checkDailyReset(appState);
     const agent = appState.agents[agentId];
     if (!agent) return socket.emit('error', 'Agent not found');
     if (!VALID_DISPOSITIONS.includes(disposition)) return socket.emit('error', 'Invalid disposition');
 
-    applyDisposition(agentId, numberId, disposition, { followupDate, followupTime, leadName, loanType });
+    applyDisposition(agentId, numberId, disposition, { followupDate, followupTime, leadName, loanType, remarks, loanAmount });
 
     const num = getNextNumber(agentId);
     if (!num) {

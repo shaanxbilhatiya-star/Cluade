@@ -304,13 +304,42 @@
             <th>Name</th>
             <th>Agent</th>
             <th>Loan Type</th>
+            <th>Remarks</th>
+            <th>Loan Amt</th>
             <th>Time Remaining</th>
-            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="interestedTable">
-          <tr><td colspan="7" class="empty">No interested leads yet</td></tr>
+          <tr><td colspan="8" class="empty">No interested leads yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Documentation Completed Panel -->
+  <div class="panel panel-completed" style="margin-bottom:20px">
+    <div class="panel-header" style="background:rgba(124,58,237,.06)">
+      <h2 style="color:var(--accent)">Documentation Completed</h2>
+      <span style="font-size:12px;color:var(--muted)" id="completedCountBadge">0 leads</span>
+    </div>
+    <div class="panel-body" style="padding:0;overflow-x:auto">
+      <table class="leads-table">
+        <thead>
+          <tr>
+            <th>Phone</th>
+            <th>Name</th>
+            <th>Agent</th>
+            <th>Loan Type</th>
+            <th>Remarks</th>
+            <th>Loan Amt</th>
+            <th>Completed At</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="completedTable">
+          <tr><td colspan="9" class="empty">No completed leads yet</td></tr>
         </tbody>
       </table>
     </div>
@@ -577,6 +606,7 @@ setInterval(async () => {
   renderStats(d);
   fetchInterestedLeads();
   fetchFollowups();
+  fetchCompletedLeads();
 }, 10000);
 
 // ── Interested Leads ──────────────────────────────────────────────────────────
@@ -609,7 +639,7 @@ function renderInterestedLeads(leads) {
   }
 
   if (!leads || leads.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">No interested leads yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No interested leads yet</td></tr>';
     return;
   }
   tbody.innerHTML = leads.map(l => {
@@ -618,20 +648,27 @@ function renderInterestedLeads(leads) {
     const timeCell = isOverdue
       ? '<span class="overdue-text">OVERDUE</span>'
       : `<span class="time-remaining" data-interested-at="${escapeHtml(l.interestedAt)}" data-doc-complete="${l.documentationComplete ? '1' : '0'}">${formatHoursRemaining(l.hoursRemaining)}</span>`;
-    const docBadge = l.documentationComplete
-      ? '<span class="doc-badge complete">Complete</span>'
-      : '<span class="doc-badge pending">Pending</span>';
-    const loanType = l.loanType
-      ? `<span class="loan-type-pill">${escapeHtml(l.loanType)}</span>`
-      : '<span style="color:var(--muted)">&#8212;</span>';
+    const loanTypeSelect = `<select onchange="adminUpdateInterested('${escapeHtml(l.id)}','loanType',this.value)" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:var(--sans)">
+      <option value="BL_Business" ${l.loanType==='BL_Business'?'selected':''}>BL_Business</option>
+      <option value="LAP_Business" ${l.loanType==='LAP_Business'?'selected':''}>LAP_Business</option>
+      <option value="LAP_Salaried" ${l.loanType==='LAP_Salaried'?'selected':''}>LAP_Salaried</option>
+      <option value="PL_Business" ${l.loanType==='PL_Business'?'selected':''}>PL_Business</option>
+      <option value="PL_Salaried" ${l.loanType==='PL_Salaried'?'selected':''}>PL_Salaried</option>
+    </select>`;
+    const remarksCell = `<input type="text" value="${escapeHtml(l.remarks || '')}" onchange="adminUpdateInterested('${escapeHtml(l.id)}','remarks',this.value)" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);width:100px;font-family:var(--sans)" placeholder="Add remarks">`;
+    const loanAmtCell = `<input type="number" value="${escapeHtml(l.loanAmount || '')}" onchange="adminUpdateInterested('${escapeHtml(l.id)}','loanAmount',this.value)" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);width:90px;font-family:var(--mono)" placeholder="Amount">`;
     return `<tr${rowClass}>
       <td><span class="phone-number">${escapeHtml(formatPhone(l.phone))}</span></td>
       <td>${escapeHtml(l.name) || '&#8212;'}</td>
       <td style="font-weight:500">${escapeHtml(l.interestedBy) || '&#8212;'}</td>
-      <td>${loanType}</td>
+      <td>${loanTypeSelect}</td>
+      <td>${remarksCell}</td>
+      <td>${loanAmtCell}</td>
       <td>${timeCell}</td>
-      <td>${docBadge}</td>
-      <td><button class="btn-transfer" onclick="openTransferModal('${escapeHtml(l.id)}','${escapeHtml(l.interestedByAgentId || '')}')">Transfer</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn-transfer" onclick="openTransferModal('${escapeHtml(l.id)}','${escapeHtml(l.interestedByAgentId || '')}')">Transfer</button>
+        <button class="btn-del" onclick="adminRemoveInterested('${escapeHtml(l.id)}')" style="margin-left:4px;padding:4px 10px">Remove</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -724,6 +761,102 @@ async function confirmTransfer() {
   }
 }
 
+// ── Admin Interested Lead Actions ─────────────────────────────────────────────
+async function adminUpdateInterested(numberId, field, value) {
+  try {
+    const body = { numberId };
+    body[field] = value;
+    const r = await fetch('/api/admin/update-interested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.error) { showToast('Update failed: ' + d.error, 'error'); return; }
+    showToast('Updated successfully', 'success');
+  } catch (e) {
+    showToast('Update failed: ' + e.message, 'error');
+  }
+}
+
+async function adminRemoveInterested(numberId) {
+  if (!confirm('Are you sure you want to permanently remove this lead?')) return;
+  try {
+    const r = await fetch('/api/admin/remove-interested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numberId })
+    });
+    const d = await r.json();
+    if (d.error) { showToast('Remove failed: ' + d.error, 'error'); return; }
+    showToast('Lead removed', 'success');
+    fetchInterestedLeads();
+    fetchCompletedLeads();
+  } catch (e) {
+    showToast('Remove failed: ' + e.message, 'error');
+  }
+}
+
+async function adminUpdateLeadStatus(numberId, adminStatus) {
+  try {
+    const r = await fetch('/api/admin/update-lead-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numberId, adminStatus })
+    });
+    const d = await r.json();
+    if (d.error) { showToast('Status update failed: ' + d.error, 'error'); return; }
+    showToast('Status updated to ' + adminStatus, 'success');
+  } catch (e) {
+    showToast('Status update failed: ' + e.message, 'error');
+  }
+}
+
+// ── Completed Leads ───────────────────────────────────────────────────────────
+async function fetchCompletedLeads() {
+  try {
+    const r = await fetch('/api/admin/completed');
+    const leads = await r.json();
+    renderCompletedLeads(leads);
+  } catch (e) {
+    console.error('Failed to fetch completed leads:', e);
+  }
+}
+
+function renderCompletedLeads(leads) {
+  const tbody = document.getElementById('completedTable');
+  const badge = document.getElementById('completedCountBadge');
+  badge.textContent = leads.length + ' lead' + (leads.length !== 1 ? 's' : '');
+  if (!leads || leads.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">No completed leads yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = leads.map(l => {
+    const completedAt = l.documentationCompletedAt ? formatTimestamp(l.documentationCompletedAt) : '&#8212;';
+    const statusSelect = `<select onchange="adminUpdateLeadStatus('${escapeHtml(l.id)}',this.value)" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:var(--sans)">
+      <option value="" ${!l.adminStatus?'selected':''}>-- Set Status --</option>
+      <option value="Completed" ${l.adminStatus==='Completed'?'selected':''}>Completed</option>
+      <option value="In Process" ${l.adminStatus==='In Process'?'selected':''}>In Process</option>
+      <option value="Rejected" ${l.adminStatus==='Rejected'?'selected':''}>Rejected</option>
+      <option value="Approved" ${l.adminStatus==='Approved'?'selected':''}>Approved</option>
+      <option value="On Hold" ${l.adminStatus==='On Hold'?'selected':''}>On Hold</option>
+    </select>`;
+    const remarksCell = `<input type="text" value="${escapeHtml(l.remarks || '')}" onchange="adminUpdateInterested('${escapeHtml(l.id)}','remarks',this.value)" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);width:100px;font-family:var(--sans)" placeholder="Add remarks">`;
+    const loanAmtCell = `<input type="number" value="${escapeHtml(l.loanAmount || '')}" onchange="adminUpdateInterested('${escapeHtml(l.id)}','loanAmount',this.value)" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);width:90px;font-family:var(--mono)" placeholder="Amount">`;
+    return `<tr>
+      <td><span class="phone-number">${escapeHtml(formatPhone(l.phone))}</span></td>
+      <td>${escapeHtml(l.name) || '&#8212;'}</td>
+      <td style="font-weight:500">${escapeHtml(l.interestedBy) || '&#8212;'}</td>
+      <td><span class="loan-type-pill">${escapeHtml(l.loanType || 'N/A')}</span></td>
+      <td>${remarksCell}</td>
+      <td>${loanAmtCell}</td>
+      <td style="font-size:12px;font-family:var(--mono)">${completedAt}</td>
+      <td>${statusSelect}</td>
+      <td><button class="btn-del" onclick="adminRemoveInterested('${escapeHtml(l.id)}')" style="padding:4px 10px">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
 // ── Followups ─────────────────────────────────────────────────────────────────
 async function fetchFollowups() {
   try {
@@ -780,6 +913,7 @@ function formatDate(dateStr) {
 // Load interested and followups on startup
 fetchInterestedLeads();
 fetchFollowups();
+fetchCompletedLeads();
 
 // ── EID Management ────────────────────────────────────────────────────────────
 async function loadEids() {
