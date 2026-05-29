@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Admin Panel UI: Enhance the Interested Leads section with 48h countdown, overdue highlighting, loan type display, documentation status, and a Transfer button that lets admin reassign a lead to a different agent.",
+  "status": "in_progress",
+  "steps": [
+    "1. In public/admin/index.html, update the Interested Leads table header to add columns: Loan Type, Time Remaining, Status, and Action (Transfer).",
+    "2. Update the renderInterestedLeads() function to use the new expanded API response. For each lead, show: phone, name (leadName), agent name, loan type, time remaining (formatted as 'XXh YYm' or 'OVERDUE' in red), documentation status (Complete/Pending badge), and a Transfer button.",
+    "3. Add CSS for overdue styling: if a lead is overdue (48h expired and documentation not complete), highlight the row with a red-ish background and show 'OVERDUE' in red bold text.",
+    "4. Add CSS for the documentation status badge: green for complete, amber/gray for pending.",
+    "5. Add a Transfer button in each row. On click, show a small inline dropdown or modal that lists all agents (fetched from GET /api/admin/agents-list) excluding the current owner. When admin selects an agent and confirms, call POST /api/admin/transfer-interested with { numberId, newAgentId }. On success, show toast and refresh the list.",
+    "6. Add a transfer modal (#transferModal) with: agent select dropdown (populated from /api/admin/agents-list), confirm button, cancel button. Store the numberId being transferred.",
+    "7. Update the fetchInterestedLeads() function to use the expanded response and re-render with new columns.",
+    "8. Add a live countdown tick for the admin panel (similar to the break timer tick pattern already in the admin). Every second, update the 'Time Remaining' column for all non-completed interested leads without re-fetching.",
+    "9. Add CSS styles for the transfer modal and the new table columns. Follow existing admin panel design patterns."
+  ],
+  "acceptance_criteria": [
+    "Admin panel Interested Leads table shows columns: Phone, Name, Agent, Loan Type, Time Remaining, Status, Action",
+    "Overdue leads (48h expired + documentation not complete) are visually highlighted with red background/text",
+    "Each lead row has a Transfer button that opens a modal with an agent dropdown",
+    "Completing a transfer updates the lead's owner and refreshes the table",
+    "Documentation status shows as a green 'Complete' badge or amber 'Pending' badge",
+    "The time remaining column shows a live countdown in 'XXh YYm' format"
+  ],
+  "verification": [
+    "Verify the admin HTML file has valid syntax by checking balanced script tags and HTML structure",
+    "Run the server and confirm the admin panel loads without JavaScript errors (check via curl that /admin returns HTML)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
