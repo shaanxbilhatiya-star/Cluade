@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Against Property (Business) - AutoLead</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Space Grotesk', sans-serif; background: #f5f5f5; min-height: 100vh; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { background: #6c2bd9; color: #fff; padding: 24px 32px; border-radius: 16px 16px 0 0; text-align: center; }
+        .header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+        .header p { font-size: 0.9rem; opacity: 0.9; }
+        .brand { font-size: 0.85rem; font-weight: 500; opacity: 0.8; margin-bottom: 8px; letter-spacing: 1px; }
+        .form-card { background: #fff; padding: 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+        .section-title { font-size: 1rem; font-weight: 600; color: #6c2bd9; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #ede9fe; }
+        .section-title:first-child { margin-top: 0; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        label { font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+        label .required { color: #e11d48; }
+        input, select, textarea { padding: 10px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.9rem; transition: border-color 0.2s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #6c2bd9; box-shadow: 0 0 0 3px rgba(108,43,217,0.1); }
+        input.invalid, select.invalid { border-color: #e11d48; }
+        .error-msg { color: #e11d48; font-size: 0.75rem; margin-top: 2px; display: none; }
+        .error-msg.show { display: block; }
+        textarea { resize: vertical; min-height: 60px; }
+        .file-upload { border: 2px dashed #d1d5db; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+        .file-upload:hover { border-color: #6c2bd9; }
+        .file-upload input { display: none; }
+        .file-upload p { color: #6b7280; font-size: 0.85rem; }
+        .file-upload .icon { font-size: 2rem; margin-bottom: 8px; }
+        .btn-row { display: flex; gap: 12px; margin-top: 28px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 12px 32px; border: none; border-radius: 8px; font-family: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: #6c2bd9; color: #fff; box-shadow: 0 4px 12px rgba(108,43,217,0.3); }
+        .btn-primary:hover { background: #5b21b6; }
+        .btn-secondary { background: #f3f4f6; color: #374151; border: 1.5px solid #d1d5db; }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .success-msg { display: none; background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #065f46; padding: 16px; border-radius: 8px; text-align: center; margin-top: 20px; font-weight: 500; }
+        .success-msg.show { display: block; }
+        .inline-group { display: flex; gap: 12px; align-items: center; }
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+            .form-card { padding: 20px; }
+            .header { padding: 20px; }
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .header { border-radius: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .form-card { box-shadow: none; border-radius: 0; }
+            .btn-row, .file-upload, .success-msg { display: none !important; }
+            input, select, textarea { border: 1px solid #999; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="brand">AUTOLEAD</div>
+            <h1>Loan Against Property (Business)</h1>
+            <p>Complete all required fields to process your LAP application</p>
+        </div>
+        <div class="form-card">
+            <form id="loanForm" novalidate>
+                <div class="section-title" style="margin-top:0;">Personal Information</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Customer Name <span class="required">*</span></label>
+                        <input type="text" name="customerName" required>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number <span class="required">*</span></label>
+                        <input type="tel" name="phone" pattern="[0-9]{10}" maxlength="10" required>
+                        <span class="error-msg">Enter a valid 10-digit phone number</span>
+                    </div>
+                    <div class="form-group">
+                        <label>PAN Number <span class="required">*</span></label>
+                        <input type="text" name="pan" pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}" maxlength="10" style="text-transform:uppercase" required>
+                        <span class="error-msg">Enter valid PAN (e.g., ABCDE1234F)</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Aadhar Number <span class="required">*</span></label>
+                        <input type="text" name="aadhar" pattern="[0-9]{12}" maxlength="12" required>
+                        <span class="error-msg">Enter a valid 12-digit Aadhar number</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Business Details</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Business Name <span class="required">*</span></label>
+                        <input type="text" name="businessName" required>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Business Type <span class="required">*</span></label>
+                        <select name="businessType" required>
+                            <option value="">Select Type</option>
+                            <option value="Proprietorship">Proprietorship</option>
+                            <option value="Partnership">Partnership</option>
+                            <option value="Pvt Ltd">Pvt Ltd</option>
+                            <option value="LLP">LLP</option>
+                        </select>
+                        <span class="error-msg">Please select a business type</span>
+                    </div>
+                    <div class="form-group">
+                        <label>GST Number</label>
+                        <input type="text" name="gstNumber" maxlength="15" style="text-transform:uppercase">
+                    </div>
+                    <div class="form-group">
+                        <label>Annual Turnover (INR) <span class="required">*</span></label>
+                        <input type="number" name="annualTurnover" required>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Loan Amount Required (INR) <span class="required">*</span></label>
+                        <input type="number" name="loanAmount" required>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Business Vintage (Years) <span class="required">*</span></label>
+                        <input type="number" name="businessVintage" min="0" required>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Property Details</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Property Type <span class="required">*</span></label>
+                        <select name="propertyType" required>
+                            <option value="">Select Type</option>
+                            <option value="Residential">Residential</option>
+                            <option value="Commercial">Commercial</option>
+                            <option value="Plot">Plot</option>
+                        </select>
+                        <span class="error-msg">Please select a property type</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Property Value (Estimated INR) <span class="required">*</span></label>
+                        <input type="number" name="propertyValue" required>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Property Address <span class="required">*</span></label>
+                        <textarea name="propertyAddress" rows="2" required></textarea>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Property Area (sq ft) <span class="required">*</span></label>
+                        <input type="number" name="propertyArea" required>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Existing Loan on Property <span class="required">*</span></label>
+                        <select name="existingLoan" id="existingLoan" required onchange="toggleExistingLoan()">
+                            <option value="">Select</option>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group" id="existingLoanAmountGroup" style="display:none;">
+                        <label>Existing Loan Amount (INR) <span class="required">*</span></label>
+                        <input type="number" name="existingLoanAmount" id="existingLoanAmount">
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Address Information</div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Current Address <span class="required">*</span></label>
+                        <textarea name="currentAddress" rows="2" required></textarea>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Office Address <span class="required">*</span></label>
+                        <textarea name="officeAddress" rows="2" required></textarea>
+                        <span class="error-msg">This field is required</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Document Upload</div>
+                <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+                    <div class="icon">&#128206;</div>
+                    <p>Click to upload documents (PAN, Aadhar, Business Proof, Property Documents, ITR)</p>
+                    <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png">
+                    <p id="fileNames" style="margin-top:8px;color:#6c2bd9;font-weight:500;"></p>
+                </div>
+
+                <div class="btn-row">
+                    <button type="submit" class="btn btn-primary">Submit Application</button>
+                    <button type="button" class="btn btn-secondary" onclick="window.print()">Print / Download</button>
+                </div>
+                <div class="success-msg" id="successMsg">Application submitted successfully! Our team will review your details shortly.</div>
+            </form>
+        </div>
+    </div>
+    <script>
+        function toggleExistingLoan() {
+            const val = document.getElementById('existingLoan').value;
+            const group = document.getElementById('existingLoanAmountGroup');
+            const input = document.getElementById('existingLoanAmount');
+            if (val === 'Yes') {
+                group.style.display = 'flex';
+                input.required = true;
+            } else {
+                group.style.display = 'none';
+                input.required = false;
+                input.value = '';
+            }
+        }
+        document.getElementById('fileInput').addEventListener('change', function() {
+            const names = Array.from(this.files).map(f => f.name).join(', ');
+            document.getElementById('fileNames').textContent = names || '';
+        });
+        document.getElementById('loanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            let valid = true;
+            this.querySelectorAll('[required]').forEach(el => {
+                if (el.offsetParent === null) return; // skip hidden fields
+                const errMsg = el.parentElement.querySelector('.error-msg');
+                if (!el.value.trim() || (el.pattern && !new RegExp('^' + el.pattern + '$').test(el.value.trim().toUpperCase()))) {
+                    el.classList.add('invalid');
+                    if (errMsg) errMsg.classList.add('show');
+                    valid = false;
+                } else {
+                    el.classList.remove('invalid');
+                    if (errMsg) errMsg.classList.remove('show');
+                }
+            });
+            if (valid) {
+                document.getElementById('successMsg').classList.add('show');
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        });
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('input', function() {
+                this.classList.remove('invalid');
+                const errMsg = this.parentElement.querySelector('.error-msg');
+                if (errMsg) errMsg.classList.remove('show');
+            });
+        });
+    </script>
+</body>
+</html>
