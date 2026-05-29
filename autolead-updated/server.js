@@ -227,6 +227,10 @@ function applyDisposition(agentId, numberId, disposition, extra) {
       num.disposition = 'interested';
       num.interestedBy = agentId;
       num.interestedAt = now;
+      num.leadName = extra && extra.leadName ? extra.leadName : '';
+      num.loanType = extra && extra.loanType ? extra.loanType : '';
+      num.documentationComplete = false;
+      num.documentationCompletedAt = null;
       num.dialedBy = agentId;
       num.dialedAt = now;
       num.assignedTo = null;
@@ -323,7 +327,7 @@ function getAdminStats() {
     };
   });
 
-  return { total, dialed, assigned, remaining, agentStats, fileStats, today: getTodayStr(), interestedCount: appState.numbers.filter(n => n.disposition === 'interested').length, followupCount: appState.numbers.filter(n => n.disposition === 'followup').length, comingBackTomorrow: appState.numbers.filter(n => (n.disposition === 'not_received' || n.disposition === 'switch_off') && n.retryAfter && getTodayStr() < n.retryAfter).length };
+  return { total, dialed, assigned, remaining, agentStats, fileStats, today: getTodayStr(), interestedCount: appState.numbers.filter(n => n.disposition === 'interested').length, followupCount: appState.numbers.filter(n => n.disposition === 'followup').length, comingBackTomorrow: appState.numbers.filter(n => (n.disposition === 'not_received' || n.disposition === 'switch_off') && n.retryAfter && getTodayStr() < n.retryAfter).length, overdueInterestedCount: appState.numbers.filter(n => n.disposition === 'interested' && !n.documentationComplete && (Date.now() - new Date(n.interestedAt).getTime()) >= 48 * 60 * 60 * 1000).length };
 }
 
 // ─── Express Setup ─────────────────────────────────────────────────────────────
@@ -363,14 +367,14 @@ app.get('/api/admin/stats', (req, res) => res.json(getAdminStats()));
 
 // ─── Disposition API Endpoints ────────────────────────────────────────────────
 app.post('/api/agent/disposition', (req, res) => {
-  const { agentId, numberId, disposition, followupDate, followupTime } = req.body;
+  const { agentId, numberId, disposition, followupDate, followupTime, leadName, loanType } = req.body;
   if (!agentId || !numberId || !disposition) {
     return res.status(400).json({ error: 'agentId, numberId, and disposition are required' });
   }
   if (!VALID_DISPOSITIONS.includes(disposition)) {
     return res.status(400).json({ error: 'Invalid disposition. Must be one of: ' + VALID_DISPOSITIONS.join(', ') });
   }
-  applyDisposition(agentId, numberId, disposition, { followupDate, followupTime });
+  applyDisposition(agentId, numberId, disposition, { followupDate, followupTime, leadName, loanType });
   const nextNum = getNextNumber(agentId);
   const agent = appState.agents[agentId];
   if (nextNum && agent) {
@@ -381,12 +385,23 @@ app.post('/api/agent/disposition', (req, res) => {
 });
 
 app.get('/api/admin/interested', (req, res) => {
+  const now = Date.now();
   const interested = appState.numbers.filter(n => n.disposition === 'interested').map(n => {
     const agent = appState.agents[n.interestedBy];
+    const elapsedMs = now - new Date(n.interestedAt).getTime();
+    const hoursElapsed = elapsedMs / (1000 * 60 * 60);
+    const hoursRemaining = Math.max(0, 48 - hoursElapsed);
+    const overdue = hoursRemaining <= 0 && !n.documentationComplete;
     return {
-      id: n.id, phone: n.phone, name: n.name || '',
+      id: n.id, phone: n.phone, name: n.leadName || n.name || '',
+      loanType: n.loanType || '',
       interestedBy: agent ? agent.name : n.interestedBy,
-      interestedAt: n.interestedAt
+      interestedByAgentId: n.interestedBy,
+      interestedAt: n.interestedAt,
+      documentationComplete: n.documentationComplete || false,
+      documentationCompletedAt: n.documentationCompletedAt || null,
+      hoursRemaining: Math.round(hoursRemaining * 100) / 100,
+      overdue
     };
   });
   res.json(interested);
@@ -407,10 +422,20 @@ app.get('/api/admin/followups', (req, res) => {
 
 app.get('/api/agent/interested/:agentId', (req, res) => {
   const agentId = req.params.agentId;
-  const interested = appState.numbers.filter(n => n.disposition === 'interested' && n.interestedBy === agentId).map(n => ({
-    id: n.id, phone: n.phone, name: n.name || '',
-    interestedAt: n.interestedAt
-  }));
+  const now = Date.now();
+  const interested = appState.numbers.filter(n => n.disposition === 'interested' && n.interestedBy === agentId).map(n => {
+    const elapsedMs = now - new Date(n.interestedAt).getTime();
+    const hoursElapsed = elapsedMs / (1000 * 60 * 60);
+    const hoursRemaining = Math.max(0, 48 - hoursElapsed);
+    return {
+      id: n.id, phone: n.phone, name: n.leadName || n.name || '',
+      loanType: n.loanType || '',
+      interestedAt: n.interestedAt,
+      documentationComplete: n.documentationComplete || false,
+      documentationCompletedAt: n.documentationCompletedAt || null,
+      hoursRemaining: Math.round(hoursRemaining * 100) / 100
+    };
+  });
   res.json(interested);
 });
 
@@ -422,6 +447,80 @@ app.get('/api/agent/followups/:agentId', (req, res) => {
     followupTime: n.followupTime
   }));
   res.json(followups);
+});
+
+// ─── Interested Lead Management Endpoints ─────────────────────────────────────
+app.post('/api/agent/mark-documentation-complete', (req, res) => {
+  const { agentId, numberId } = req.body;
+  if (!agentId || !numberId) {
+    return res.status(400).json({ error: 'agentId and numberId are required' });
+  }
+  const num = appState.numbers.find(n => n.id === numberId);
+  if (!num) return res.status(404).json({ error: 'Number not found' });
+  if (num.disposition !== 'interested') return res.status(400).json({ error: 'Number is not marked as interested' });
+  if (num.interestedBy !== agentId) return res.status(403).json({ error: 'This lead is not assigned to you' });
+  num.documentationComplete = true;
+  num.documentationCompletedAt = new Date().toISOString();
+  saveState(appState);
+  broadcastAdminStats();
+  res.json({ success: true, numberId, documentationComplete: true, documentationCompletedAt: num.documentationCompletedAt });
+});
+
+app.post('/api/admin/transfer-interested', (req, res) => {
+  const { numberId, newAgentId } = req.body;
+  if (!numberId || !newAgentId) {
+    return res.status(400).json({ error: 'numberId and newAgentId are required' });
+  }
+  if (!appState.agents[newAgentId]) {
+    return res.status(404).json({ error: 'Target agent not found' });
+  }
+  const num = appState.numbers.find(n => n.id === numberId);
+  if (!num) return res.status(404).json({ error: 'Number not found' });
+  if (num.disposition !== 'interested') return res.status(400).json({ error: 'Number is not marked as interested' });
+  num.interestedBy = newAgentId;
+  num.interestedAt = new Date().toISOString();
+  saveState(appState);
+  broadcastAdminStats();
+  res.json({ success: true, numberId, newAgentId, interestedAt: num.interestedAt });
+});
+
+app.post('/api/agent/add-interested', (req, res) => {
+  const { agentId, phone, leadName, loanType } = req.body;
+  if (!agentId || !phone) {
+    return res.status(400).json({ error: 'agentId and phone are required' });
+  }
+  if (!appState.agents[agentId]) {
+    return res.status(404).json({ error: 'Agent not found' });
+  }
+  const now = new Date().toISOString();
+  const newEntry = {
+    id: uuidv4(),
+    phone,
+    name: leadName || '',
+    file: null,
+    assignedTo: null,
+    dialedBy: agentId,
+    dialedAt: now,
+    disposition: 'interested',
+    interestedBy: agentId,
+    interestedAt: now,
+    leadName: leadName || '',
+    loanType: loanType || '',
+    documentationComplete: false,
+    documentationCompletedAt: null
+  };
+  appState.numbers.push(newEntry);
+  saveState(appState);
+  broadcastAdminStats();
+  res.json({ success: true, entry: newEntry });
+});
+
+app.get('/api/admin/agents-list', (req, res) => {
+  const agents = Object.entries(appState.agents).map(([id, a]) => ({
+    id,
+    name: a.name
+  }));
+  res.json(agents);
 });
 
 app.delete('/api/admin/file/:fileId', (req, res) => {
@@ -664,13 +763,13 @@ io.on('connection', (socket) => {
     broadcastAdminStats();
   });
 
-  socket.on('agent-disposition', ({ agentId, numberId, disposition, followupDate, followupTime }) => {
+  socket.on('agent-disposition', ({ agentId, numberId, disposition, followupDate, followupTime, leadName, loanType }) => {
     appState = checkDailyReset(appState);
     const agent = appState.agents[agentId];
     if (!agent) return socket.emit('error', 'Agent not found');
     if (!VALID_DISPOSITIONS.includes(disposition)) return socket.emit('error', 'Invalid disposition');
 
-    applyDisposition(agentId, numberId, disposition, { followupDate, followupTime });
+    applyDisposition(agentId, numberId, disposition, { followupDate, followupTime, leadName, loanType });
 
     const num = getNextNumber(agentId);
     if (!num) {
