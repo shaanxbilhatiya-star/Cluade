@@ -1,0 +1,22 @@
+{
+  "project_type": "Node.js Express + Socket.IO LAN-based lead management app with single-page HTML dashboards",
+  "language": "JavaScript (Node.js backend, vanilla JS frontend)",
+  "build_system": "npm - simple start script, no build step",
+  "test_framework": "None - no tests present",
+  "build_command": "cd '/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)' && npm install",
+  "test_command": "node -c server.js (syntax check only, no test suite)",
+  "verification_instructions": "1. Run npm install to verify deps. 2. Run node -c server.js to verify syntax. 3. Start server and verify endpoints respond.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "cd '/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)' && npm install",
+  "environment_constraints": "OPEN_INTERNET - full network. Node.js v22 available. No Docker needed - pure Node app.",
+  "contribution_requirements": "None documented. The project is a zip-based deliverable.",
+  "key_patterns": "Single server.js with Express routes + Socket.IO events. State stored in data/state.json. Frontend is inline HTML/CSS/JS. Admin at /admin, Agent at /agent. Uses multer for uploads, xlsx for parsing. Agent EIDs stored in allowedEids object in state. Agents identified by 'emp_<eid>' pattern. Dispositions: dead, not_received, not_interested, followup, switch_off, interested. Interested form modal asks Name, Phone, Loan Type, Employment Type, Loan Amount, City, Remarks. Manual add form asks Phone, Lead Name, Loan Type only. The interested modal is triggered from disposition buttons during active dialing.",
+  "relevant_files": [
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/server.js",
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/public/agent/index.html",
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/public/admin/index.html",
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/data/state.json",
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/package.json"
+  ],
+  "directory_structure": "Root: server.js (backend), package.json. public/: index.html (login redirect), admin/index.html, agent/index.html, logo.png. data/: state.json. uploads/: lead_docs/ for ZIP files."
+}

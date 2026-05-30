@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Runtime data & uploads
+uploads/*
+!uploads/.gitkeep
+!uploads/lead_docs/
+uploads/lead_docs/*
+!uploads/lead_docs/.gitkeep
+!uploads/agent_photos/
+uploads/agent_photos/*
+!uploads/agent_photos/.gitkeep
+data/*
+!data/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
