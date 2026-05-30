@@ -241,7 +241,11 @@
   .face-ring:hover { transform: scale(1.06); }
   .face-ring img { width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block; border-radius: 50%; }
   .face-ring .face-letter { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; background: var(--accent); border-radius: 50%; }
-  .face-ring.r1 { width: 100px; height: 100px; border: 3px solid #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.25), 0 8px 32px rgba(245,158,11,.4); }
+  @keyframes rank1-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(245,158,11,.25), 0 8px 32px rgba(245,158,11,.4); transform: scale(1); }
+    50% { box-shadow: 0 0 0 8px rgba(245,158,11,.5), 0 8px 40px rgba(245,158,11,.7), 0 0 60px rgba(245,158,11,.3); transform: scale(1.05); }
+  }
+  .face-ring.r1 { width: 100px; height: 100px; border: 3px solid #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.25), 0 8px 32px rgba(245,158,11,.4); animation: rank1-pulse 2s ease-in-out infinite; }
   .face-ring.r1 .face-letter { font-size: 36px; }
   .face-ring.r2 { width: 78px; height: 78px; border: 3px solid #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,.2), 0 6px 20px rgba(148,163,184,.3); }
   .face-ring.r2 .face-letter { font-size: 28px; }
@@ -1321,14 +1325,14 @@ function getInitial(name) {
 
 function getSmartRemarks(r, data, idx) {
   if (data.length === 0) return '';
-  if (idx === 0 && r.score > 0) return '🏆 Top performer — leading the board!';
-  if (r.score <= 0) return '💡 Focus on quality conversations to get on the board!';
+  if (idx === 0 && r.score > 0) return '🏆 शाबाश! #1 पर हो — ऐसे ही dominate करते रहो!';
+  if (r.score <= 0) return '💡 अभी मौका है — एक अच्छी call से board पर आ सकते हो!';
   const above = data[idx - 1];
   const gap = above.score - r.score;
-  if (gap <= 0) return '🔥 Tied for #' + idx + '!';
-  if (gap === 1) return '⚡ Just 1 pt behind ' + above.name.split(' ')[0] + ' — one more interested!';
+  if (gap <= 0) return '🔥 बराबर हो #' + idx + ' पर! एक call से आगे निकल सकते हो!';
+  if (gap === 1) return '⚡ बस 1 point पीछे ' + above.name.split(' ')[0] + ' से — एक interested lead लाओ और आगे!';
   const intNeeded = Math.ceil(gap / 2);
-  return '📈 Need ' + gap + ' pts to pass ' + above.name.split(' ')[0] + ' — aim for ' + intNeeded + ' more interested lead' + (intNeeded > 1 ? 's' : '') + '!';
+  return '📈 ' + above.name.split(' ')[0] + ' से ' + gap + ' pts पीछे — ' + intNeeded + ' interested lead' + (intNeeded > 1 ? 's' : '') + ' लाओ और overtake करो!';
 }
 
 function renderAdminLeaderboard(data) {
@@ -1399,7 +1403,7 @@ async function fetchAdminLeaderboard() {
 
 // Fetch leaderboard on load and refresh periodically
 setTimeout(fetchAdminLeaderboard, 500);
-setInterval(fetchAdminLeaderboard, 60000);
+setInterval(fetchAdminLeaderboard, 5000);
 </script>
 </body>
 </html>
