@@ -1,0 +1,7 @@
+{
+  "task_id": "task-lead-management-updates",
+  "task_description": "Update AutoLead application: simplify Interested lead forms, add agent ranking/leaderboard system with Daily/Weekly/Monthly stats, add agent photo upload capability, and produce final ZIP",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}

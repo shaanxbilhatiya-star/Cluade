@@ -1,0 +1,37 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Simplify the Interested lead forms (both disposition modal and manual add) and add agent ranking/leaderboard system with image upload for agents",
+  "status": "completed",
+  "steps": [
+    "STEP 1 - Simplify the Interested Disposition Modal in public/agent/index.html: When marking a lead as 'Interested' via the disposition button (during active dialing), the modal should ONLY ask for: Name (mandatory), Required Amount (mandatory), Remarks (mandatory). Remove: Phone Number field (auto-fetch from current number being dialed), Loan Type, Employment Type, City fields. The phone number should be automatically pulled from the currently displayed number (currentNumberId -> find the phone from the number display). Update the interestedModal HTML to only show: Lead Name, Required Loan Amount, Remarks. Update confirmInterested() function validation to only check those 3 fields. Update the socket emit to pass the phone from the current number context.",
+    "STEP 2 - Simplify the Manual Add Interested Lead form in public/agent/index.html: The 'Add Interested Lead Manually' form should ask ONLY: Name (mandatory), Mob No/Phone (mandatory), Required Amount (mandatory), Remarks (mandatory). Remove: Loan Type dropdown. Update the add-lead-form HTML section. Update addInterestedManually() function to validate all 4 fields and send them to the API.",
+    "STEP 3 - Update server.js to handle simplified interested data: The disposition endpoint and add-interested endpoint should accept the reduced field set. Fields like loanType, employmentType, city become optional/empty. Ensure backward compatibility - existing data with those fields still works. Add 'requiredAmount' as an alias/field alongside loanAmount for clarity.",
+    "STEP 4 - Add Ranking/Leaderboard API endpoint in server.js: Create GET /api/rankings endpoint that accepts ?period=daily|weekly|monthly query param. The ranking formula: score = (interested_count + followup_count + total_calls) - not_interested_count. For each agent, compute this score from dialedLog entries within the period. Return sorted array of agents with: rank, name, agentId, score, interested_count, followup_count, total_calls, not_interested_count, remarks (a short auto-generated note explaining their position and how to improve). The remarks should say something like 'Top performer with X interested leads' or 'Move up by converting more followups to interested'.",
+    "STEP 5 - Add Ranking/Leaderboard UI section to public/agent/index.html: Add a visually appealing leaderboard section at the TOP of the agent's main area (after stats-grid, before the grid-2 section). Use a card-based podium-style layout: 1st place prominent (gold), 2nd silver, 3rd bronze, then a ranked list for remaining positions. Include period toggle buttons (Daily, Weekly, Monthly). Each card shows: rank medal/number, agent name, score, breakdown (interested/followups/calls/not-interested), and the AI-generated remark. Style it like a modern leaderboard with gradient cards, rank badges.",
+    "STEP 6 - Add Ranking/Leaderboard UI section to public/admin/index.html: Add the same leaderboard panel to the admin dashboard (after the disposition stats panel, before the EID panel). Same visual style, same period toggles, same data. Admin can see all agents ranked.",
+    "STEP 7 - Add image upload capability to the EID/Agent management panel in public/admin/index.html and server.js: In the 'Allowed Agent EIDs' panel, add an image upload field next to the 'Add Agent' form. When adding an agent or editing, admin can upload a profile picture. Store images in uploads/agent_photos/ directory. Add a multer route POST /api/admin/agent-photo/:eid for uploading. Store the photo path in allowedEids as an object {name, photo}. Update the EID list rendering to show the agent's photo. Update the leaderboard to show agent photos next to names.",
+    "STEP 8 - Create the final ZIP file: After all changes are complete, create a zip of the entire 'autolead-updated (Final)' directory (excluding node_modules) at /projects/sandbox/Cluade/AutoLead_Updated_v2/AutoLead_Updated_v3.zip"
+  ],
+  "acceptance_criteria": [
+    "The Interested disposition modal (triggered during dialing) asks ONLY for Name, Required Amount, and Remarks - phone is auto-fetched",
+    "The manual Add Interested Lead form asks ONLY for Name, Mob No, Required Amount, and Remarks",
+    "All mandatory fields are validated before submission",
+    "A GET /api/rankings?period=daily|weekly|monthly endpoint returns ranked agents with scores",
+    "Ranking formula: (interested + followups + total_calls) - not_interested",
+    "Agent page shows a leaderboard section with Daily/Weekly/Monthly toggle at the top area",
+    "Admin page shows the same leaderboard section",
+    "Leaderboard uses a visually appealing card-based design with podium style (gold/silver/bronze for top 3)",
+    "Each ranked entry shows remarks explaining position and how to improve",
+    "Admin can upload a profile image when adding an agent in the EID panel",
+    "Agent photos appear in the leaderboard",
+    "Final updated project is zipped as AutoLead_Updated_v3.zip"
+  ],
+  "verification": [
+    "Run 'node -c server.js' in the project directory to verify no syntax errors",
+    "Run 'node -e \"require('./server.js')\"' or start server briefly to verify it loads without crashing",
+    "Verify the zip file exists at /projects/sandbox/Cluade/AutoLead_Updated_v2/AutoLead_Updated_v3.zip"
+  ],
+  "blocked_reason": null,
+  "findings": "All 8 steps implemented successfully. Server passes syntax check and starts without errors. Rankings API returns correct data. Agent photo upload endpoint works. Leaderboard added to both agent and admin pages. ZIP file created at AutoLead_Updated_v3.zip. The allowedEids format now supports both string (backward compat) and object {name, photo} formats via getEidName/getEidPhoto helpers."
+}
