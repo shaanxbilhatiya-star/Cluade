@@ -118,7 +118,7 @@
   .leads-table tr:last-child td { border-bottom: none; }
   .phone-number { font-family: var(--mono); font-weight: 700; color: var(--accent); }
 
-  @media(max-width:900px){ .stats-grid{grid-template-columns:1fr 1fr} .grid-2{grid-template-columns:1fr} }
+  @media(max-width:900px){ .stats-grid{grid-template-columns:1fr 1fr} .grid-2{grid-template-columns:1fr} .leaderboard-podium{flex-direction:column;align-items:center} .podium-card{min-width:auto;width:100%} }
 
   .logo-img { height: 28px; background: #fff; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border, #e2e8f0); }
 
@@ -201,7 +201,7 @@
   @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
   @keyframes pulseGlow { 0%,100%{opacity:.7;transform:scale(1)} 50%{opacity:1;transform:scale(1.03)} }
   @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+
   @keyframes ringPulse { 0%,100%{box-shadow:0 0 0 3px rgba(251,191,36,.3)} 50%{box-shadow:0 0 0 6px rgba(251,191,36,.15)} }
 
   .leaderboard-panel { margin-bottom: 24px; border-radius: 20px; overflow: hidden; background: rgba(15,23,42,.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(124,58,237,.25); box-shadow: 0 8px 32px rgba(124,58,237,.1), 0 0 0 1px rgba(255,255,255,.05) inset; position: relative; }

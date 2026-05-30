@@ -1367,14 +1367,14 @@ app.get('/api/rankings', (req, res) => {
     } else if (r.score < 0) {
       const above = rankings[i - 1];
       const diff = above.score - r.score;
-      r.remarks = `You need ${diff} more points to overtake ${above.name} at #${above.rank}. Focus on quality calls to reduce not-interested outcomes!`;
+      r.remarks = `You need ${diff} more points to overtake ${above.name} at #${above.rank}. Each interested call nets +2 pts. Avoid not-interested outcomes (0 pts each).`;
     } else {
       const above = rankings[i - 1];
       const diff = above.score - r.score;
       if (diff === 0) {
         r.remarks = `Tied with ${above.name} at #${above.rank}! One more interested lead will push you ahead!`;
       } else {
-        r.remarks = `You need ${diff} more points to overtake ${above.name} at #${above.rank}. Try getting more interested leads!`;
+        r.remarks = `You need ${diff} more points to overtake ${above.name} at #${above.rank}. Each interested or followup call is worth 2 pts!`;
       }
     }
   });
