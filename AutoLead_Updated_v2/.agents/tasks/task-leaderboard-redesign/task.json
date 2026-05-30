@@ -1,0 +1,7 @@
+{
+  "task_id": "task-leaderboard-redesign",
+  "task_description": "Redesign the leaderboard/rankings UI with a premium glassmorphism design, add competitive remarks referencing the person above, display agent profile photos, position leaderboard at top of both agent and admin pages, and recreate the zip.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}

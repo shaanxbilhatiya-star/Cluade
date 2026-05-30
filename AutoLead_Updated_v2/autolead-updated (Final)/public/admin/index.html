@@ -197,37 +197,53 @@
   .dispo-stat-card.dispo-stat-total .dispo-stat-val { font-size: 36px; }
   .dispo-stat-lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
 
-  /* ── Leaderboard ── */
-  .leaderboard-panel { margin-bottom: 20px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
-  .leaderboard-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: linear-gradient(135deg, rgba(108,43,217,.08), rgba(16,185,129,.05)); flex-wrap: wrap; gap: 10px; }
-  .leaderboard-header h2 { margin: 0; font-size: 18px; color: var(--accent); }
+  /* ── Premium Leaderboard ── */
+  @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @keyframes pulseGlow { 0%,100%{opacity:.7;transform:scale(1)} 50%{opacity:1;transform:scale(1.03)} }
+  @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  @keyframes ringPulse { 0%,100%{box-shadow:0 0 0 3px rgba(251,191,36,.3)} 50%{box-shadow:0 0 0 6px rgba(251,191,36,.15)} }
+
+  .leaderboard-panel { margin-bottom: 24px; border-radius: 20px; overflow: hidden; background: rgba(15,23,42,.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(124,58,237,.25); box-shadow: 0 8px 32px rgba(124,58,237,.1), 0 0 0 1px rgba(255,255,255,.05) inset; position: relative; }
+  .leaderboard-panel::before { content:''; position:absolute; inset:-1px; border-radius:20px; padding:1px; background:linear-gradient(135deg,rgba(124,58,237,.4),rgba(16,185,129,.3),rgba(251,191,36,.3),rgba(124,58,237,.4)); background-size:300% 300%; animation:gradientShift 6s ease infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; z-index:0; }
+  .leaderboard-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; background: linear-gradient(135deg, rgba(124,58,237,.12), rgba(16,185,129,.06)); flex-wrap: wrap; gap: 10px; position: relative; z-index: 1; }
+  .leaderboard-header h2 { margin: 0; font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #a78bfa, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .lb-period-tabs { display: flex; gap: 4px; }
-  .lb-period-tab { padding: 5px 14px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; }
-  .lb-period-tab:hover { border-color: var(--accent2, #a78bfa); color: var(--accent); }
-  .lb-period-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .leaderboard-body { padding: 20px; }
-  .leaderboard-podium { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-  .podium-card { border-radius: 14px; padding: 20px 16px; text-align: center; min-width: 160px; flex: 1; max-width: 220px; }
-  .podium-card.gold { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; }
-  .podium-card.silver { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); border: 2px solid #94a3b8; }
-  .podium-card.bronze { background: linear-gradient(135deg, #fef2e8, #fed7aa); border: 2px solid #f97316; }
-  .podium-rank { font-size: 28px; margin-bottom: 6px; }
-  .podium-avatar { width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; background: var(--accent); overflow: hidden; }
+  .lb-period-tab { padding: 6px 16px; border-radius: 8px; border: 1.5px solid rgba(124,58,237,.25); background: rgba(124,58,237,.08); color: #a78bfa; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .3s; backdrop-filter: blur(4px); }
+  .lb-period-tab:hover { border-color: #a78bfa; background: rgba(124,58,237,.15); color: #c4b5fd; transform: translateY(-1px); }
+  .lb-period-tab.active { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border-color: transparent; box-shadow: 0 4px 15px rgba(124,58,237,.4); }
+  .leaderboard-body { padding: 24px; position: relative; z-index: 1; }
+  .leaderboard-podium { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; align-items: flex-end; }
+  .podium-card { border-radius: 18px; padding: 24px 18px 20px; text-align: center; min-width: 160px; flex: 1; max-width: 220px; position: relative; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: all .4s cubic-bezier(.175,.885,.32,1.275); cursor: default; }
+  .podium-card:hover { transform: translateY(-6px) scale(1.02); }
+  .podium-card.gold { background: linear-gradient(160deg, rgba(251,191,36,.15), rgba(245,158,11,.08)); border: 1.5px solid rgba(251,191,36,.4); box-shadow: 0 8px 30px rgba(251,191,36,.15), 0 0 40px rgba(251,191,36,.05) inset; min-height: 240px; transform: translateY(-8px); }
+  .podium-card.gold:hover { transform: translateY(-14px) scale(1.03); box-shadow: 0 12px 40px rgba(251,191,36,.25); }
+  .podium-card.silver { background: linear-gradient(160deg, rgba(148,163,184,.12), rgba(100,116,139,.06)); border: 1.5px solid rgba(148,163,184,.35); box-shadow: 0 6px 24px rgba(148,163,184,.1); }
+  .podium-card.bronze { background: linear-gradient(160deg, rgba(249,115,22,.12), rgba(234,88,12,.06)); border: 1.5px solid rgba(249,115,22,.35); box-shadow: 0 6px 24px rgba(249,115,22,.1); }
+  .podium-rank { font-size: 32px; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.2)); }
+  .podium-avatar { width: 68px; height: 68px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #7c3aed, #6d28d9); overflow: hidden; position: relative; }
+  .podium-card.gold .podium-avatar { box-shadow: 0 0 0 3px rgba(251,191,36,.5), 0 0 20px rgba(251,191,36,.3); animation: ringPulse 2s ease-in-out infinite; }
+  .podium-card.silver .podium-avatar { box-shadow: 0 0 0 3px rgba(148,163,184,.5), 0 0 15px rgba(148,163,184,.2); }
+  .podium-card.bronze .podium-avatar { box-shadow: 0 0 0 3px rgba(249,115,22,.5), 0 0 15px rgba(249,115,22,.2); }
   .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .podium-name { font-weight: 700; font-size: 14px; color: var(--fg, #1e293b); margin-bottom: 4px; }
-  .podium-score { font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 6px; }
-  .podium-stats { font-size: 11px; color: var(--muted); line-height: 1.6; }
-  .podium-remarks { font-size: 11px; color: var(--green); margin-top: 6px; font-style: italic; }
+  .podium-name { font-weight: 700; font-size: 14px; color: #e2e8f0; margin-bottom: 6px; }
+  .podium-card.gold .podium-name { font-size: 15px; background: linear-gradient(90deg, #fbbf24, #f59e0b, #fbbf24); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmer 3s linear infinite; }
+  .podium-score { font-size: 28px; font-weight: 800; color: #a78bfa; margin-bottom: 8px; text-shadow: 0 0 20px rgba(167,139,250,.4); animation: pulseGlow 3s ease-in-out infinite; }
+  .podium-card.gold .podium-score { font-size: 32px; color: #fbbf24; text-shadow: 0 0 25px rgba(251,191,36,.5); }
+  .podium-stats { font-size: 11px; color: #94a3b8; line-height: 1.7; }
+  .podium-remarks { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2); font-size: 11px; color: #6ee7b7; font-style: italic; }
+  .podium-remarks::before { content: '💡 '; }
   .lb-list { display: flex; flex-direction: column; gap: 8px; }
-  .lb-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--surface2, #f8fafc); border: 1px solid var(--border); }
-  .lb-rank-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: var(--bg); color: var(--muted); border: 1.5px solid var(--border); flex-shrink: 0; }
-  .lb-row-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; background: #a78bfa; overflow: hidden; flex-shrink: 0; }
+  .lb-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: rgba(30,41,59,.6); border: 1px solid rgba(124,58,237,.12); backdrop-filter: blur(6px); transition: all .3s ease; }
+  .lb-row:hover { background: rgba(30,41,59,.85); border-color: rgba(124,58,237,.3); transform: translateX(4px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .lb-rank-badge { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: rgba(124,58,237,.1); color: #a78bfa; border: 1.5px solid rgba(124,58,237,.25); flex-shrink: 0; }
+  .lb-row-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #6d28d9, #7c3aed); overflow: hidden; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(124,58,237,.3); }
   .lb-row-avatar img { width: 100%; height: 100%; object-fit: cover; }
   .lb-row-info { flex: 1; min-width: 0; }
-  .lb-row-name { font-weight: 700; font-size: 13px; color: var(--fg, #1e293b); }
-  .lb-row-stats { font-size: 11px; color: var(--muted); }
-  .lb-row-score { font-weight: 800; font-size: 16px; color: var(--accent); text-align: right; min-width: 40px; }
-  .lb-row-remarks { font-size: 10px; color: var(--green); font-style: italic; margin-top: 2px; }
+  .lb-row-name { font-weight: 700; font-size: 13px; color: #e2e8f0; }
+  .lb-row-stats { font-size: 11px; color: #64748b; }
+  .lb-row-score { font-weight: 800; font-size: 18px; color: #a78bfa; text-align: right; min-width: 40px; text-shadow: 0 0 10px rgba(167,139,250,.3); }
+  .lb-row-remarks { font-size: 10px; color: #6ee7b7; font-style: italic; margin-top: 3px; padding: 4px 8px; border-radius: 4px; background: rgba(16,185,129,.06); border-left: 2px solid rgba(16,185,129,.3); }
   .eid-photo-thumb { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; border: 1px solid var(--border); }
 </style>
 </head>
@@ -279,6 +295,21 @@
   <div id="breakSummary">
     <div class="break-summary-title">☕ Agents on Break</div>
     <div class="break-agents-list" id="breakAgentsList"></div>
+  </div>
+
+  <!-- Leaderboard Panel -->
+  <div class="leaderboard-panel">
+    <div class="leaderboard-header">
+      <h2>&#127942; Agent Rankings</h2>
+      <div class="lb-period-tabs">
+        <button class="lb-period-tab active" data-period="daily" onclick="switchAdminLbPeriod('daily')">Daily</button>
+        <button class="lb-period-tab" data-period="weekly" onclick="switchAdminLbPeriod('weekly')">Weekly</button>
+        <button class="lb-period-tab" data-period="monthly" onclick="switchAdminLbPeriod('monthly')">Monthly</button>
+      </div>
+    </div>
+    <div class="leaderboard-body" id="adminLeaderboardBody">
+      <div style="text-align:center;color:#64748b;padding:20px">Loading rankings...</div>
+    </div>
   </div>
 
   <div class="grid-2">
@@ -481,21 +512,6 @@
           <div class="dispo-stat-lbl">Interested</div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Leaderboard Panel -->
-  <div class="leaderboard-panel">
-    <div class="leaderboard-header">
-      <h2>&#127942; Agent Rankings</h2>
-      <div class="lb-period-tabs">
-        <button class="lb-period-tab active" data-period="daily" onclick="switchAdminLbPeriod('daily')">Daily</button>
-        <button class="lb-period-tab" data-period="weekly" onclick="switchAdminLbPeriod('weekly')">Weekly</button>
-        <button class="lb-period-tab" data-period="monthly" onclick="switchAdminLbPeriod('monthly')">Monthly</button>
-      </div>
-    </div>
-    <div class="leaderboard-body" id="adminLeaderboardBody">
-      <div style="text-align:center;color:var(--muted);padding:20px">Loading rankings...</div>
     </div>
   </div>
 
@@ -1259,7 +1275,7 @@ function getInitial(name) {
 function renderAdminLeaderboard(data) {
   const body = document.getElementById('adminLeaderboardBody');
   if (!data || data.length === 0) {
-    body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">No ranking data available yet</div>';
+    body.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px">No ranking data available yet</div>';
     return;
   }
   const top3 = data.slice(0, 3);
@@ -1276,7 +1292,7 @@ function renderAdminLeaderboard(data) {
       '<div class="podium-rank">' + medals[i] + '</div>' +
       '<div class="podium-avatar">' + avatarContent + '</div>' +
       '<div class="podium-name">' + escapeHtml(r.name) + '</div>' +
-      '<div class="podium-score">' + r.score + '</div>' +
+      '<div class="podium-score">' + r.score + ' pts</div>' +
       '<div class="podium-stats">&#9733; ' + r.interested + ' interested &middot; ' + r.followups + ' followups<br>&#128222; ' + r.totalCalls + ' calls &middot; &#10060; ' + r.notInterested + ' NI</div>' +
       '<div class="podium-remarks">' + escapeHtml(r.remarks) + '</div>' +
     '</div>';
@@ -1290,7 +1306,7 @@ function renderAdminLeaderboard(data) {
         ? '<img src="' + r.profilePhoto + '" alt="">'
         : getInitial(r.name);
       html += '<div class="lb-row">' +
-        '<div class="lb-rank-badge">' + r.rank + '</div>' +
+        '<div class="lb-rank-badge">#' + r.rank + '</div>' +
         '<div class="lb-row-avatar">' + avatarContent + '</div>' +
         '<div class="lb-row-info">' +
           '<div class="lb-row-name">' + escapeHtml(r.name) + '</div>' +

@@ -1,0 +1,20 @@
+{
+  "project_type": "Node.js Express app with Socket.IO real-time features, single-page HTML frontend",
+  "language": "JavaScript (server) + HTML/CSS/JS (frontend)",
+  "build_system": "npm (no build step, just node server.js)",
+  "test_framework": "None - no test infrastructure exists",
+  "build_command": "cd '/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)' && node -c server.js",
+  "test_command": "No test suite exists. Validate by checking syntax with node -c.",
+  "verification_instructions": "1. Run node -c server.js to verify no syntax errors. 2. Start server and check /api/rankings returns valid JSON with remarks fields that reference the person above.",
+  "snapshot_or_generated_files": "AutoLead_Updated_v3.zip must be recreated at /projects/sandbox/Cluade/AutoLead_Updated_v2/AutoLead_Updated_v3.zip after changes",
+  "setup_instructions": "cd '/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)' && npm install",
+  "environment_constraints": "OPEN_INTERNET network mode. Node 22 available via nvm.",
+  "contribution_requirements": "None documented",
+  "key_patterns": "Single server.js file with all backend logic. HTML files are self-contained with inline CSS and JS. Rankings API at GET /api/rankings?period=daily|weekly|monthly returns array of {agentId, name, score, interested, followups, totalCalls, notInterested, profilePhoto, rank, remarks}. Agent photos served from /api/admin/agent-photo/:eid. Leaderboard in agent.html is inside #dialerScreen after stats-grid. In admin.html it is below the Disposition Stats panel near bottom.",
+  "relevant_files": [
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/server.js",
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/public/agent/index.html",
+    "/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)/public/admin/index.html"
+  ],
+  "directory_structure": "Root has server.js, package.json, public/ (with admin/index.html, agent/index.html, index.html, logo.png), data/ (state.json), uploads/ (agent_photos/, lead_docs/)"
+}

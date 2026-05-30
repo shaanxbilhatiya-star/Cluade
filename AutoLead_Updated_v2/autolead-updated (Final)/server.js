@@ -1357,15 +1357,25 @@ app.get('/api/rankings', (req, res) => {
 
   rankings.sort((a, b) => b.score - a.score);
 
-  // Add rank and remarks
+  // Add rank and competitive remarks
   rankings.forEach((r, i) => {
     r.rank = i + 1;
     if (i === 0 && r.score > 0) {
-      r.remarks = `Top performer! Leading with ${r.interested} interested leads and ${r.followups} followups`;
+      r.remarks = `🏆 Top performer! Leading the board with ${r.interested} interested leads and ${r.followups} followups. Keep dominating!`;
+    } else if (i === 0 && r.score === 0) {
+      r.remarks = 'Make your first calls to claim the #1 spot!';
     } else if (r.score < 0) {
-      r.remarks = 'Focus on quality calls - reduce not-interested outcomes';
+      const above = rankings[i - 1];
+      const diff = above.score - r.score;
+      r.remarks = `You need ${diff} more points to overtake ${above.name} at #${above.rank}. Focus on quality calls to reduce not-interested outcomes!`;
     } else {
-      r.remarks = `${r.interested} interested, ${r.followups} followups. Increase interested conversions to move up`;
+      const above = rankings[i - 1];
+      const diff = above.score - r.score;
+      if (diff === 0) {
+        r.remarks = `Tied with ${above.name} at #${above.rank}! One more interested lead will push you ahead!`;
+      } else {
+        r.remarks = `You need ${diff} more points to overtake ${above.name} at #${above.rank}. Try getting more interested leads!`;
+      }
     }
   });
 

@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Redesign the leaderboard/rankings UI in both agent.html and admin.html with a visually stunning modern design (glassmorphism, animated podium, gradient backgrounds, profile photos in circles, nice shadows). Update the server-side remarks logic to specifically tell each agent how they can overtake the person directly above them. Move leaderboard to the TOP of both pages (after stats grid in agent, after stats grid in admin). Finally recreate the zip file.",
+  "status": "in_progress",
+  "steps": [
+    "Step 1 - Update server.js rankings remarks logic (lines ~1360-1375): Change the remarks generation so that for rank 2+ agents, the remark specifically references the person above them by name and tells them exactly what they need (e.g., 'You need X more interested leads to overtake [Name] at #Y'). Calculate the score difference and break it down into actionable advice. Keep rank 1 remark as congratulatory.",
+    "Step 2 - Redesign leaderboard CSS and HTML in public/agent/index.html: Replace the existing .leaderboard-panel styles (around lines 250-290) with a premium glassmorphism design featuring animated gradient backgrounds, glowing borders, larger profile photo circles with ring effects, trophy animations, particle/confetti-like accents, backdrop blur, shimmer effects on podium cards. The podium should have a raised 3D look with the #1 card elevated. Add a remarks section styled distinctly for competitive tips. Ensure the leaderboard panel stays positioned right after the stats-grid (it already is there - just ensure it remains first in the main content).",
+    "Step 3 - Update the renderLeaderboard() JS function in agent/index.html (around lines 1571-1630): Update the rendering to use the new CSS classes, display profile photos prominently, show the new competitive remarks with a distinct styling, add score difference indicator between positions.",
+    "Step 4 - Move the leaderboard panel in admin/index.html: Currently the leaderboard is after the Disposition Stats panel near line 487. Move it to right after the stats-grid and break-summary section (after line ~430, before the grid-2 with Upload/Agents panels). Apply same premium glassmorphism CSS and rendering logic as agent.html.",
+    "Step 5 - Update the renderAdminLeaderboard() JS function in admin/index.html (lines ~1259-1310): Mirror the same premium rendering as agent.html with competitive remarks display.",
+    "Step 6 - Recreate the zip file: Run 'cd /projects/sandbox/Cluade/AutoLead_Updated_v2 && rm -f AutoLead_Updated_v3.zip && zip -r AutoLead_Updated_v3.zip \"autolead-updated (Final)/\" -x \"autolead-updated (Final)/node_modules/*\"'"
+  ],
+  "acceptance_criteria": [
+    "Running 'node -c server.js' succeeds with no syntax errors in the project directory",
+    "The /api/rankings endpoint returns remarks that reference the person above by name (e.g., 'Need 3 more interested leads to overtake Shweta at #1')",
+    "Leaderboard panel is the first major UI section after stats in both agent.html and admin.html",
+    "Profile photos from /api/admin/agent-photo/:eid are displayed in circular avatars with ring/glow effects",
+    "CSS uses glassmorphism (backdrop-filter, semi-transparent backgrounds), animated gradients, and modern shadows",
+    "AutoLead_Updated_v3.zip is recreated at /projects/sandbox/Cluade/AutoLead_Updated_v2/AutoLead_Updated_v3.zip"
+  ],
+  "verification": [
+    "Run: cd '/projects/sandbox/Cluade/AutoLead_Updated_v2/autolead-updated (Final)' && node -c server.js",
+    "Run: cd '/projects/sandbox/Cluade/AutoLead_Updated_v2' && ls -la AutoLead_Updated_v3.zip",
+    "Grep server.js for the updated remarks logic to confirm it references person above by name"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
