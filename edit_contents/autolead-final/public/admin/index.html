@@ -267,16 +267,23 @@
   .lb-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); transition: all .2s; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
   .lb-row:hover { border-color: var(--accent2, #a78bfa); box-shadow: 0 4px 16px rgba(108,43,217,.1); transform: translateX(3px); }
   .lb-rank-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: var(--bg); color: var(--muted); border: 1.5px solid var(--border); flex-shrink: 0; font-family: monospace; }
-  .lb-row-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; background: #a78bfa; overflow: hidden; flex-shrink: 0; border: 2px solid var(--border); }
+  .lb-row-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; background: #a78bfa; overflow: hidden; flex-shrink: 0; border: 2px solid var(--border); }
   .lb-row-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center center; }
   .lb-row-info { flex: 1; min-width: 0; }
   .lb-row-name { font-weight: 700; font-size: 13px; color: var(--fg, #1e293b); }
   .lb-row-stats { font-size: 11px; color: var(--muted); margin-top: 1px; }
-  .lb-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 5px; max-width: 180px; }
+  .lb-bar-wrap { height: 5px; background: var(--border); border-radius: 3px; margin-top: 6px; max-width: none; }
   .lb-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), #a78bfa); transition: width 1s cubic-bezier(.4,0,.2,1); }
   .lb-row-right { text-align: right; min-width: 55px; }
   .lb-row-score { font-weight: 800; font-size: 17px; color: var(--accent); font-family: monospace; }
-  .lb-row-remarks { font-size: 10px; color: var(--green); font-style: italic; margin-top: 3px; line-height: 1.4; max-width: 180px; }
+  .lb-row-remarks { font-size: 13px; color: var(--green); font-style: normal; margin-top: 5px; line-height: 1.5; max-width: none; font-weight: 500; }
+  .lb-rank-badge.top3 { background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #f59e0b; font-size: 16px; }
+  .rank-1-row { border: 2px solid #f59e0b; background: rgba(245,158,11,.05); animation: rank1-row-pulse 2s ease-in-out infinite; }
+  @keyframes rank1-row-pulse {
+    0%, 100% { box-shadow: 0 2px 8px rgba(245,158,11,.15); }
+    50% { box-shadow: 0 4px 20px rgba(245,158,11,.35), 0 0 40px rgba(245,158,11,.1); }
+  }
+  .rank-1-avatar { border-color: #f59e0b !important; box-shadow: 0 0 12px rgba(245,158,11,.4); }
   .eid-photo-thumb { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; border: 1px solid var(--border); }
 </style>
 </head>
@@ -1338,58 +1345,35 @@ function getSmartRemarks(r, data, idx) {
 function renderAdminLeaderboard(data) {
   const body = document.getElementById('adminLeaderboardBody');
   if (!data || data.length === 0) {
-    body.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:30px">No ranking data available yet</div>';
+    body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">No ranking data available yet</div>';
     return;
   }
   const maxScore = Math.max(...data.map(d => d.score), 1);
-  const top3 = data.slice(0, 3);
-  const rest = data.slice(3);
-  const rankClass = ['r1', 'r2', 'r3'];
-  const crowns = ['👑', '🥈', '🥉'];
+  const medals = ['🥇', '🥈', '🥉'];
 
-  let html = '<div class="face-bar">';
-  top3.forEach((r, i) => {
-    const rc = rankClass[i];
-    const faceContent = r.profilePhoto
+  let html = '<div class="lb-list">';
+  data.forEach((r, idx) => {
+    const pct = Math.round((r.score / maxScore) * 100);
+    const faceHtml = r.profilePhoto
       ? '<img src="' + r.profilePhoto + '" alt="">'
-      : '<div class="face-letter" style="font-size:' + [36,28,22][i] + 'px">' + getInitial(r.name) + '</div>';
-    const remarks = getSmartRemarks(r, data, i);
-    html += '<div class="face-bar-item ' + rc + '">' +
-      '<div class="face-crown">' + crowns[i] + '</div>' +
-      '<div style="position:relative">' +
-        '<div class="face-ring ' + rc + '">' + faceContent + '</div>' +
-        '<div class="face-rank-badge ' + rc + '">' + (i+1) + '</div>' +
+      : getInitial(r.name);
+    const remarks = getSmartRemarks(r, data, idx);
+    const isTop3 = idx < 3;
+    const rankDisplay = isTop3 ? medals[idx] : r.rank;
+    const rowClass = 'lb-row' + (idx === 0 ? ' rank-1-row' : '');
+    html += '<div class="' + rowClass + '">' +
+      '<div class="lb-rank-badge' + (isTop3 ? ' top3' : '') + '">' + rankDisplay + '</div>' +
+      '<div class="lb-row-avatar' + (idx === 0 ? ' rank-1-avatar' : '') + '">' + faceHtml + '</div>' +
+      '<div class="lb-row-info">' +
+        '<div class="lb-row-name">' + escapeHtml(r.name) + '</div>' +
+        '<div class="lb-row-stats">⭐ ' + r.interested + ' interested &nbsp;·&nbsp; 📅 ' + r.followups + ' followups &nbsp;·&nbsp; 📞 ' + r.totalCalls + ' calls</div>' +
+        '<div class="lb-bar-wrap"><div class="lb-bar" style="width:' + pct + '%"></div></div>' +
+        (remarks ? '<div class="lb-row-remarks">' + remarks + '</div>' : '') +
       '</div>' +
-      '<div class="face-name">' + escapeHtml(r.name.split(' ')[0]) + '</div>' +
-      '<div class="face-score">' + r.score + ' pts</div>' +
-      (remarks ? '<div class="face-remarks">' + remarks + '</div>' : '') +
+      '<div class="lb-row-right"><div class="lb-row-score">' + r.score + '</div></div>' +
     '</div>';
   });
   html += '</div>';
-
-  if (rest.length > 0) {
-    html += '<div class="lb-list">';
-    rest.forEach((r, ri) => {
-      const idx = ri + 3;
-      const pct = Math.round((r.score / maxScore) * 100);
-      const faceHtml = r.profilePhoto
-        ? '<img src="' + r.profilePhoto + '" alt="">'
-        : getInitial(r.name);
-      const remarks = getSmartRemarks(r, data, idx);
-      html += '<div class="lb-row">' +
-        '<div class="lb-rank-badge">' + r.rank + '</div>' +
-        '<div class="lb-row-avatar">' + faceHtml + '</div>' +
-        '<div class="lb-row-info">' +
-          '<div class="lb-row-name">' + escapeHtml(r.name) + '</div>' +
-          '<div class="lb-row-stats">⭐ ' + r.interested + ' &nbsp;·&nbsp; 📅 ' + r.followups + ' FU &nbsp;·&nbsp; 📞 ' + r.totalCalls + '</div>' +
-          '<div class="lb-bar-wrap"><div class="lb-bar" style="width:' + pct + '%"></div></div>' +
-          (remarks ? '<div class="lb-row-remarks">' + remarks + '</div>' : '') +
-        '</div>' +
-        '<div class="lb-row-right"><div class="lb-row-score">' + r.score + '</div></div>' +
-      '</div>';
-    });
-    html += '</div>';
-  }
   body.innerHTML = html;
 }
 
