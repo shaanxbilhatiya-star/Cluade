@@ -844,6 +844,7 @@ function showTLDashboard() {
   fetchTLDispoStats();
   setInterval(()=>{fetchTLData();fetchTLLeaderboard();fetchTLDispoStats();},5000);
   setInterval(fetchTLLeaderboard,5000);
+  setMode(false);
 }
 
 // Auto-restore session
@@ -857,9 +858,9 @@ function setMode(tlMode) {
   inTLMode = tlMode;
   updateModeUI();
   if (!inTLMode) {
-    // Switch to agent dialing mode — start TL mode timer (not meeting)
+    // Switch to agent dialing mode — end TL mode timer
     document.body.classList.add('agent-mode-theme');
-    socket.emit('agent-tlmode-start', {agentId: tlAgentId});
+    socket.emit('agent-tlmode-end', {agentId: tlAgentId});
     document.getElementById('tlScreen').style.display='none';
     document.getElementById('agentScreen').style.display='block';
     socket.emit('agent-start',{agentId:tlAgentId});
@@ -868,9 +869,9 @@ function setMode(tlMode) {
     fetchAgentDispoStats();
     startAgentModeTimer();
   } else {
-    // Switch back to TL mode — end TL mode timer, end meeting if active
+    // Switch back to TL mode — start TL mode timer, end meeting if active
     document.body.classList.remove('agent-mode-theme');
-    socket.emit('agent-tlmode-end', {agentId: tlAgentId});
+    socket.emit('agent-tlmode-start', {agentId: tlAgentId});
     stopAgentModeTimer();
     if (onMeeting) {
       socket.emit('agent-meeting-end', {agentId: tlAgentId});
