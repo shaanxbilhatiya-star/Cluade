@@ -43,10 +43,11 @@
   }
   .header-center { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1; }
   .logo-img {
-    height: 68px; padding: 4px 8px; border-radius: 10px;
+    height: 72px; padding: 10px 18px; border-radius: 14px;
     border: 2px solid rgba(108,43,217,.3); background: #fff;
     filter: drop-shadow(0 0 10px rgba(108,43,217,.55)) drop-shadow(0 0 22px rgba(108,43,217,.25));
     animation: logo-glow-agent 2.5s ease-in-out infinite;
+    box-shadow: 0 4px 16px rgba(108,43,217,.12), 0 1px 4px rgba(0,0,0,.06);
   }
   @keyframes logo-glow-agent {
     0%,100% { filter: drop-shadow(0 0 7px rgba(108,43,217,.5)) drop-shadow(0 0 14px rgba(108,43,217,.2)); }
@@ -254,6 +255,12 @@
   .panel-header.accent-h { background: var(--accent-glow); }
   .panel-header.accent-h h2 { color: var(--accent); }
 
+  /* ── Hindi Quotes Ticker ── */
+  .quotes-bar { background: linear-gradient(90deg, rgba(108,43,217,.06), rgba(139,92,246,.06)); border: 1px solid rgba(108,43,217,.15); border-radius: 10px; padding: 10px 20px; margin-bottom: 20px; overflow: hidden; display: flex; align-items: center; gap: 12px; }
+  .quotes-label { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 1px; white-space: nowrap; }
+  .quotes-text { font-size: 14px; color: var(--accent2); font-weight: 600; animation: marquee 22s linear infinite; white-space: nowrap; }
+  @keyframes marquee { 0%{transform:translateX(60vw)} 100%{transform:translateX(-100%)} }
+
   @media(max-width:900px){ .grid-2{grid-template-columns:1fr} .add-lead-form{grid-template-columns:1fr} .stats-grid{grid-template-columns:1fr 1fr} .leaderboard-podium{flex-direction:column;align-items:center} .podium-card{min-width:auto;width:100%} }
 
   /* ── Leaderboard Blink Animation ── */
@@ -385,6 +392,12 @@
 ──────────────────────────────────────────────────────────── -->
 <div id="dialerScreen">
   <div class="main">
+
+    <!-- Hindi Motivational Quotes Ticker -->
+    <div class="quotes-bar">
+      <span class="quotes-label">&#127775; QUOTE</span>
+      <span class="quotes-text" id="agentQuoteText"></span>
+    </div>
 
     <!-- LEADERBOARD -->
     <div class="leaderboard-panel" id="leaderboardPanel">
@@ -1664,6 +1677,9 @@ function renderLeaderboard(data) {
   let html = '<div class="lb-list">';
   data.forEach((r, idx) => {
     const pct = Math.round((r.score / maxScore) * 100);
+    // Avatar sizing: rank 1 biggest, shrinks for lower ranks
+    const avatarSize = idx === 0 ? 64 : idx === 1 ? 56 : idx === 2 ? 50 : idx < 6 ? 44 : 38;
+    const fontSize = idx === 0 ? 20 : idx === 1 ? 18 : idx === 2 ? 16 : idx < 6 ? 14 : 12;
     const faceHtml = r.profilePhoto
       ? '<img src="' + r.profilePhoto + '" alt="">'
       : getInitial(r.name);
@@ -1682,7 +1698,7 @@ function renderLeaderboard(data) {
     const rowClass = 'lb-row' + (isMe ? ' is-me' : '') + (idx === 0 ? ' rank-1-row' : '');
     html += '<div class="' + rowClass + '">' +
       '<div class="lb-rank-badge top3" style="' + badgeStyle + 'text-align:center;line-height:1.2">' + rankDisplay + '</div>' +
-      '<div class="lb-row-avatar' + (idx === 0 ? ' rank-1-avatar' : '') + '">' + faceHtml + '</div>' +
+      '<div class="lb-row-avatar' + (idx === 0 ? ' rank-1-avatar' : '') + '" style="width:' + avatarSize + 'px;height:' + avatarSize + 'px;font-size:' + fontSize + 'px">' + faceHtml + '</div>' +
       '<div class="lb-row-info">' +
         '<div class="lb-row-name">' + escapeHtml(r.name) + (isMe ? ' <span style="font-size:10px;color:var(--accent);font-weight:700;margin-left:4px">YOU</span>' : '') + '</div>' +
         '<div class="lb-row-stats">⭐ ' + r.interested + ' interested &nbsp;·&nbsp; 📅 ' + r.followups + ' followups &nbsp;·&nbsp; 📞 ' + r.totalCalls + ' calls</div>' +
@@ -1722,6 +1738,40 @@ setInterval(() => { if (agentId) socket.emit('ping-alive', { agentId }); }, 3000
 ['empId','agentName'].forEach(id => {
   document.getElementById(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') registerAgent(); });
 });
+
+// ── Hindi Motivational Quotes (Agent - DSA telecaller) ────────────────────────
+const agentQuotes = [
+  '\u{1F525} Har call ek naya mauka hai - aaj ka target tod do!',
+  '\u{1F4AA} DSA ka kaam hai loan dena, sapne poore karna - kar dikhao!',
+  '\u{1F3C6} Jeetne wale alag kaam nahi karte, wo har kaam alag tarike se karte hain',
+  '\u{1F4B0} Ek interested lead = ek kadam success ki taraf',
+  '\u{1F525} Target tod do, warna target tumhe tod dega',
+  '\u{2B50} Customer ka bharosa hi tera sabse bada asset hai',
+  '\u{1F4DE} Har number mein chupa hai ek success story',
+  '\u{1F680} Call karo, connect karo, convert karo - yahi hai DSA mantra',
+  '\u{1F4AA} Mehnat ka koi shortcut nahi hota - dial karte raho!',
+  '\u{1F3AF} Aaj ka ek extra call, kal ka bonus ban sakta hai',
+  '\u{1F525} Bank partnership ka fayda uthao - har loan ek commission hai',
+  '\u{2B50} Jo dar gaya wo haar gaya - phone uthao aur bol do!',
+  '\u{1F4B0} Loan dena sirf kaam nahi, kisi ka sapna poora karna hai',
+  '\u{1F3C6} Top agent banne ka raaz: consistency aur confidence',
+  '\u{1F4DE} Aaj ki calls, kal ki earnings - ek bhi miss mat karo',
+  '\u{1F680} Rejection se mat daro, har NO ke baad ek YES aata hai',
+  '\u{1F4AA} Sapne wo nahi jo so kar dekhte hain, sapne wo hain jo sone nahi dete',
+  '\u{1F525} Teri mehnat tujhe leaderboard ke top pe le jayegi',
+  '\u{2B50} Har interested lead tera commission badhati hai - hustle karo!',
+  '\u{1F3AF} Jab iraada pakka ho to rasta khud ban jata hai'
+];
+function shuffleQuotes(arr) {
+  const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;
+}
+function setAgentQuotes() {
+  const shuffled = shuffleQuotes(agentQuotes);
+  const el = document.getElementById('agentQuoteText');
+  if(el) el.textContent = shuffled.join('  \u2022  ');
+}
+setAgentQuotes();
+setInterval(setAgentQuotes, 22000);
 </script>
 </body>
 </html>
