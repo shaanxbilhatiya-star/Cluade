@@ -1,0 +1,22 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Change all leaderboard ranking emojis to use only the trophy emoji across all panels (agent, TL, admin). Currently uses gold/silver/bronze medals for ranks 2-3 and trophy only for rank 1. Change so every rank uses the trophy emoji in the rank badge.",
+  "status": "in_progress",
+  "steps": [
+    "In public/agent/index.html: In renderLeaderboard function (around line 1657), change the medals array and rankDisplay logic so ALL ranks use the trophy emoji instead of medals[idx] for top 3 and plain #N for others. Specifically: replace `const medals = ['\\u{1F947}', '\\u{1F948}', '\\u{1F949}']` usage - instead all ranks should display the trophy. For rank 1: keep existing trophy display. For ranks 2-3: change from medals[idx] to trophy. For ranks 4+: change from plain '#N' to trophy + '#N'.",
+    "In public/admin/index.html: In renderAdminLeaderboard function (around line 1406), apply same change - remove medals array usage, use trophy for all. Currently uses HTML entities &#129697;, &#129698;, &#129699; for medals.",
+    "In public/tl/index.html: In renderTLLeaderboard function, apply same change - currently uses emoji medals array ['\\u{1F947}','\\u{1F948}','\\u{1F949}']. Replace all rank badges with trophy emoji."
+  ],
+  "acceptance_criteria": [
+    "All leaderboard rows across agent, admin, and TL panels show the trophy emoji for every rank",
+    "No gold/silver/bronze medal emojis remain in any leaderboard rendering code",
+    "Rank numbers still display correctly alongside the trophy"
+  ],
+  "verification": [
+    "Run node -c public/agent/index.html (should not error on HTML)",
+    "grep for medal emojis in all HTML files to confirm they are removed from leaderboard rendering"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
