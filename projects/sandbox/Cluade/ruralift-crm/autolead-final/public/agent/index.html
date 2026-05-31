@@ -950,6 +950,7 @@ function showDialer(name, eid) {
   document.getElementById('displayAgentName').textContent = name;
   document.getElementById('displayEmpId').textContent     = 'EID: ' + eid;
   fetchMyStats();
+  if(typeof setAgentQuotes === 'function') setAgentQuotes();
 }
 
 // ── Dialing ───────────────────────────────────────────────────────────────────
@@ -1739,7 +1740,10 @@ setInterval(() => { if (agentId) socket.emit('ping-alive', { agentId }); }, 3000
   document.getElementById(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') registerAgent(); });
 });
 
-// ── Hindi Motivational Quotes loaded from /quotes-agent.js ────────────────────
+
+</script>
+<script src="/quotes-agent.js"></script>
+<script>
 function shuffleQuotes(arr) {
   const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;
 }
@@ -1750,9 +1754,6 @@ function setAgentQuotes() {
   if(el) el.textContent = shuffled.join('  \u2022  ');
 }
 setAgentQuotes();
-</script>
-<script src="/quotes-agent.js"></script>
-<script>setAgentQuotes();
 </script>
 </body>
 </html>
