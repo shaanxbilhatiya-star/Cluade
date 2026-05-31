@@ -353,6 +353,7 @@
     <span class="header-brand">Ruralift CRM</span>
   </div>
   <div class="header-right">
+    <button id="btnLogout" onclick="logoutAgent()" style="display:none;background:none;border:1px solid var(--border-strong);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)">Logout</button>
     <span class="badge">AGENT</span>
   </div>
 </header>
@@ -935,12 +936,19 @@ async function registerAgent() {
   applyAgentState(d, true);
 }
 
+function logoutAgent() {
+  if (!confirm('Are you sure you want to logout?')) return;
+  sessionStorage.clear();
+  location.reload();
+}
+
 function showDialer(name, eid) {
   document.getElementById('loginScreen').style.display  = 'none';
   document.getElementById('dialerScreen').style.display = 'block';
   document.getElementById('agentChip').style.display    = 'flex';
   document.getElementById('displayAgentName').textContent = name;
   document.getElementById('displayEmpId').textContent     = 'EID: ' + eid;
+  document.getElementById('btnLogout').style.display = 'inline-block';
   fetchMyStats();
 
 }

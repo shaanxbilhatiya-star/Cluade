@@ -672,6 +672,14 @@ function tickBreakTimers() {
         el.textContent = formatMs(used);
       }
     }
+    if (a.onTlMode) {
+      const el = document.getElementById('tlmode-timer-' + a.id);
+      if (el) {
+        const elapsed = now - (window._tlModeStartTimes[a.id] || now);
+        const used = (window._tlModeMsAtRender[a.id] || 0) + elapsed;
+        el.textContent = formatMs(used);
+      }
+    }
     // Live Net Dialing Time tick
     const ndEl = document.getElementById('net-dialing-' + a.id);
     if (ndEl) {
@@ -688,7 +696,11 @@ function tickBreakTimers() {
       if (a.onMeeting && window._meetingStartTimes[a.id]) {
         liveMeeting = (window._meetingMsAtRender[a.id] || 0) + (now - window._meetingStartTimes[a.id]);
       }
-      const netMs = Math.max(0, SHIFT_MS - liveBreak - liveWashroom - liveMeeting - (a.totalTlModeMs || 0));
+      let liveTlMode = a.totalTlModeMs || 0;
+      if (a.onTlMode && window._tlModeStartTimes[a.id]) {
+        liveTlMode = (window._tlModeMsAtRender[a.id] || 0) + (now - window._tlModeStartTimes[a.id]);
+      }
+      const netMs = Math.max(0, SHIFT_MS - liveBreak - liveWashroom - liveMeeting - liveTlMode);
       const netH = Math.floor(netMs / (60 * 60 * 1000));
       const netM = Math.floor((netMs % (60 * 60 * 1000)) / (60 * 1000));
       ndEl.textContent = netH + 'h ' + netM + 'm';
@@ -702,6 +714,8 @@ window._washroomStartTimes = {};
 window._washroomMsAtRender = {};
 window._meetingStartTimes  = {};
 window._meetingMsAtRender  = {};
+window._tlModeStartTimes   = {};
+window._tlModeMsAtRender   = {};
 
 function renderStats(data) {
   lastStats = data;
@@ -773,6 +787,10 @@ function renderStats(data) {
         window._meetingStartTimes[a.id] = Date.now();
         window._meetingMsAtRender[a.id] = a.totalMeetingMs || 0;
       }
+      if (a.onTlMode) {
+        window._tlModeStartTimes[a.id] = Date.now();
+        window._tlModeMsAtRender[a.id] = a.totalTlModeMs || 0;
+      }
 
       const remaining = Math.max(0, (a.breakAllowedMs || 3600000) - (a.totalBreakMs || 0));
 
@@ -805,7 +823,7 @@ function renderStats(data) {
       const netDialingTime = netH + 'h ' + netM + 'm';
 
       const tlModeCell = a.onTlMode
-        ? `<span style="font-family:var(--mono);font-size:12px;color:#a78bfa;font-weight:700">${formatMs(a.totalTlModeMs||0)} &#9654;</span>`
+        ? `<span id="tlmode-timer-${a.id}" style="font-family:var(--mono);font-size:12px;color:#a78bfa;font-weight:700">${formatMs(a.totalTlModeMs||0)} &#9654;</span>`
         : `<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalTlModeMs||0)}</span>`;
 
       return `<tr>

@@ -337,6 +337,7 @@
     <span class="header-brand">Ruralift CRM</span>
   </div>
   <div class="header-right">
+    <button id="btnLogoutTL" onclick="logoutTL()" style="display:none;background:none;border:1px solid rgba(163,139,250,.3);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)">Logout</button>
     <span class="today-badge" id="todayBadge">&#8212;</span>
     <div class="mode-btn-wrap" id="modeToggleWrap">
       <button class="mode-btn agent-btn" id="btnAgentMode" onclick="setMode(false)">&#128100; Agent Mode</button>
@@ -821,10 +822,17 @@ async function loginTL() {
   showTLDashboard();
 }
 
+function logoutTL() {
+  if (!confirm('Are you sure you want to logout?')) return;
+  sessionStorage.clear();
+  location.reload();
+}
+
 function showTLDashboard() {
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('tlScreen').style.display='block';
   document.getElementById('modeToggleWrap').style.display='flex';
+  document.getElementById('btnLogoutTL').style.display = 'inline-block';
   inTLMode=true;
   updateModeUI();
   socket.emit('join-admin');
@@ -896,6 +904,8 @@ window._tlWashroomStartTimes = {};
 window._tlWashroomMsAtRender = {};
 window._tlMeetingStartTimes = {};
 window._tlMeetingMsAtRender = {};
+window._tlTlModeStartTimes = {};
+window._tlTlModeMsAtRender = {};
 setInterval(()=>{if(lastTLStats&&inTLMode)tickTLBreakTimers();},1000);
 
 async function fetchTLData() {
@@ -933,6 +943,7 @@ function renderTLStats(data) {
       if(a.onBreak){window._tlBreakStartTimes[a.id]=Date.now();window._tlBreakMsAtRender[a.id]=a.totalBreakMs||0;}
       if(a.onWashroom){window._tlWashroomStartTimes[a.id]=Date.now();window._tlWashroomMsAtRender[a.id]=a.totalWashroomMs||0;}
       if(a.onMeeting){window._tlMeetingStartTimes[a.id]=Date.now();window._tlMeetingMsAtRender[a.id]=a.totalMeetingMs||0;}
+      if(a.onTlMode){window._tlTlModeStartTimes[a.id]=Date.now();window._tlTlModeMsAtRender[a.id]=a.totalTlModeMs||0;}
 
       const rem=Math.max(0,(a.breakAllowedMs||3600000)-(a.totalBreakMs||0));
       const breakCell=a.onBreak
@@ -1002,6 +1013,14 @@ function tickTLBreakTimers(){
         el.textContent=formatMs(used);
       }
     }
+    if(a.onTlMode){
+      const el=document.getElementById('tl-tlmode-timer-'+a.id);
+      if(el){
+        const elapsed=now-(window._tlTlModeStartTimes[a.id]||now);
+        const used=(window._tlTlModeMsAtRender[a.id]||0)+elapsed;
+        el.textContent=formatMs(used);
+      }
+    }
     const ndEl=document.getElementById('tl-net-dialing-'+a.id);
     if(ndEl){
       const SHIFT_MS=8*60*60*1000;
@@ -1017,7 +1036,11 @@ function tickTLBreakTimers(){
       if(a.onMeeting&&window._tlMeetingStartTimes[a.id]){
         liveMeeting=(window._tlMeetingMsAtRender[a.id]||0)+(now-window._tlMeetingStartTimes[a.id]);
       }
-      const netMs=Math.max(0,SHIFT_MS-liveBreak-liveWashroom-liveMeeting-(a.totalTlModeMs||0));
+      let liveTlMode=a.totalTlModeMs||0;
+      if(a.onTlMode&&window._tlTlModeStartTimes[a.id]){
+        liveTlMode=(window._tlTlModeMsAtRender[a.id]||0)+(now-window._tlTlModeStartTimes[a.id]);
+      }
+      const netMs=Math.max(0,SHIFT_MS-liveBreak-liveWashroom-liveMeeting-liveTlMode);
       const netH=Math.floor(netMs/(60*60*1000));
       const netM=Math.floor((netMs%(60*60*1000))/(60*1000));
       ndEl.textContent=netH+'h '+netM+'m';
