@@ -1,0 +1,20 @@
+{
+  "id": "FEAT-004",
+  "type": "chore",
+  "description": "Create an updated ZIP file of the complete project for download.",
+  "status": "completed",
+  "steps": [
+    "Create a ZIP file at /projects/sandbox/Cluade/ruralift-crm-updated.zip containing the entire autolead-final directory (excluding node_modules, data/state.json, .agents/). Include: server.js, package.json, package-lock.json, public/ (all HTML files and logo.png), uploads/.gitkeep files, data/.gitkeep, README.md, .gitignore, START-LINUX-MAC.sh, START-WINDOWS.bat."
+  ],
+  "acceptance_criteria": [
+    "A ZIP file exists at /projects/sandbox/Cluade/ruralift-crm-updated.zip",
+    "The ZIP contains the full project structure with all updated files",
+    "node_modules and state.json are excluded"
+  ],
+  "verification": [
+    "ls -la /projects/sandbox/Cluade/ruralift-crm-updated.zip to confirm it exists",
+    "unzip -l /projects/sandbox/Cluade/ruralift-crm-updated.zip | head -30 to verify contents"
+  ],
+  "blocked_reason": null,
+  "findings": "ZIP created at /projects/sandbox/Cluade/ruralift-crm-updated.zip (95KB, 24 files). All required files included, node_modules/state.json/.agents/.git excluded."
+}
