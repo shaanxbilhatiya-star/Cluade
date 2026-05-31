@@ -1,0 +1,21 @@
+{
+  "project_type": "Node.js Express + Socket.io real-time CRM application",
+  "language": "JavaScript (Node.js backend, vanilla JS frontend)",
+  "build_system": "npm with no build step - direct node server.js",
+  "test_framework": "None - no test framework present",
+  "build_command": "cd /projects/sandbox/Cluade/projects/sandbox/Cluade/ruralift-crm/autolead-final && npm install",
+  "test_command": "node -c server.js (syntax check only, no tests)",
+  "verification_instructions": "1. Run npm install to ensure deps. 2. Run node -c server.js to validate syntax. 3. Optionally start server and check HTTP endpoints respond.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "cd /projects/sandbox/Cluade/projects/sandbox/Cluade/ruralift-crm/autolead-final && npm install",
+  "environment_constraints": "OPEN_INTERNET - full network access. Node 22 available via nvm.",
+  "contribution_requirements": "Single-file HTML pages with inline CSS/JS. No bundler. Express serves static files from public/.",
+  "key_patterns": "State stored in data/state.json. Socket.io for real-time updates. Admin room broadcasts. Agent state includes break/washroom/meeting timers. Leaderboard rendered client-side from /api/rankings endpoint. TL page has mode toggle between TL monitoring and Agent dialing mode.",
+  "relevant_files": [
+    "server.js",
+    "public/agent/index.html",
+    "public/admin/index.html",
+    "public/tl/index.html"
+  ],
+  "directory_structure": "Root: server.js (backend), package.json. public/ has index.html (landing), admin/index.html, agent/index.html, tl/index.html. data/ stores state.json. uploads/ for files and photos."
+}

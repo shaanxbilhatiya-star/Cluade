@@ -113,11 +113,7 @@
   #agentScreen { display: none; }
   .main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
 
-  /* Hindi quotes ticker */
-  .quotes-bar { background: linear-gradient(90deg, rgba(167,139,250,.08), rgba(99,102,241,.08)); border: 1px solid rgba(167,139,250,.2); border-radius: 10px; padding: 10px 20px; margin-bottom: 20px; overflow: hidden; display: flex; align-items: center; gap: 12px; }
-  .quotes-label { font-size: 11px; font-weight: 700; color: var(--tl); letter-spacing: 1px; white-space: nowrap; }
-  .quotes-text { font-size: 14px; color: var(--tl2); font-weight: 600; animation: marquee 90s linear infinite; white-space: nowrap; }
-  @keyframes marquee { 0%{transform:translateX(60vw)} 100%{transform:translateX(-100%)} }
+
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
   .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 5px; box-shadow: 0 2px 12px rgba(0,0,0,.3); transition: transform .2s, box-shadow .2s; }
@@ -319,9 +315,7 @@
   body.agent-mode-theme .lb-row:hover { border-color: #8b5cf6 !important; box-shadow: 0 4px 16px rgba(108,43,217,.1) !important; }
   body.agent-mode-theme .lb-row-score { color: #6c2bd9 !important; }
   body.agent-mode-theme .lb-row-avatar { background: #8b5cf6 !important; border-color: #e2e8f0 !important; }
-  body.agent-mode-theme .quotes-bar { background: linear-gradient(90deg, rgba(108,43,217,.06), rgba(139,92,246,.06)) !important; border-color: rgba(108,43,217,.15) !important; }
-  body.agent-mode-theme .quotes-label { color: #6c2bd9 !important; }
-  body.agent-mode-theme .quotes-text { color: #8b5cf6 !important; }
+
   body.agent-mode-theme .dispo-stat-val { color: #6c2bd9 !important; }
   body.agent-mode-theme .stat-value.tl { color: #6c2bd9 !important; }
   body.agent-mode-theme .stat-value.blue { color: #6c2bd9 !important; }
@@ -379,12 +373,6 @@
 <!-- ───────────── TL MONITOR SCREEN ───────────── -->
 <div id="tlScreen">
   <div class="main">
-
-    <!-- Hindi Motivational Quotes Ticker -->
-    <div class="quotes-bar">
-      <span class="quotes-label">&#127775; QUOTE</span>
-      <span class="quotes-text" id="tlQuoteText"></span>
-    </div>
 
     <!-- Leaderboard -->
     <div class="leaderboard-panel">
@@ -517,11 +505,6 @@
 <div id="agentScreen">
   <div class="main">
 
-    <!-- Hindi Motivational Quotes (Agent Mode) -->
-    <div class="quotes-bar">
-      <span class="quotes-label">&#127775; QUOTE</span>
-      <span class="quotes-text" id="tlaQuoteText"></span>
-    </div>
 
 
 
@@ -851,8 +834,6 @@ function showTLDashboard() {
   if(dateEl) dateEl.textContent=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
   populateTLAgentFilter();
   fetchTLDispoStats();
-  if(typeof setTLQuotes === 'function') setTLQuotes();
-  if(typeof setTLAQuotes === 'function') setTLAQuotes();
   setInterval(()=>{fetchTLData();fetchTLLeaderboard();fetchTLDispoStats();},10000);
   setInterval(fetchTLLeaderboard,5000);
 }
@@ -1509,23 +1490,6 @@ async function tlaSubmitDocZip() {
   } catch(e){showToast('Upload failed','error');}
 }
 
-// ── Hindi Motivational Quotes (loaded from external files) ────────────────────
-function shuffleArr(arr) {
-  const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;
-}
-function setTLQuotes() {
-  if(typeof tlQuotes === 'undefined') return;
-  const shuffled = shuffleArr(tlQuotes);
-  const el = document.getElementById('tlQuoteText');
-  if(el) el.textContent = shuffled.join('  \u2022  ');
-}
-function setTLAQuotes() {
-  if(typeof agentQuotes === 'undefined') return;
-  const shuffled = shuffleArr(agentQuotes);
-  const el = document.getElementById('tlaQuoteText');
-  if(el) el.textContent = shuffled.join('  \u2022  ');
-}
-
 // ── Agent Mode Timer ──────────────────────────────────────────────────────────
 let agentModeStartTime = null;
 
@@ -1554,9 +1518,6 @@ function updateTLNetDialingTime() {
 }
 setInterval(updateTLNetDialingTime, 1000);
 </script>
-<script src="/quotes-tl.js"></script>
-<script src="/quotes-agent.js"></script>
-<script>setTLQuotes(); setTLAQuotes();
-</script>
+
 </body>
 </html>

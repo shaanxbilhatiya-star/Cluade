@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-005",
+  "type": "fix",
+  "description": "Fix Hindi motivational quotes ticker visibility on Agent and TL pages. Also add getSmartRemarks() personalized Hindi leaderboard remarks to TL page leaderboards.",
+  "status": "completed",
+  "steps": [
+    "In public/agent/index.html: Move <script src='/quotes-agent.js'></script> BEFORE the inline script that defines setAgentQuotes(). Remove the premature setAgentQuotes() call. Keep only one call after the script is loaded.",
+    "In public/agent/index.html: Add setAgentQuotes() call inside showDialer() function to re-apply quotes after login when the element becomes visible.",
+    "In public/tl/index.html: Remove premature setTLQuotes()/setTLAQuotes() calls from inline script block (they were called before external scripts loaded, doing nothing).",
+    "In public/tl/index.html: Add setTLQuotes() and setTLAQuotes() calls to showTLDashboard() for post-login rendering.",
+    "In public/tl/index.html: Add getSmartRemarks() function with Hindi motivational remarks for leaderboard positions.",
+    "In public/tl/index.html: Add .lb-row-remarks CSS style.",
+    "In public/tl/index.html: Integrate remarks into both renderTLLeaderboard() and renderAgentLeaderboard() functions.",
+    "Update /projects/sandbox/Cluade/ruralift-crm-updated.zip with all changes."
+  ],
+  "acceptance_criteria": [
+    "Quotes ticker is visible and animated on Agent page after login",
+    "Quotes ticker is visible and animated on TL page in both TL mode and Agent mode",
+    "TL leaderboard (TL mode) shows personalized Hindi smart remarks per agent row",
+    "Agent leaderboard (Agent mode in TL page) shows personalized Hindi smart remarks per agent row",
+    "All script blocks parse without syntax errors",
+    "Updated ZIP file is created at /projects/sandbox/Cluade/ruralift-crm-updated.zip"
+  ],
+  "verification": [
+    "node -c server.js passes",
+    "All inline script blocks in HTML files parse correctly via new Function()",
+    "ZIP file created with all updated files"
+  ],
+  "blocked_reason": null,
+  "findings": "The root cause was script loading order: setAgentQuotes() was called before quotes-agent.js was loaded (making agentQuotes undefined), and the same issue existed in TL page. Fixed by ensuring external scripts load first. Also added quote-setting calls to login functions. TL page leaderboards already had the structure but lacked getSmartRemarks - added it with the same Hindi motivational messages as the admin page."
+}
