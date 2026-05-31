@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Implement TL Mode timer logic: When TL switches to Agent Mode, track time as 'TL Mode Time' (not meeting). When switching back to TL Mode, auto-end any active meeting and show dialer. TL Mode Time is visible only to Admin and subtracts from Net Dialing Time. Also fully replicate the agent page modules into TL's agent mode section (leaderboard, stats, interested leads table, followups, add lead form, completed leads, disposition stats).",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "SERVER (server.js): Add tlModeMs and tlModeStartedAt fields to agent state. Add helper functions startTlMode(agentId) and endTlMode(agentId) similar to meeting helpers. Add socket events 'agent-tlmode-start' and 'agent-tlmode-end'. In checkDailyReset, reset tlModeMs fields. In getAdminStats, include totalTlModeMs in agent stats. Modify Net Dialing Time calculation in getAdminStats to also subtract totalTlModeMs.",
     "SERVER (server.js): Add a new API endpoint POST /api/admin/hard-reset that calls createFreshState(), also deletes all files in uploads/lead_docs/ and uploads/agent_photos/, emits force-stop to all, saves state, and returns success.",
@@ -25,5 +25,5 @@
     "Verify the admin HTML references totalTlModeMs in the agents table rendering"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Implemented TL Mode timer logic, full agent mode in TL page, admin TL Mode column. Server syntax validates. server.js was untracked so it was added as new file. The TL page agent mode includes: leaderboard with period switching, full stats grid, dialer panel, disposition stats, interested leads table with countdown and doc zip upload, followups table, add lead manually form, and completed leads table. Admin page now has 9 columns (added TL Mode after Meeting). Net dialing time subtracts TL mode time in both admin and TL pages."
 }
