@@ -469,6 +469,7 @@
         <div class="btn-row">
           <button class="btn btn-warn" onclick="resetToday()">&#128260; Reset Today's Count</button>
           <button class="btn btn-danger" onclick="clearAll()">&#128465; Clear All Numbers</button>
+          <button class="btn btn-danger" onclick="hardReset()" style="background:rgba(244,67,54,.25);border:2px solid var(--danger);font-weight:800;letter-spacing:.5px">&#128163; HARD RESET (Factory Reset)</button>
         </div>
       </div>
     </div>
@@ -873,6 +874,23 @@ async function clearAll() {
   if (!confirm('⚠️ This will delete ALL numbers! Continue?')) return;
   await fetch('/api/admin/clear-all', { method: 'POST' });
   showToast('All numbers cleared', 'success');
+}
+
+async function hardReset() {
+  if (!confirm('⚠️ HARD RESET: This will permanently delete ALL data including:\n\n• All numbers & uploaded files\n• All agent registrations\n• All interested leads & followups\n• All dialed logs\n• All uploaded documents & photos\n\nThe system will be completely fresh.\n\nAre you sure?')) return;
+  if (!confirm('🚨 FINAL WARNING: This action CANNOT be undone!\n\nType OK in your head and click OK to proceed.')) return;
+  try {
+    const r = await fetch('/api/admin/hard-reset', { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      showToast('🔄 Hard reset complete — system is now fresh', 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast('Reset failed: ' + (d.error || 'Unknown error'), 'error');
+    }
+  } catch (e) {
+    showToast('Reset failed: ' + e.message, 'error');
+  }
 }
 
 function showToast(msg, type='success') {

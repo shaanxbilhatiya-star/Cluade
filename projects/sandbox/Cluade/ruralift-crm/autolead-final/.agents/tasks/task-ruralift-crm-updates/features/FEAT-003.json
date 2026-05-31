@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Add a Hard Reset button to the Admin panel that completely resets the project to a fresh state (removes all data, agents, uploaded files, dialed logs). Requires confirmation dialog before executing.",
+  "status": "in_progress",
+  "steps": [
+    "SERVER (server.js): Add POST /api/admin/hard-reset endpoint that: (1) replaces appState with createFreshState(), (2) deletes all files in uploads/lead_docs/ directory, (3) deletes all files in uploads/agent_photos/ directory, (4) saves the fresh state, (5) emits 'force-stop' to all connected clients via io.emit, (6) broadcasts fresh admin stats, (7) returns {success: true}.",
+    "ADMIN PAGE (public/admin/index.html): Add a prominent 'Hard Reset' button in the admin panel (in the button row next to 'Reset Today' and 'Clear All Numbers' buttons). Style it with a distinct dangerous appearance (red background, warning icon). On click, show a two-step confirmation: first confirm('Are you sure...'), then a second confirm with stronger wording about permanent data loss. Only if both confirmed, call the API endpoint.",
+    "ADMIN PAGE: Add the hardReset() JavaScript function that calls POST /api/admin/hard-reset, shows a toast on success, and reloads the page after a brief delay to reflect the fresh state."
+  ],
+  "acceptance_criteria": [
+    "Admin panel has a visible Hard Reset button",
+    "Clicking it shows a confirmation dialog (with strong warning text)",
+    "After confirmation, all data is wiped: numbers, agents, files, logs",
+    "Upload directories are cleaned",
+    "All connected clients get force-stop signal",
+    "Page reloads to show fresh empty state"
+  ],
+  "verification": [
+    "Run node -c server.js to validate server syntax",
+    "grep for 'hard-reset' in server.js and admin/index.html to confirm endpoint and button exist"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
