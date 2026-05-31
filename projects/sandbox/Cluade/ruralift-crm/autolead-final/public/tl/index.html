@@ -116,7 +116,7 @@
   /* Hindi quotes ticker */
   .quotes-bar { background: linear-gradient(90deg, rgba(167,139,250,.08), rgba(99,102,241,.08)); border: 1px solid rgba(167,139,250,.2); border-radius: 10px; padding: 10px 20px; margin-bottom: 20px; overflow: hidden; display: flex; align-items: center; gap: 12px; }
   .quotes-label { font-size: 11px; font-weight: 700; color: var(--tl); letter-spacing: 1px; white-space: nowrap; }
-  .quotes-text { font-size: 14px; color: var(--tl2); font-weight: 600; animation: marquee 180s linear infinite; white-space: nowrap; }
+  .quotes-text { font-size: 14px; color: var(--tl2); font-weight: 600; animation: marquee 90s linear infinite; white-space: nowrap; }
   @keyframes marquee { 0%{transform:translateX(60vw)} 100%{transform:translateX(-100%)} }
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
@@ -522,12 +522,7 @@
       <span class="quotes-text" id="tlaQuoteText"></span>
     </div>
 
-    <!-- Agent Mode Timer -->
-    <div id="agentModeTimerBar" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:10px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
-      <span style="font-size:11px;font-weight:700;color:var(--accent2);letter-spacing:1px;white-space:nowrap">&#128337; AGENT MODE</span>
-      <span style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent2)" id="agentModeElapsed">0:00:00</span>
-      <span style="font-size:12px;color:var(--muted);margin-left:auto">Time spent in agent mode this session</span>
-    </div>
+
 
     <!-- LEADERBOARD -->
     <div class="leaderboard-panel">
@@ -1516,28 +1511,12 @@ setTLQuotes(); setTLAQuotes();
 
 // ── Agent Mode Timer ──────────────────────────────────────────────────────────
 let agentModeStartTime = null;
-let agentModeTimerInterval = null;
 
 function startAgentModeTimer() {
   agentModeStartTime = Date.now();
-  if(agentModeTimerInterval) clearInterval(agentModeTimerInterval);
-  agentModeTimerInterval = setInterval(tickAgentModeTimer, 1000);
-  tickAgentModeTimer();
 }
 function stopAgentModeTimer() {
-  if(agentModeTimerInterval) { clearInterval(agentModeTimerInterval); agentModeTimerInterval = null; }
   agentModeStartTime = null;
-  const el = document.getElementById('agentModeElapsed');
-  if(el) el.textContent = '0:00:00';
-}
-function tickAgentModeTimer() {
-  if(!agentModeStartTime) return;
-  const elapsed = Date.now() - agentModeStartTime;
-  const h = Math.floor(elapsed / 3600000);
-  const m = Math.floor((elapsed % 3600000) / 60000);
-  const s = Math.floor((elapsed % 60000) / 1000);
-  const el = document.getElementById('agentModeElapsed');
-  if(el) el.textContent = h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 }
 
 // ── Net Dialing Time for TL Agent Mode ────────────────────────────────────────

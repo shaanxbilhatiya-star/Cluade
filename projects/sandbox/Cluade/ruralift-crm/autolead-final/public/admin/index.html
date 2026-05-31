@@ -311,17 +311,7 @@
     </div>
   </div>
 
-  <!-- TOP TWO CARDS SIDE BY SIDE -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-    <div class="stat-card">
-      <span class="stat-label">Total Numbers Uploaded Till Date</span>
-      <span class="stat-value blue" id="statTotal">0</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-label">Remaining Numbers Left To Dial</span>
-      <span class="stat-value accent" id="statRemaining">0</span>
-    </div>
-  </div>
+
 
   <!-- DISPOSITION STATS immediately below top two cards -->
   <div class="panel dispo-stats-panel" style="margin-bottom:20px">
@@ -412,6 +402,18 @@
   <div id="breakSummary">
     <div class="break-summary-title">&#9749; Agents on Break</div>
     <div class="break-agents-list" id="breakAgentsList"></div>
+  </div>
+
+  <!-- TOP TWO CARDS SIDE BY SIDE -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="stat-card">
+      <span class="stat-label">Total Numbers Uploaded Till Date</span>
+      <span class="stat-value blue" id="statTotal">0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Remaining Numbers Left To Dial</span>
+      <span class="stat-value accent" id="statRemaining">0</span>
+    </div>
   </div>
 
   <div class="grid-2">
@@ -670,6 +672,27 @@ function tickBreakTimers() {
         el.textContent = formatMs(used);
       }
     }
+    // Live Net Dialing Time tick
+    const ndEl = document.getElementById('net-dialing-' + a.id);
+    if (ndEl) {
+      const SHIFT_MS = 8 * 60 * 60 * 1000;
+      let liveBreak = a.totalBreakMs || 0;
+      if (a.onBreak && window._breakStartTimes[a.id]) {
+        liveBreak = (window._breakMsAtRender[a.id] || 0) + (now - window._breakStartTimes[a.id]);
+      }
+      let liveWashroom = a.totalWashroomMs || 0;
+      if (a.onWashroom && window._washroomStartTimes[a.id]) {
+        liveWashroom = (window._washroomMsAtRender[a.id] || 0) + (now - window._washroomStartTimes[a.id]);
+      }
+      let liveMeeting = a.totalMeetingMs || 0;
+      if (a.onMeeting && window._meetingStartTimes[a.id]) {
+        liveMeeting = (window._meetingMsAtRender[a.id] || 0) + (now - window._meetingStartTimes[a.id]);
+      }
+      const netMs = Math.max(0, SHIFT_MS - liveBreak - liveWashroom - liveMeeting - (a.totalTlModeMs || 0));
+      const netH = Math.floor(netMs / (60 * 60 * 1000));
+      const netM = Math.floor((netMs % (60 * 60 * 1000)) / (60 * 1000));
+      ndEl.textContent = netH + 'h ' + netM + 'm';
+    }
   });
 }
 
@@ -790,7 +813,7 @@ function renderStats(data) {
         <td>${loginCell}</td>
         <td><span class="status-dot ${statusDot}"></span>${statusText}</td>
         <td><span class="dialed-count">${a.totalDialedToday}</span></td>
-        <td style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)">${netDialingTime}</td>
+        <td style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)" id="net-dialing-${a.id}">${netDialingTime}</td>
         <td>${breakCell}</td>
         <td>${washroomCell}</td>
         <td>${meetingCell}</td>

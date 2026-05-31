@@ -258,7 +258,7 @@
   /* ── Hindi Quotes Ticker ── */
   .quotes-bar { background: linear-gradient(90deg, rgba(108,43,217,.06), rgba(139,92,246,.06)); border: 1px solid rgba(108,43,217,.15); border-radius: 10px; padding: 10px 20px; margin-bottom: 20px; overflow: hidden; display: flex; align-items: center; gap: 12px; }
   .quotes-label { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 1px; white-space: nowrap; }
-  .quotes-text { font-size: 14px; color: var(--accent2); font-weight: 600; animation: marquee 180s linear infinite; white-space: nowrap; }
+  .quotes-text { font-size: 14px; color: var(--accent2); font-weight: 600; animation: marquee 90s linear infinite; white-space: nowrap; }
   @keyframes marquee { 0%{transform:translateX(60vw)} 100%{transform:translateX(-100%)} }
 
   @media(max-width:900px){ .grid-2{grid-template-columns:1fr} .add-lead-form{grid-template-columns:1fr} .stats-grid{grid-template-columns:1fr 1fr} .leaderboard-podium{flex-direction:column;align-items:center} .podium-card{min-width:auto;width:100%} }
@@ -1270,6 +1270,7 @@ function updateNetDialingTime() {
   const el = document.getElementById('netDialingTime');
   if (el) el.textContent = h + 'h ' + m + 'm';
 }
+setInterval(updateNetDialingTime, 1000);
 
 function formatMs(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
