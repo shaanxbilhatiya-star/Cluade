@@ -128,7 +128,17 @@
   .leads-table tr:last-child td { border-bottom: none; }
   .phone-number { font-family: var(--mono); font-weight: 700; color: var(--accent); }
 
-  @media(max-width:900px){ .stats-grid{grid-template-columns:1fr 1fr} .grid-2{grid-template-columns:1fr} }
+  /* Hard Reset */
+  .btn-hard-reset { padding: 10px 20px; border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: all .2s; background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; box-shadow: 0 4px 14px rgba(220,38,38,.4); letter-spacing: .5px; animation: reset-pulse 3s ease-in-out infinite; }
+  .btn-hard-reset:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(220,38,38,.6); }
+  @keyframes reset-pulse { 0%,100%{box-shadow:0 4px 14px rgba(220,38,38,.4)} 50%{box-shadow:0 4px 24px rgba(220,38,38,.7)} }
+  .hard-reset-modal .modal-box { border: 2px solid var(--danger); }
+  .hard-reset-modal .reset-warn { background: rgba(244,67,54,.06); border: 1px solid rgba(244,67,54,.2); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--text); margin-bottom: 18px; line-height: 1.6; }
+  .hard-reset-modal .reset-confirm-field input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 2px solid rgba(244,67,54,.4); background: var(--surface2); color: var(--danger); font-family: var(--mono); font-size: 15px; font-weight: 700; outline: none; text-align: center; }
+  .hard-reset-modal .reset-confirm-field input:focus { border-color: var(--danger); }
+  .btn-hard-confirm { width: 100%; padding: 13px; border-radius: 10px; border: none; background: var(--danger); color: #fff; font-family: var(--sans); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; transition: all .2s; }
+  .btn-hard-confirm:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-hard-confirm:not(:disabled):hover { filter: brightness(1.1); }
 
   .logo-img { height: 48px; background: #fff; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border, #2C2C2C); }
   .login-time { font-family: var(--mono, monospace); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px; }
@@ -454,6 +464,7 @@
               <th>Status</th>
               <th>Total No. Dialed</th>
               <th>Net Dialing Time</th>
+              <th>TL Mode Time</th>
               <th>Break Used</th>
               <th>&#128699; Washroom</th>
               <th>&#128203; Meeting</th>
@@ -574,6 +585,20 @@
       </div>
     </div>
   </div>
+  <!-- Hard Reset Panel -->
+  <div class="panel" style="margin-top:24px;border:2px solid rgba(244,67,54,.3);box-shadow:0 4px 24px rgba(244,67,54,.12);">
+    <div class="panel-header" style="background:rgba(244,67,54,.06)">
+      <h2 style="color:var(--danger)">&#9888;&#65039; Danger Zone</h2>
+      <span style="font-size:12px;color:var(--muted)">Irreversible actions</span>
+    </div>
+    <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--danger);margin-bottom:4px">&#128721; Hard Reset</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">Wipes <strong style="color:var(--text)">everything</strong> — all numbers, agents, leads, files, EIDs, dispositions. Resets to factory new.</div>
+      </div>
+      <button class="btn-hard-reset" onclick="openHardResetModal()">&#128721; HARD RESET</button>
+    </div>
+  </div>
 
 </div><!-- end main -->
 
@@ -595,6 +620,29 @@
   </div>
 </div>
 
+
+<!-- Hard Reset Modal -->
+<div class="modal-overlay hard-reset-modal" id="hardResetModal">
+  <div class="modal-box" style="max-width:420px">
+    <div style="font-size:40px;text-align:center;margin-bottom:12px">&#128721;</div>
+    <h3 style="text-align:center;color:var(--danger);font-size:20px;margin-bottom:8px">HARD RESET</h3>
+    <div class="reset-warn">
+      This will <strong>permanently delete</strong>:<br>
+      &#8226; All uploaded phone number files<br>
+      &#8226; All agent registrations &amp; profiles<br>
+      &#8226; All leads (interested, followups, completed)<br>
+      &#8226; All dispositions &amp; stats<br>
+      &#8226; All EID whitelist entries<br><br>
+      <strong style="color:var(--danger)">This action CANNOT be undone.</strong>
+    </div>
+    <div class="reset-confirm-field">
+      <label style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px">Type <span style="color:var(--danger);font-family:var(--mono)">RESET</span> to confirm</label>
+      <input type="text" id="hardResetInput" placeholder="RESET" oninput="checkHardResetInput()" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="btn-hard-confirm" id="btnHardConfirm" disabled onclick="executeHardReset()">&#128721; DELETE EVERYTHING</button>
+    <button class="btn-cancel" onclick="closeHardResetModal()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;font-size:14px;font-weight:600;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">Cancel</button>
+  </div>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -726,7 +774,7 @@ function renderStats(data) {
   const meetingAgents  = data.agentStats.filter(a => a.onMeeting);
 
   if (!data.agentStats.length) {
-    at.innerHTML = '<tr><td colspan="8" class="empty">No agents registered</td></tr>';
+    at.innerHTML = '<tr><td colspan="9" class="empty">No agents registered</td></tr>';
   } else {
     at.innerHTML = data.agentStats.map(a => {
       let statusDot, statusText;
@@ -774,10 +822,15 @@ function renderStats(data) {
       // Net Dialing Time calculation — Xh Ym format
       const SHIFT_MS = 8 * 60 * 60 * 1000;
       const BREAK_ALLOC_MS = 1 * 60 * 60 * 1000;
-      const netMs = Math.max(0, SHIFT_MS - BREAK_ALLOC_MS - (a.totalMeetingMs || 0) - (a.totalWashroomMs || 0));
+      const netMs = Math.max(0, SHIFT_MS - BREAK_ALLOC_MS - (a.totalMeetingMs || 0) - (a.totalWashroomMs || 0) - (a.tlModeMs || 0));
       const netH = Math.floor(netMs / (60 * 60 * 1000));
       const netM = Math.floor((netMs % (60 * 60 * 1000)) / (60 * 1000));
       const netDialingTime = netH + 'h ' + netM + 'm';
+
+      // TL Mode time (only shown in admin, only for TL-role agents)
+      const tlModeCell = a.isTL && (a.tlModeMs || 0) > 0
+        ? `<span style="font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700">${formatMs(a.tlModeMs||0)}</span>`
+        : `<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">&#8212;</span>`;
 
       return `<tr>
         <td style="font-weight:600">${escapeHtml(a.name)}</td>
@@ -785,6 +838,7 @@ function renderStats(data) {
         <td><span class="status-dot ${statusDot}"></span>${statusText}</td>
         <td><span class="dialed-count">${a.totalDialedToday}</span></td>
         <td style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)">${netDialingTime}</td>
+        <td>${tlModeCell}</td>
         <td>${breakCell}</td>
         <td>${washroomCell}</td>
         <td>${meetingCell}</td>
@@ -1456,6 +1510,45 @@ async function fetchAdminLeaderboard() {
 
 setTimeout(fetchAdminLeaderboard, 500);
 setInterval(fetchAdminLeaderboard, 5000);
+
+// ── Hard Reset ────────────────────────────────────────────────────────────────
+function openHardResetModal(){
+  document.getElementById('hardResetInput').value='';
+  document.getElementById('btnHardConfirm').disabled=true;
+  document.getElementById('hardResetModal').classList.add('active');
+}
+function closeHardResetModal(){
+  document.getElementById('hardResetModal').classList.remove('active');
+  document.getElementById('hardResetInput').value='';
+  document.getElementById('btnHardConfirm').disabled=true;
+}
+function checkHardResetInput(){
+  const val=document.getElementById('hardResetInput').value.trim().toUpperCase();
+  document.getElementById('btnHardConfirm').disabled=(val!=='RESET');
+}
+async function executeHardReset(){
+  const val=document.getElementById('hardResetInput').value.trim().toUpperCase();
+  if(val!=='RESET'){showToast('Type RESET to confirm','error');return;}
+  document.getElementById('btnHardConfirm').disabled=true;
+  document.getElementById('btnHardConfirm').textContent='Resetting...';
+  try{
+    const r=await fetch('/api/admin/hard-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'RESET'})});
+    const d=await r.json();
+    if(d.success){
+      closeHardResetModal();
+      showToast('&#9989; Hard reset complete — system is brand new','success');
+      setTimeout(()=>location.reload(),2000);
+    }else{
+      showToast('Reset failed: '+(d.error||'Unknown'),'error');
+      document.getElementById('btnHardConfirm').disabled=false;
+      document.getElementById('btnHardConfirm').textContent='&#128721; DELETE EVERYTHING';
+    }
+  }catch(e){
+    showToast('Reset failed: '+e.message,'error');
+    document.getElementById('btnHardConfirm').disabled=false;
+    document.getElementById('btnHardConfirm').textContent='&#128721; DELETE EVERYTHING';
+  }
+}
 </script>
 </body>
 </html>

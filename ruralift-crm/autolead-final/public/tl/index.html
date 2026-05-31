@@ -405,7 +405,7 @@
             <tr>
               <th>Agent</th><th>Login</th><th>Status</th>
               <th>Total No. Dialed</th><th>Net Dialing Time</th>
-              <th>Break Used</th><th>🚻 Washroom</th><th>📋 Meeting</th>
+              <th>Break Used</th><th>&#128699; Washroom</th><th>&#128203; Meeting</th>
             </tr>
           </thead>
           <tbody id="agentTable"><tr><td colspan="8" class="empty">No agents registered</td></tr></tbody>
@@ -466,66 +466,226 @@
 </div><!-- end #tlScreen -->
 
 
-<!-- ───────────── AGENT DIALER SCREEN (TL in agent mode) ───────────── -->
+<!-- ───────────── AGENT DIALER SCREEN (TL in agent mode — full copy) ───────────── -->
 <div id="agentScreen">
   <div class="main">
+
+    <!-- LEADERBOARD (TL agent mode) -->
+    <div class="leaderboard-panel">
+      <div class="leaderboard-header">
+        <h2>&#127942; Agent Rankings</h2>
+        <div class="lb-period-tabs">
+          <button class="lb-period-tab active" data-period="daily" onclick="switchAgentLbPeriod('daily')">Daily</button>
+          <button class="lb-period-tab" data-period="weekly" onclick="switchAgentLbPeriod('weekly')">Weekly</button>
+          <button class="lb-period-tab" data-period="monthly" onclick="switchAgentLbPeriod('monthly')">Monthly</button>
+        </div>
+      </div>
+      <div class="leaderboard-body" id="agentLbBody">
+        <div style="text-align:center;color:var(--muted);padding:20px">Loading rankings...</div>
+      </div>
+    </div>
+
+    <!-- STATS ROW -->
     <div class="stats-grid">
       <div class="stat-card"><span class="stat-label">Dialed Today</span><span class="stat-value tl" id="agentCountToday">0</span></div>
+      <div class="stat-card"><span class="stat-label">Net Dialing Time</span><span class="stat-value tl" id="agentNetDialingTime">7h 0m</span></div>
       <div class="stat-card"><span class="stat-label">Break Used</span><span class="stat-value amber" id="agentBreakUsed">0:00</span></div>
       <div class="stat-card"><span class="stat-label">Washroom</span><span class="stat-value" style="color:#818cf8" id="agentWashroomUsed">0:00</span></div>
       <div class="stat-card"><span class="stat-label">Meeting</span><span class="stat-value" style="color:#22d3ee" id="agentMeetingUsed">0:00</span></div>
-      <div class="stat-card"><span class="stat-label">Net Dialing Time</span><span class="stat-value tl" id="agentNetDialingTime">7h 0m</span></div>
       <div class="stat-card"><span class="stat-label">Interested</span><span class="stat-value green" id="agentInterestedCount">0</span></div>
+      <div class="stat-card"><span class="stat-label">Followups</span><span class="stat-value tl" id="agentFollowupsCount">0</span></div>
     </div>
-    <div class="panel dialer-panel" style="margin-bottom:22px">
-      <div class="panel-header" style="background:rgba(124,58,237,.05)">
-        <h2 style="color:var(--tl)">&#128222; Current Lead (TL Dialing Mode)</h2>
-      </div>
-      <div id="agentNumberDisplay" style="display:none">
-        <div class="number-block">
-          <div class="number-label">Lead to Dial</div>
-          <div class="lead-name" id="agentLeadName"></div>
-          <div class="phone-number-big" id="agentPhoneDisplay">—</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:8px">Dial this number now</div>
+
+    <!-- DIALER + DISPO STATS (2-col) -->
+    <div class="grid-2">
+
+      <!-- Dialer Panel -->
+      <div class="panel dialer-panel">
+        <div class="panel-header" style="background:rgba(167,139,250,.06)">
+          <h2 style="color:var(--tl)">&#128222; Current Lead</h2>
+          <span style="font-size:11px;color:var(--muted)">TL Dialing Mode</span>
+        </div>
+
+        <div id="agentResumeToast" style="display:none;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green);font-weight:600;text-align:center;margin:12px 20px 0;">&#9889; Session resumed</div>
+
+        <div id="agentNumberDisplay" style="display:none">
+          <div class="number-block">
+            <div class="number-label">Lead to Dial</div>
+            <div class="lead-name" id="agentLeadName"></div>
+            <div class="phone-number-big" id="agentPhoneDisplay">&#8212;</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:8px">Dial this number now</div>
+          </div>
+        </div>
+
+        <div id="agentIdleOverlay"><span class="idle-icon">&#128203;</span><p class="idle-text">Press Start to begin dialing leads</p></div>
+
+        <div id="agentNoNumbers" style="display:none;text-align:center;padding:28px 16px">
+          <div style="font-size:42px;margin-bottom:10px">&#9989;</div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:6px;color:var(--text)">All Done!</div>
+          <p style="color:var(--muted);font-size:13px">No more numbers right now.<br>Check back or ask your admin.</p>
+        </div>
+
+        <!-- Break card -->
+        <div id="agentBreakCard" style="display:none;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:20px;text-align:center;margin:12px 20px 0">
+          <div style="font-size:30px;margin-bottom:6px">&#9749;</div>
+          <div style="font-size:14px;font-weight:700;color:var(--warn);margin-bottom:4px">You are on a Break</div>
+          <div class="break-timer" id="agentBreakTimerDisplay">60:00</div>
+          <div style="font-size:11px;color:var(--muted)">Break time remaining</div>
+          <div style="height:4px;background:rgba(245,158,11,.2);border-radius:2px;margin:10px 0 0"><div id="agentBreakBarFill" style="height:100%;background:var(--warn);border-radius:2px;width:100%;transition:width .5s"></div></div>
+        </div>
+
+        <!-- Washroom card -->
+        <div id="agentWashroomCard" style="display:none;text-align:center;padding:20px 20px 0">
+          <div style="font-size:30px;margin-bottom:6px">&#128699;</div>
+          <div style="font-size:14px;font-weight:700;color:#818cf8;margin-bottom:4px">Washroom Break</div>
+          <div class="break-timer" id="agentWashroomTimerDisplay" style="color:#818cf8">0:00</div>
+          <div style="font-size:11px;color:var(--muted)">Elapsed</div>
+        </div>
+
+        <!-- Meeting card -->
+        <div id="agentMeetingCard" style="display:none;text-align:center;padding:20px 20px 0">
+          <div style="font-size:30px;margin-bottom:6px">&#128203;</div>
+          <div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:4px">In a Meeting</div>
+          <div class="break-timer" id="agentMeetingTimerDisplay" style="color:#22d3ee">0:00</div>
+          <div style="font-size:11px;color:var(--muted)">Elapsed</div>
+        </div>
+
+        <!-- Disposition grid -->
+        <div id="agentDispositionPanel" class="dispo-wrap">
+          <div class="dispo-grid">
+            <button class="dispo-btn dispo-dead"           onclick="agentSubmitDisposition('dead')">&#9760;&#65039; Call Not Connected</button>
+            <button class="dispo-btn dispo-not-received"   onclick="agentSubmitDisposition('not_received')">&#128245; Not Received</button>
+            <button class="dispo-btn dispo-not-interested" onclick="agentSubmitDisposition('not_interested')">&#128683; Not Interested</button>
+            <button class="dispo-btn dispo-followup"       onclick="agentSubmitDisposition('followup')">&#128197; Followup</button>
+            <button class="dispo-btn dispo-switch-off"     onclick="agentSubmitDisposition('switch_off')">&#128244; Switch OFF</button>
+            <button class="dispo-btn dispo-interested"     onclick="agentSubmitDisposition('interested')">&#11088; Interested</button>
+          </div>
+        </div>
+
+        <div class="btn-row-a">
+          <button class="action-btn" id="agentBtnStart"      onclick="agentStartDialing()" style="background:var(--tl);color:#0e0e1a">&#9654; Start Dialing</button>
+          <button class="action-btn" id="agentBtnBreak"      onclick="agentTakeBreak()"    style="background:rgba(245,158,11,.1);color:var(--warn);border:1.5px solid rgba(245,158,11,.3);display:none">&#9749; Take a Break</button>
+          <button class="action-btn" id="agentBtnEndBreak"   onclick="agentEndBreak()"     style="background:var(--green);color:#fff;display:none">&#9654; End Break &#8212; Resume</button>
+          <button class="action-btn" id="agentBtnWashroom"   onclick="agentTakeWashroom()" style="background:rgba(99,102,241,.1);color:#818cf8;border:1.5px solid rgba(99,102,241,.3);display:none">&#128699; Washroom</button>
+          <button class="action-btn" id="agentBtnEndWashroom" onclick="agentEndWashroom()" style="background:#6366f1;color:#fff;display:none">&#9654; Done &#8212; Resume</button>
+          <button class="action-btn" id="agentBtnMeeting"    onclick="agentTakeMeeting()"  style="background:rgba(8,145,178,.1);color:#22d3ee;border:1.5px solid rgba(8,145,178,.3);display:none">&#128203; Meeting</button>
+          <button class="action-btn" id="agentBtnEndMeeting" onclick="agentEndMeeting()"   style="background:#0891b2;color:#fff;display:none">&#9654; Meeting Done &#8212; Resume</button>
         </div>
       </div>
-      <div id="agentIdleOverlay"><span class="idle-icon">&#128203;</span><p class="idle-text">Press Start to begin dialing leads</p></div>
-      <div id="agentNoNumbers" style="display:none;text-align:center;padding:28px 16px">
-        <div style="font-size:42px;margin-bottom:10px">&#9989;</div>
-        <div style="font-size:17px;font-weight:700;margin-bottom:6px;color:var(--text)">All Done!</div>
-        <p style="color:var(--muted);font-size:13px">No more numbers right now.</p>
-      </div>
-      <div id="agentBreakCard" style="display:none;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:20px;text-align:center;margin:0 20px 16px">
-        <div style="font-size:30px;margin-bottom:6px">&#9749;</div>
-        <div style="font-size:14px;font-weight:700;color:var(--warn);margin-bottom:4px">You are on a Break</div>
-        <div class="break-timer" id="agentBreakTimerDisplay">60:00</div>
-        <div style="font-size:11px;color:var(--muted)">Break time remaining</div>
-        <div style="height:4px;background:rgba(245,158,11,.2);border-radius:2px;margin:10px 0 0"><div id="agentBreakBarFill" style="height:100%;background:var(--warn);border-radius:2px;width:100%;transition:width .5s"></div></div>
-      </div>
-      <div id="agentDispositionPanel" class="dispo-wrap">
-        <div class="dispo-grid">
-          <button class="dispo-btn dispo-dead" onclick="agentSubmitDisposition('dead')">&#9760;&#65039; Call Not Connected</button>
-          <button class="dispo-btn dispo-not-received" onclick="agentSubmitDisposition('not_received')">&#128245; Not Received</button>
-          <button class="dispo-btn dispo-not-interested" onclick="agentSubmitDisposition('not_interested')">&#128683; Not Interested</button>
-          <button class="dispo-btn dispo-followup" onclick="agentSubmitDisposition('followup')">&#128197; Followup</button>
-          <button class="dispo-btn dispo-switch-off" onclick="agentSubmitDisposition('switch_off')">&#128244; Switch OFF</button>
-          <button class="dispo-btn dispo-interested" onclick="agentSubmitDisposition('interested')">&#11088; Interested</button>
+
+      <!-- My Disposition Stats Panel -->
+      <div class="panel">
+        <div class="panel-header" style="background:rgba(167,139,250,.06)">
+          <h2 style="color:var(--tl)">&#128202; My Disposition Stats</h2>
+          <div class="admin-stats-tabs" id="agentStatsTabs">
+            <button class="admin-stats-tab active" data-period="daily"   onclick="switchAgentStatsPeriod('daily')">Daily</button>
+            <button class="admin-stats-tab"        data-period="weekly"  onclick="switchAgentStatsPeriod('weekly')">Weekly</button>
+            <button class="admin-stats-tab"        data-period="monthly" onclick="switchAgentStatsPeriod('monthly')">Monthly</button>
+            <button class="admin-stats-tab"        data-period="yearly"  onclick="switchAgentStatsPeriod('yearly')">Yearly</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="dispo-stats-grid">
+            <div class="dispo-stat-card dispo-stat-total"><div class="dispo-stat-val" id="agMyStatsTotalCalls">0</div><div class="dispo-stat-lbl">Total Calls</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:var(--danger)"></div><div class="dispo-stat-val" id="agMyStatsDead">0</div><div class="dispo-stat-lbl">Not Connected</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:var(--warn)"></div><div class="dispo-stat-val" id="agMyStatsNotReceived">0</div><div class="dispo-stat-lbl">Not Received</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:var(--muted)"></div><div class="dispo-stat-val" id="agMyStatsNotInterested">0</div><div class="dispo-stat-lbl">Not Interested</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:var(--accent2)"></div><div class="dispo-stat-val" id="agMyStatsFollowup">0</div><div class="dispo-stat-lbl">Followup</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#f59e0b"></div><div class="dispo-stat-val" id="agMyStatsSwitchOff">0</div><div class="dispo-stat-lbl">Switch OFF</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:var(--green)"></div><div class="dispo-stat-val" id="agMyStatsInterested">0</div><div class="dispo-stat-lbl">Interested</div></div>
+          </div>
         </div>
       </div>
-      <div class="btn-row-a">
-        <button class="action-btn" id="agentBtnStart" onclick="agentStartDialing()" style="background:var(--tl);color:#0e0e1a">&#9654; Start Dialing</button>
-        <button class="action-btn" id="agentBtnBreak" onclick="agentTakeBreak()" style="background:rgba(245,158,11,.1);color:var(--warn);border:1.5px solid rgba(245,158,11,.3);display:none">&#9749; Take a Break</button>
-        <button class="action-btn" id="agentBtnEndBreak" onclick="agentEndBreak()" style="background:var(--green);color:#fff;display:none">&#9654; End Break &#8212; Resume</button>
-        <button class="action-btn" id="agentBtnWashroom" onclick="agentTakeWashroom()" style="background:rgba(99,102,241,.1);color:#818cf8;border:1.5px solid rgba(99,102,241,.3);display:none">&#128699; Washroom</button>
-        <button class="action-btn" id="agentBtnEndWashroom" onclick="agentEndWashroom()" style="background:#6366f1;color:#fff;display:none">&#9654; Done &#8212; Resume</button>
-        <button class="action-btn" id="agentBtnMeeting" onclick="agentTakeMeeting()" style="background:rgba(8,145,178,.1);color:#22d3ee;border:1.5px solid rgba(8,145,178,.3);display:none">&#128203; Meeting</button>
-        <button class="action-btn" id="agentBtnEndMeeting" onclick="agentEndMeeting()" style="background:#0891b2;color:#fff;display:none">&#9654; Meeting Done &#8212; Resume</button>
+
+    </div><!-- end grid-2 -->
+
+    <!-- INTERESTED LEADS (full width) -->
+    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--green)">
+      <div class="panel-header" style="background:rgba(16,185,129,.05)">
+        <h2 style="color:var(--green)">&#11088; My Interested Leads</h2>
+        <span style="font-size:12px;color:var(--muted)" id="agInterestedCountBadge">0 leads</span>
+      </div>
+      <div class="panel-body" style="padding:0;overflow-x:auto">
+        <table class="leads-table">
+          <thead><tr><th>Phone</th><th>Name</th><th>Loan Type</th><th>Loan Amt</th><th>Time Left</th><th>Actions</th></tr></thead>
+          <tbody id="agInterestedTable"><tr><td colspan="6" class="empty">No interested leads yet</td></tr></tbody>
+        </table>
       </div>
     </div>
+
+    <!-- FOLLOWUPS + ADD LEAD -->
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header" style="background:rgba(99,102,241,.05)">
+          <h2 style="color:var(--accent2)">&#128197; My Followups</h2>
+          <span style="font-size:12px;color:var(--muted)" id="agFollowupsCountBadge">0 followups</span>
+        </div>
+        <div class="panel-body" style="padding:0;overflow-x:auto">
+          <table class="leads-table">
+            <thead><tr><th>Phone</th><th>Name</th><th>Date</th><th>Time</th></tr></thead>
+            <tbody id="agFollowupsTable"><tr><td colspan="4" class="empty">No followups yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header" style="background:rgba(167,139,250,.06)">
+          <h2 style="color:var(--tl)">&#10133; Add Interested Lead Manually</h2>
+        </div>
+        <div class="panel-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="field"><label>Name <span style="color:#ef4444">*</span></label><input type="text" id="agManualLeadName" placeholder="e.g. Amit Kumar" autocomplete="off"></div>
+            <div class="field"><label>Mob No <span style="color:#ef4444">*</span></label><input type="text" id="agManualPhone" placeholder="10-digit number" maxlength="10"></div>
+            <div class="field"><label>Required Amount <span style="color:#ef4444">*</span></label><input type="number" id="agManualLoanAmount" placeholder="e.g. 500000" min="1"></div>
+            <div class="field"><label>Remarks <span style="color:#ef4444">*</span></label><input type="text" id="agManualRemarks" placeholder="Notes about this lead"></div>
+            <div style="grid-column:1/-1;display:flex;justify-content:flex-end"><button onclick="agAddInterestedManually()" style="padding:11px 22px;border-radius:8px;border:none;background:var(--green);color:#fff;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer">+ Add Lead</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETED LEADS -->
+    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--tl)">
+      <div class="panel-header" style="background:rgba(167,139,250,.06)">
+        <h2 style="color:var(--tl)">&#9989; Documentation Completed</h2>
+        <span style="font-size:12px;color:var(--muted)" id="agCompletedCountBadge">0 leads</span>
+      </div>
+      <div class="panel-body" style="padding:0;overflow-x:auto">
+        <table class="leads-table">
+          <thead><tr><th>Phone</th><th>Name</th><th>Loan Amt</th><th>Completed At</th><th>Status</th></tr></thead>
+          <tbody id="agCompletedTable"><tr><td colspan="5" class="empty">No completed leads yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- end .main agentScreen -->
+</div><!-- end #agentScreen -->
+
+<div id="toast"></div>
+
+<!-- Agent Mode: Followup Modal -->
+<div class="modal-overlay-a" id="agFollowupModal">
+  <div class="modal-box-a">
+    <h3>&#128197; Schedule Followup</h3>
+    <p class="modal-sub">Set a date and time to follow up</p>
+    <div class="field"><label>Followup Date</label><input type="date" id="agFollowupDate"></div>
+    <div class="field"><label>Followup Time</label><input type="time" id="agFollowupTime"></div>
+    <button class="btn-confirm-a blue" onclick="agConfirmFollowup()">Confirm Followup</button>
+    <button class="btn-cancel-a" onclick="document.getElementById('agFollowupModal').classList.remove('active')">Cancel</button>
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- Agent Mode: Interested Modal -->
+<div class="modal-overlay-a" id="agInterestedModal">
+  <div class="modal-box-a">
+    <h3>&#11088; Mark as Interested</h3>
+    <p class="modal-sub">Fill in lead details (all mandatory)</p>
+    <div class="field"><label>Lead Name *</label><input type="text" id="agILeadName"><span class="field-err" id="agErrILeadName">Required</span></div>
+    <div class="field"><label>Required Amount (&#8377;) *</label><input type="number" id="agILoanAmount" min="1"><span class="field-err" id="agErrILoanAmt">Required</span></div>
+    <div class="field"><label>Remarks *</label><textarea id="agIRemarks" rows="3"></textarea><span class="field-err" id="agErrIRemarks">Required</span></div>
+    <button class="btn-confirm-a green" onclick="agConfirmInterested()">&#9989; Confirm Interested</button>
+    <button class="btn-cancel-a" onclick="document.getElementById('agInterestedModal').classList.remove('active')">Cancel</button>
+  </div>
+</div>
 
 <!-- Transfer Modal -->
 <div class="modal-overlay" id="transferModal">
@@ -606,9 +766,9 @@ function showToast(msg,type='success') {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let tlAgentId = null, tlName = null, tlEmpId = null;
-let inTLMode = true; // true = TL monitoring mode, false = agent dialing mode
+let inTLMode = true;
 
-// Agent dialer state (when in agent mode)
+// Agent dialer state
 const socket = io({ reconnection:true, reconnectionAttempts:Infinity, reconnectionDelay:1000 });
 let currentNumberId = null;
 let onBreak=false, breakStartedAt=null, totalBreakMsUsed=0, breakAllowedMs=3600000;
@@ -616,6 +776,9 @@ let breakInterval=null, breakExhausted=false;
 let onWashroom=false, washroomStartedAt=null, totalWashroomMsUsed=0, washroomInterval=null;
 let onMeeting=false, meetingStartedAt=null, totalMeetingMsUsed=0, meetingInterval=null;
 let agentCurrentNumberId=null;
+
+// TL-mode timer: tracks how long TL is in agent-dialing mode (admin-only visibility)
+let tlModeMs=0, tlModeStartedAt=null, tlModeInterval=null;
 
 // ── Socket ────────────────────────────────────────────────────────────────────
 socket.on('connect', () => { hideBanner(); });
@@ -683,26 +846,33 @@ function setMode(tlMode) {
   inTLMode = tlMode;
   updateModeUI();
   if (!inTLMode) {
-    // Switch to agent dialing mode — start meeting timer
-    if (!onMeeting) {
-      onMeeting = true;
-      meetingStartedAt = Date.now();
-      socket.emit('agent-meeting-start', {agentId: tlAgentId});
-    }
+    // Going TO agent mode: start TL-mode timer (separate from meeting)
+    tlModeStartedAt = Date.now();
+    if(tlModeInterval) clearInterval(tlModeInterval);
+    tlModeInterval = setInterval(()=>{
+      if(tlModeStartedAt) tlModeMs = (tlModeMs||0) + 0; // accumulates in getMode
+    }, 1000);
     document.getElementById('tlScreen').style.display='none';
     document.getElementById('agentScreen').style.display='block';
     socket.emit('agent-start',{agentId:tlAgentId});
+    agentRefreshLeadSections();
+    fetchAgentLeaderboard();
+    fetchAgentDispoStats();
+    agentUpdateNetDialingTime();
   } else {
-    // Switch back to TL mode — end meeting if active
-    if (onMeeting) {
-      socket.emit('agent-meeting-end', {agentId: tlAgentId});
-      onMeeting = false; meetingStartedAt = null;
-    }
-    if (agentCurrentNumberId) { socket.emit('agent-stop',{agentId:tlAgentId,currentNumberId:agentCurrentNumberId}); agentCurrentNumberId=null; }
+    // Going BACK to TL mode: stop TL-mode timer, accumulate ms
+    if(tlModeStartedAt){ tlModeMs=(tlModeMs||0)+(Date.now()-tlModeStartedAt); tlModeStartedAt=null; }
+    if(tlModeInterval){clearInterval(tlModeInterval);tlModeInterval=null;}
+    if(agentCurrentNumberId){socket.emit('agent-stop',{agentId:tlAgentId,currentNumberId:agentCurrentNumberId});agentCurrentNumberId=null;}
     document.getElementById('agentScreen').style.display='none';
     document.getElementById('tlScreen').style.display='block';
     fetchTLData();
   }
+}
+// Helper: live TL-mode ms
+function getTLModeLiveMs(){
+  if(tlModeStartedAt) return (tlModeMs||0)+(Date.now()-tlModeStartedAt);
+  return tlModeMs||0;
 }
 function updateModeUI() {
   const badge=document.getElementById('roleBadge');
@@ -968,16 +1138,13 @@ function renderTLLeaderboard(data) {
   const body=document.getElementById('tlLeaderboardBody');
   if(!data||!data.length){body.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px">No data yet</div>';return;}
   const maxS=Math.max(...data.map(d=>d.score),1);
-  const medals=['🥇','🥈','🥉'];
   let html='<div class="lb-list">';
   data.forEach((r,idx)=>{
     const pct=Math.round((r.score/maxS)*100);
     const face=r.profilePhoto?`<img src="${r.profilePhoto}" alt="">`:getInit(r.name);
     const isTop3=idx<3;
-    let rd;
-    if(idx===0) rd='🏆<br><span style="font-size:9px">#1</span>';
-    else if(isTop3) rd=medals[idx]+'<br><span style="font-size:9px">#'+(idx+1)+'</span>';
-    else rd='#'+r.rank;
+    // 🏆 for everyone
+    const rd='&#127942;<br><span style="font-size:9px">#'+(idx+1)+'</span>';
     const bs=idx===0?'font-size:18px;width:38px;height:38px;':'';
     const rc='lb-row'+(idx===0?' rank-1-row':'');
     html+=`<div class="${rc}">
@@ -985,7 +1152,7 @@ function renderTLLeaderboard(data) {
       <div class="lb-row-avatar${idx===0?' rank-1-avatar':''}">${face}</div>
       <div class="lb-row-info">
         <div class="lb-row-name">${escapeHtml(r.name)}</div>
-        <div class="lb-row-stats">⭐ ${r.interested} interested · 📅 ${r.followups} followups · 📞 ${r.totalCalls} calls</div>
+        <div class="lb-row-stats">&#11088; ${r.interested} interested &middot; &#128197; ${r.followups} followups &middot; &#128222; ${r.totalCalls} calls</div>
         <div class="lb-bar-wrap"><div class="lb-bar" style="width:${pct}%"></div></div>
       </div>
       <div style="text-align:right;min-width:50px"><div class="lb-row-score">${r.score}</div></div>
@@ -1082,26 +1249,344 @@ function agentConfirmInterested(){
   agentCurrentNumberId=null;
 }
 
-// Agent Break
+// ── Agent mode: TL dialing ────────────────────────────────────────────────────
+// Break
 function agentTakeBreak(){if(breakExhausted)return;socket.emit('agent-break-start',{agentId:tlAgentId});}
 function agentEndBreak(){socket.emit('agent-break-end',{agentId:tlAgentId});}
-socket.on('break-started',d=>{if(d.error){alert(d.error);return;}onBreak=true;breakStartedAt=d.breakStartedAt||Date.now();agentShowBreakMode();agentStartBreakCountdown();});
-socket.on('break-ended',d=>{if(d.error){alert(d.error);return;}onBreak=false;breakStartedAt=null;totalBreakMsUsed=d.totalBreakMs||totalBreakMsUsed;breakExhausted=totalBreakMsUsed>=breakAllowedMs;agentStopBreakCountdown();agentHideBreakMode();if(agentCurrentNumberId){document.getElementById('agentNumberDisplay').style.display='block';document.getElementById('agentDispositionPanel').style.display='block';if(!breakExhausted){document.getElementById('agentBtnBreak').style.display='block';document.getElementById('agentBtnBreak').disabled=false;}document.getElementById('agentBtnWashroom').style.display='block';document.getElementById('agentBtnMeeting').style.display='block';}else{agentShowIdle();}});
-function agentShowBreakMode(){document.getElementById('agentBreakCard').style.display='block';document.getElementById('agentBtnBreak').style.display='none';document.getElementById('agentDispositionPanel').style.display='none';document.getElementById('agentNumberDisplay').style.display='none';document.getElementById('agentIdleOverlay').style.display='none';document.getElementById('agentBtnStart').style.display='none';document.getElementById('agentBtnEndBreak').style.display='block';}
+socket.on('break-started',d=>{
+  if(d.error){alert(d.error);return;}
+  onBreak=true; breakStartedAt=d.breakStartedAt||Date.now();
+  agentShowBreakMode(); agentStartBreakCountdown();
+});
+socket.on('break-ended',d=>{
+  if(d.error){alert(d.error);return;}
+  onBreak=false; breakStartedAt=null;
+  totalBreakMsUsed=d.totalBreakMs||totalBreakMsUsed;
+  breakExhausted=totalBreakMsUsed>=breakAllowedMs;
+  agentStopBreakCountdown(); agentHideBreakMode();
+  document.getElementById('agentBreakUsed').textContent=formatMs(totalBreakMsUsed);
+  if(agentCurrentNumberId){
+    document.getElementById('agentNumberDisplay').style.display='block';
+    document.getElementById('agentDispositionPanel').style.display='block';
+    if(!breakExhausted){document.getElementById('agentBtnBreak').style.display='block';document.getElementById('agentBtnBreak').disabled=false;}
+    document.getElementById('agentBtnWashroom').style.display='block';
+    document.getElementById('agentBtnMeeting').style.display='block';
+  }else{agentShowIdle();}
+});
+function agentShowBreakMode(){
+  ['agentBtnBreak','agentDispositionPanel','agentNumberDisplay','agentIdleOverlay','agentBtnStart','agentWashroomCard','agentMeetingCard'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  document.getElementById('agentBreakCard').style.display='block';
+  document.getElementById('agentBtnEndBreak').style.display='block';
+}
 function agentHideBreakMode(){document.getElementById('agentBreakCard').style.display='none';document.getElementById('agentBtnEndBreak').style.display='none';}
 function agentStartBreakCountdown(){if(breakInterval)clearInterval(breakInterval);breakInterval=setInterval(agentTickBreak,1000);agentTickBreak();}
 function agentStopBreakCountdown(){if(breakInterval){clearInterval(breakInterval);breakInterval=null;}}
-function agentTickBreak(){if(!onBreak||!breakStartedAt)return;const live=Date.now()-breakStartedAt,used=totalBreakMsUsed+live,rem=Math.max(0,breakAllowedMs-used);document.getElementById('agentBreakTimerDisplay').textContent=formatMs(rem);document.getElementById('agentBreakBarFill').style.width=((rem/breakAllowedMs)*100)+'%';document.getElementById('agentBreakUsed').textContent=formatMs(used);if(rem<=0){agentStopBreakCountdown();breakExhausted=true;socket.emit('agent-break-end',{agentId:tlAgentId});}}
+function agentTickBreak(){
+  if(!onBreak||!breakStartedAt)return;
+  const live=Date.now()-breakStartedAt,used=totalBreakMsUsed+live,rem=Math.max(0,breakAllowedMs-used);
+  document.getElementById('agentBreakTimerDisplay').textContent=formatMs(rem);
+  document.getElementById('agentBreakBarFill').style.width=((rem/breakAllowedMs)*100)+'%';
+  document.getElementById('agentBreakUsed').textContent=formatMs(used);
+  agentUpdateNetDialingTime();
+  if(rem<=0){agentStopBreakCountdown();breakExhausted=true;socket.emit('agent-break-end',{agentId:tlAgentId});}
+}
 
+// Washroom
 function agentTakeWashroom(){socket.emit('agent-washroom-start',{agentId:tlAgentId});}
 function agentEndWashroom(){socket.emit('agent-washroom-end',{agentId:tlAgentId});}
-socket.on('washroom-started',d=>{if(d.error){alert(d.error);return;}onWashroom=true;washroomStartedAt=d.washroomStartedAt||Date.now();['agentBtnBreak','agentBtnWashroom','agentBtnMeeting','agentDispositionPanel','agentNumberDisplay','agentIdleOverlay','agentBtnStart'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});const wc=document.createElement('div');wc.id='agentWashroomCard';wc.style.cssText='display:block;text-align:center;padding:20px 0';wc.innerHTML='<div style="font-size:30px;margin-bottom:6px">🚻</div><div style="font-size:14px;font-weight:700;color:#6366f1">Washroom Break</div><div class="break-timer" id="wTimer" style="color:#6366f1">0:00</div>';const panel=document.querySelector('.dialer-panel');if(panel&&!document.getElementById('agentWashroomCard')){panel.insertBefore(wc,document.getElementById('agentBtnRow'));};document.getElementById('agentBtnEndWashroom').style.display='block';if(washroomInterval)clearInterval(washroomInterval);washroomInterval=setInterval(()=>{if(!onWashroom||!washroomStartedAt)return;const u=totalWashroomMsUsed+Date.now()-washroomStartedAt;const el=document.getElementById('wTimer');if(el)el.textContent=formatMs(u);document.getElementById('agentWashroomUsed').textContent=formatMs(u);},1000);});
-socket.on('washroom-ended',d=>{if(d.error){alert(d.error);return;}onWashroom=false;washroomStartedAt=null;totalWashroomMsUsed=d.totalWashroomMs||totalWashroomMsUsed;if(washroomInterval){clearInterval(washroomInterval);washroomInterval=null;}document.getElementById('agentWashroomUsed').textContent=formatMs(totalWashroomMsUsed);document.getElementById('agentBtnEndWashroom').style.display='none';const wc2=document.getElementById('agentWashroomCard');if(wc2)wc2.remove();if(agentCurrentNumberId){document.getElementById('agentNumberDisplay').style.display='block';document.getElementById('agentDispositionPanel').style.display='block';if(!breakExhausted){document.getElementById('agentBtnBreak').style.display='block';document.getElementById('agentBtnBreak').disabled=false;}document.getElementById('agentBtnWashroom').style.display='block';document.getElementById('agentBtnMeeting').style.display='block';}else agentShowIdle();});
+socket.on('washroom-started',d=>{
+  if(d.error){alert(d.error);return;}
+  onWashroom=true; washroomStartedAt=d.washroomStartedAt||Date.now();
+  ['agentBtnBreak','agentBtnWashroom','agentBtnMeeting','agentDispositionPanel','agentNumberDisplay','agentIdleOverlay','agentBtnStart'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  document.getElementById('agentWashroomCard').style.display='block';
+  document.getElementById('agentBtnEndWashroom').style.display='block';
+  if(washroomInterval)clearInterval(washroomInterval);
+  washroomInterval=setInterval(()=>{
+    if(!onWashroom||!washroomStartedAt)return;
+    const u=totalWashroomMsUsed+Date.now()-washroomStartedAt;
+    document.getElementById('agentWashroomTimerDisplay').textContent=formatMs(u);
+    document.getElementById('agentWashroomUsed').textContent=formatMs(u);
+    agentUpdateNetDialingTime();
+  },1000);
+});
+socket.on('washroom-ended',d=>{
+  if(d.error){alert(d.error);return;}
+  onWashroom=false; washroomStartedAt=null;
+  totalWashroomMsUsed=d.totalWashroomMs||totalWashroomMsUsed;
+  if(washroomInterval){clearInterval(washroomInterval);washroomInterval=null;}
+  document.getElementById('agentWashroomCard').style.display='none';
+  document.getElementById('agentBtnEndWashroom').style.display='none';
+  document.getElementById('agentWashroomUsed').textContent=formatMs(totalWashroomMsUsed);
+  agentUpdateNetDialingTime();
+  if(agentCurrentNumberId){
+    document.getElementById('agentNumberDisplay').style.display='block';
+    document.getElementById('agentDispositionPanel').style.display='block';
+    if(!breakExhausted){document.getElementById('agentBtnBreak').style.display='block';document.getElementById('agentBtnBreak').disabled=false;}
+    document.getElementById('agentBtnWashroom').style.display='block';
+    document.getElementById('agentBtnMeeting').style.display='block';
+  }else agentShowIdle();
+});
 
+// Meeting
 function agentTakeMeeting(){socket.emit('agent-meeting-start',{agentId:tlAgentId});}
 function agentEndMeeting(){socket.emit('agent-meeting-end',{agentId:tlAgentId});}
-socket.on('meeting-started',d=>{if(d.error){alert(d.error);return;}onMeeting=true;meetingStartedAt=d.meetingStartedAt||Date.now();['agentBtnBreak','agentBtnWashroom','agentBtnMeeting','agentDispositionPanel','agentNumberDisplay','agentIdleOverlay','agentBtnStart'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});document.getElementById('agentBtnEndMeeting').style.display='block';if(meetingInterval)clearInterval(meetingInterval);meetingInterval=setInterval(()=>{if(!onMeeting||!meetingStartedAt)return;const u=totalMeetingMsUsed+Date.now()-meetingStartedAt;document.getElementById('agentMeetingUsed').textContent=formatMs(u);},1000);});
-socket.on('meeting-ended',d=>{if(d.error){alert(d.error);return;}onMeeting=false;meetingStartedAt=null;totalMeetingMsUsed=d.totalMeetingMs||totalMeetingMsUsed;if(meetingInterval){clearInterval(meetingInterval);meetingInterval=null;}document.getElementById('agentMeetingUsed').textContent=formatMs(totalMeetingMsUsed);document.getElementById('agentBtnEndMeeting').style.display='none';if(agentCurrentNumberId){document.getElementById('agentNumberDisplay').style.display='block';document.getElementById('agentDispositionPanel').style.display='block';if(!breakExhausted){document.getElementById('agentBtnBreak').style.display='block';document.getElementById('agentBtnBreak').disabled=false;}document.getElementById('agentBtnWashroom').style.display='block';document.getElementById('agentBtnMeeting').style.display='block';}else agentShowIdle();});
+socket.on('meeting-started',d=>{
+  if(d.error){alert(d.error);return;}
+  onMeeting=true; meetingStartedAt=d.meetingStartedAt||Date.now();
+  ['agentBtnBreak','agentBtnWashroom','agentBtnMeeting','agentDispositionPanel','agentNumberDisplay','agentIdleOverlay','agentBtnStart'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  document.getElementById('agentMeetingCard').style.display='block';
+  document.getElementById('agentBtnEndMeeting').style.display='block';
+  if(meetingInterval)clearInterval(meetingInterval);
+  meetingInterval=setInterval(()=>{
+    if(!onMeeting||!meetingStartedAt)return;
+    const u=totalMeetingMsUsed+Date.now()-meetingStartedAt;
+    document.getElementById('agentMeetingTimerDisplay').textContent=formatMs(u);
+    document.getElementById('agentMeetingUsed').textContent=formatMs(u);
+    agentUpdateNetDialingTime();
+  },1000);
+});
+socket.on('meeting-ended',d=>{
+  if(d.error){alert(d.error);return;}
+  onMeeting=false; meetingStartedAt=null;
+  totalMeetingMsUsed=d.totalMeetingMs||totalMeetingMsUsed;
+  if(meetingInterval){clearInterval(meetingInterval);meetingInterval=null;}
+  document.getElementById('agentMeetingCard').style.display='none';
+  document.getElementById('agentBtnEndMeeting').style.display='none';
+  document.getElementById('agentMeetingUsed').textContent=formatMs(totalMeetingMsUsed);
+  agentUpdateNetDialingTime();
+  if(agentCurrentNumberId){
+    document.getElementById('agentNumberDisplay').style.display='block';
+    document.getElementById('agentDispositionPanel').style.display='block';
+    if(!breakExhausted){document.getElementById('agentBtnBreak').style.display='block';document.getElementById('agentBtnBreak').disabled=false;}
+    document.getElementById('agentBtnWashroom').style.display='block';
+    document.getElementById('agentBtnMeeting').style.display='block';
+  }else agentShowIdle();
+});
+
+// Net Dialing Time (agent mode)
+function agentUpdateNetDialingTime(){
+  const SHIFT=8*3600000, BALLOC=3600000;
+  const liveW=onWashroom&&washroomStartedAt?Date.now()-washroomStartedAt:0;
+  const liveM=onMeeting&&meetingStartedAt?Date.now()-meetingStartedAt:0;
+  const netMs=Math.max(0,SHIFT-BALLOC-(totalWashroomMsUsed+liveW)-(totalMeetingMsUsed+liveM));
+  const h=Math.floor(netMs/3600000),m=Math.floor((netMs%3600000)/60000);
+  const el=document.getElementById('agentNetDialingTime');
+  if(el)el.textContent=h+'h '+m+'m';
+}
+
+// Show/hide number
+socket.on('show-number',({numberId,phone,name,totalDialedToday,resumed})=>{
+  if(inTLMode) return;
+  agentCurrentNumberId=numberId;
+  document.getElementById('agentCountToday').textContent=totalDialedToday;
+  ['agentIdleOverlay','agentNoNumbers','agentBreakCard','agentWashroomCard','agentMeetingCard'].forEach(id=>{document.getElementById(id).style.display='none';});
+  document.getElementById('agentNumberDisplay').style.display='block';
+  document.getElementById('agentBtnStart').style.display='none';
+  document.getElementById('agentDispositionPanel').style.display='block';
+  if(!breakExhausted&&!onBreak){document.getElementById('agentBtnBreak').style.display='block';document.getElementById('agentBtnBreak').disabled=false;}
+  if(!onWashroom&&!onBreak&&!onMeeting)document.getElementById('agentBtnWashroom').style.display='block';
+  if(!onMeeting&&!onBreak&&!onWashroom)document.getElementById('agentBtnMeeting').style.display='block';
+  const ne=document.getElementById('agentLeadName');
+  if(name&&name.trim()){ne.textContent='&#128100; '+name.trim();ne.className='lead-name';}
+  else{ne.textContent='Name not available';ne.className='lead-name no-name';}
+  const el=document.getElementById('agentPhoneDisplay');
+  el.textContent=formatPhone(phone);el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
+  agentRefreshLeadSections();
+});
+socket.on('no-numbers',()=>{
+  if(inTLMode)return;
+  agentCurrentNumberId=null;
+  ['agentNumberDisplay','agentBtnStart','agentDispositionPanel','agentBtnBreak','agentBtnWashroom','agentBtnMeeting'].forEach(id=>{document.getElementById(id).style.display='none';});
+  document.getElementById('agentIdleOverlay').style.display='none';
+  document.getElementById('agentNoNumbers').style.display='block';
+});
+socket.on('error',msg=>{if(msg==='Agent not found'){sessionStorage.clear();location.reload();}});
+socket.on('force-stop',()=>{if(!inTLMode)agentShowIdle();});
+
+function agentShowIdle(){
+  agentCurrentNumberId=null;
+  ['agentNumberDisplay','agentBtnBreak','agentBtnWashroom','agentBtnMeeting','agentDispositionPanel',
+   'agentBreakCard','agentBtnEndBreak','agentWashroomCard','agentBtnEndWashroom',
+   'agentMeetingCard','agentBtnEndMeeting','agentNoNumbers'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  document.getElementById('agentIdleOverlay').style.display='block';
+  document.getElementById('agentBtnStart').style.display='block';
+}
+
+function agentStartDialing(){socket.emit('agent-start',{agentId:tlAgentId});}
+
+function agentSubmitDisposition(d){
+  if(d==='followup'){agShowFollowupModal();return;}
+  if(d==='interested'){agShowInterestedModal();return;}
+  document.getElementById('agentDispositionPanel').style.display='none';
+  socket.emit('agent-disposition',{agentId:tlAgentId,numberId:agentCurrentNumberId,disposition:d});
+  agentCurrentNumberId=null; agentRefreshLeadSections();
+}
+
+// Followup modal
+function agShowFollowupModal(){
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('agFollowupDate').value=today;
+  document.getElementById('agFollowupDate').min=today;
+  document.getElementById('agFollowupTime').value='';
+  document.getElementById('agFollowupModal').classList.add('active');
+}
+function agConfirmFollowup(){
+  const fd=document.getElementById('agFollowupDate').value,ft=document.getElementById('agFollowupTime').value;
+  if(!fd){alert('Select a date');return;}if(!ft){alert('Select a time');return;}
+  document.getElementById('agFollowupModal').classList.remove('active');
+  document.getElementById('agentDispositionPanel').style.display='none';
+  socket.emit('agent-disposition',{agentId:tlAgentId,numberId:agentCurrentNumberId,disposition:'followup',followupDate:fd,followupTime:ft});
+  agentCurrentNumberId=null; agentRefreshLeadSections();
+}
+
+// Interested modal
+function agShowInterestedModal(){
+  ['agILeadName','agILoanAmount','agIRemarks'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['agErrILeadName','agErrILoanAmt','agErrIRemarks'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  document.getElementById('agInterestedModal').classList.add('active');
+}
+function agConfirmInterested(){
+  const ln=document.getElementById('agILeadName').value.trim();
+  const la=document.getElementById('agILoanAmount').value.trim();
+  const rm=document.getElementById('agIRemarks').value.trim();
+  ['agErrILeadName','agErrILoanAmt','agErrIRemarks'].forEach(id=>{document.getElementById(id).style.display='none';});
+  let ok=true;
+  if(!ln){document.getElementById('agErrILeadName').style.display='block';ok=false;}
+  if(!la||Number(la)<=0){document.getElementById('agErrILoanAmt').style.display='block';ok=false;}
+  if(!rm){document.getElementById('agErrIRemarks').style.display='block';ok=false;}
+  if(!ok)return;
+  document.getElementById('agInterestedModal').classList.remove('active');
+  document.getElementById('agentDispositionPanel').style.display='none';
+  socket.emit('agent-disposition',{agentId:tlAgentId,numberId:agentCurrentNumberId,disposition:'interested',leadName:ln,loanAmount:la,remarks:rm});
+  agentCurrentNumberId=null; agentRefreshLeadSections();
+}
+
+// Add interested manually
+async function agAddInterestedManually(){
+  const name=document.getElementById('agManualLeadName').value.trim();
+  const phone=document.getElementById('agManualPhone').value.trim();
+  const amt=document.getElementById('agManualLoanAmount').value.trim();
+  const rem=document.getElementById('agManualRemarks').value.trim();
+  if(!name||!phone||!amt||!rem){showToast('All fields required','error');return;}
+  try{
+    const r=await fetch('/api/agent/add-interested-manual',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({agentId:tlAgentId,name,phone,loanAmount:amt,remarks:rem})});
+    const d=await r.json();
+    if(d.error){showToast('Error: '+d.error,'error');return;}
+    showToast('Lead added','success');
+    ['agManualLeadName','agManualPhone','agManualLoanAmount','agManualRemarks'].forEach(id=>document.getElementById(id).value='');
+    agentRefreshLeadSections();
+  }catch(e){showToast('Failed to add lead','error');}
+}
+
+// Disposition stats (agent mode)
+let agStatsPeriod='daily';
+function switchAgentStatsPeriod(p){
+  agStatsPeriod=p;
+  document.querySelectorAll('#agentStatsTabs .admin-stats-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('#agentStatsTabs .admin-stats-tab[data-period="'+p+'"]').classList.add('active');
+  fetchAgentDispoStats();
+}
+async function fetchAgentDispoStats(){
+  try{
+    const r=await fetch('/api/stats/dispositions?period='+agStatsPeriod+'&agentId='+encodeURIComponent(tlAgentId));
+    const d=await r.json();
+    document.getElementById('agMyStatsTotalCalls').textContent=d.totalCalls||0;
+    document.getElementById('agMyStatsDead').textContent=d.dead||0;
+    document.getElementById('agMyStatsNotReceived').textContent=d.not_received||0;
+    document.getElementById('agMyStatsNotInterested').textContent=d.not_interested||0;
+    document.getElementById('agMyStatsFollowup').textContent=d.followup||0;
+    document.getElementById('agMyStatsSwitchOff').textContent=d.switch_off||0;
+    document.getElementById('agMyStatsInterested').textContent=d.interested||0;
+  }catch(e){}
+}
+
+// Leaderboard (agent mode)
+let agLbPeriod='daily';
+function switchAgentLbPeriod(p){
+  agLbPeriod=p;
+  document.querySelectorAll('#agentScreen .lb-period-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('#agentScreen .lb-period-tab[data-period="'+p+'"]').classList.add('active');
+  fetchAgentLeaderboard();
+}
+async function fetchAgentLeaderboard(){
+  try{const r=await fetch('/api/rankings?period='+agLbPeriod);renderAgentLeaderboard(await r.json());}catch(e){}
+}
+function renderAgentLeaderboard(data){
+  const body=document.getElementById('agentLbBody');
+  if(!data||!data.length){body.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px">No data yet</div>';return;}
+  const maxS=Math.max(...data.map(d=>d.score),1);
+  let html='<div class="lb-list">';
+  data.forEach((r,idx)=>{
+    const pct=Math.round((r.score/maxS)*100);
+    const face=r.profilePhoto?`<img src="${r.profilePhoto}" alt="">`:getInit(r.name);
+    const isMe=r.agentId===tlAgentId;
+    const rd='&#127942;<br><span style="font-size:9px">#'+(idx+1)+'</span>';
+    const rc='lb-row'+(idx===0?' rank-1-row':'')+(isMe?' is-me':'');
+    html+=`<div class="${rc}">
+      <div class="lb-rank-badge${idx<3?' top3':''}" style="${idx===0?'font-size:18px;width:38px;height:38px;':''}text-align:center;line-height:1.2">${rd}</div>
+      <div class="lb-row-avatar${idx===0?' rank-1-avatar':''}">${face}</div>
+      <div class="lb-row-info">
+        <div class="lb-row-name">${escapeHtml(r.name)}${isMe?' <span style="font-size:10px;color:var(--tl)">(You)</span>':''}</div>
+        <div class="lb-row-stats">&#11088; ${r.interested} &middot; &#128197; ${r.followups} &middot; &#128222; ${r.totalCalls}</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:${pct}%"></div></div>
+      </div>
+      <div style="text-align:right;min-width:50px"><div class="lb-row-score">${r.score}</div></div>
+    </div>`;
+  });
+  html+='</div>';
+  body.innerHTML=html;
+}
+
+// Refresh lead sections (agent mode)
+async function agentRefreshLeadSections(){
+  fetchAgentDispoStats(); fetchAgentLeaderboard();
+  try{
+    const r=await fetch('/api/agent/leads/'+tlAgentId);const d=await r.json();
+    // Interested
+    const ib=document.getElementById('agInterestedTable');
+    const iCount=document.getElementById('agInterestedCountBadge');
+    const leads=d.interested||[];
+    iCount.textContent=leads.length+' lead'+(leads.length!==1?'s':'');
+    document.getElementById('agentInterestedCount').textContent=leads.length;
+    if(!leads.length){ib.innerHTML='<tr><td colspan="6" class="empty">No interested leads yet</td></tr>';}
+    else{ib.innerHTML=leads.map(l=>{
+      const rem=l.overdue?'<span style="color:var(--danger);font-weight:700;font-family:var(--mono);font-size:12px">OVERDUE</span>'
+        :`<span style="font-family:var(--mono);font-size:12px">${Math.floor(l.hoursRemaining)}h ${Math.round((l.hoursRemaining%1)*60)}m</span>`;
+      return `<tr><td><span style="font-family:var(--mono);font-weight:700;color:var(--tl)">${escapeHtml(formatPhone(l.phone))}</span></td>
+        <td>${escapeHtml(l.name)||'&#8212;'}</td>
+        <td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:rgba(167,139,250,.1);color:var(--tl);border:1px solid rgba(167,139,250,.25)">${escapeHtml(l.loanType||'&#8212;')}</span></td>
+        <td style="font-family:var(--mono);font-size:12px">${escapeHtml(l.loanAmount||'&#8212;')}</td>
+        <td>${rem}</td>
+        <td></td></tr>`;
+    }).join('');}
+    // Followups
+    const fb=document.getElementById('agFollowupsTable');
+    const fups=d.followups||[];
+    document.getElementById('agFollowupsCountBadge').textContent=fups.length+' followup'+(fups.length!==1?'s':'');
+    document.getElementById('agentFollowupsCount').textContent=fups.length;
+    if(!fups.length){fb.innerHTML='<tr><td colspan="4" class="empty">No followups yet</td></tr>';}
+    else{fb.innerHTML=fups.map(f=>`<tr>
+      <td><span style="font-family:var(--mono);font-weight:700;color:var(--tl)">${escapeHtml(formatPhone(f.phone))}</span></td>
+      <td>${escapeHtml(f.name)||'&#8212;'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${escapeHtml(f.followupDate||'&#8212;')}</td>
+      <td style="font-family:var(--mono);font-size:12px">${escapeHtml(f.followupTime||'&#8212;')}</td></tr>`).join('');}
+    // Completed
+    const cb=document.getElementById('agCompletedTable');
+    const comp=d.completed||[];
+    document.getElementById('agCompletedCountBadge').textContent=comp.length+' lead'+(comp.length!==1?'s':'');
+    if(!comp.length){cb.innerHTML='<tr><td colspan="5" class="empty">No completed leads yet</td></tr>';}
+    else{cb.innerHTML=comp.map(l=>`<tr>
+      <td><span style="font-family:var(--mono);font-weight:700;color:var(--tl)">${escapeHtml(formatPhone(l.phone))}</span></td>
+      <td>${escapeHtml(l.name)||'&#8212;'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${escapeHtml(l.loanAmount||'&#8212;')}</td>
+      <td style="font-size:12px;font-family:var(--mono)">${l.documentationCompletedAt?formatTimestamp(l.documentationCompletedAt):'&#8212;'}</td>
+      <td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.25)">${escapeHtml(l.adminStatus||'Pending')}</span></td></tr>`).join('');}
+  }catch(e){}
+}
+
+// Periodic refresh when in agent mode
+setInterval(()=>{if(!inTLMode){agentRefreshLeadSections();fetchAgentLeaderboard();}},10000);
 
 ['empId','tlName'].forEach(id=>{
   document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')loginTL();});
