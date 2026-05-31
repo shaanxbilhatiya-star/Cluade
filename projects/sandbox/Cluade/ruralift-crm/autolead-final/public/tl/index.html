@@ -28,7 +28,7 @@
   }
   .header-left { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; justify-content: center; }
   .logo-img {
-    height: 74px; padding: 10px 18px; border-radius: 14px;
+    width: 272px; height: 70px; object-fit: contain; padding: 10px 18px; border-radius: 14px;
     border: 2px solid rgba(163,139,250,.4); background: rgba(255,255,255,.05);
     filter: drop-shadow(0 0 12px rgba(163,139,250,.6)) drop-shadow(0 0 24px rgba(163,139,250,.3));
     animation: logo-glow 2.5s ease-in-out infinite;
@@ -116,7 +116,7 @@
   /* Hindi quotes ticker */
   .quotes-bar { background: linear-gradient(90deg, rgba(167,139,250,.08), rgba(99,102,241,.08)); border: 1px solid rgba(167,139,250,.2); border-radius: 10px; padding: 10px 20px; margin-bottom: 20px; overflow: hidden; display: flex; align-items: center; gap: 12px; }
   .quotes-label { font-size: 11px; font-weight: 700; color: var(--tl); letter-spacing: 1px; white-space: nowrap; }
-  .quotes-text { font-size: 14px; color: var(--tl2); font-weight: 600; animation: marquee 22s linear infinite; white-space: nowrap; }
+  .quotes-text { font-size: 14px; color: var(--tl2); font-weight: 600; animation: marquee 180s linear infinite; white-space: nowrap; }
   @keyframes marquee { 0%{transform:translateX(60vw)} 100%{transform:translateX(-100%)} }
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
@@ -450,7 +450,7 @@
           <thead>
             <tr>
               <th>Agent</th><th>Login</th><th>Status</th>
-              <th>Total No. Dialed</th><th>Net Dialing Time</th>
+              <th>Total No. Dialed</th><th>Net Dialing Time <span title="Net Dialing Time = 8h shift - Break - Meeting - Washroom - TL Mode (time available for actual calling)" style="cursor:help;opacity:.7">&#9432;</span></th>
               <th>Break Used</th><th>🚻 Washroom</th><th>📋 Meeting</th>
             </tr>
           </thead>
@@ -522,10 +522,17 @@
       <span class="quotes-text" id="tlaQuoteText"></span>
     </div>
 
-    <!-- Agent Mode Leaderboard -->
+    <!-- Agent Mode Timer -->
+    <div id="agentModeTimerBar" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:10px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:11px;font-weight:700;color:var(--accent2);letter-spacing:1px;white-space:nowrap">&#128337; AGENT MODE</span>
+      <span style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent2)" id="agentModeElapsed">0:00:00</span>
+      <span style="font-size:12px;color:var(--muted);margin-left:auto">Time spent in agent mode this session</span>
+    </div>
+
+    <!-- LEADERBOARD -->
     <div class="leaderboard-panel">
       <div class="leaderboard-header">
-        <h2>&#127942; My Rankings</h2>
+        <h2>&#127942; Agent Rankings</h2>
         <div class="lb-period-tabs">
           <button class="lb-period-tab active" data-tla-period="daily" onclick="switchAgentLbPeriod('daily')">Daily</button>
           <button class="lb-period-tab" data-tla-period="weekly" onclick="switchAgentLbPeriod('weekly')">Weekly</button>
@@ -537,10 +544,10 @@
       </div>
     </div>
 
-    <!-- Stats Grid -->
+    <!-- STATS GRID -->
     <div class="stats-grid">
       <div class="stat-card"><span class="stat-label">Dialed Today</span><span class="stat-value tl" id="agentCountToday">0</span></div>
-      <div class="stat-card"><span class="stat-label">Net Dialing Time</span><span class="stat-value tl" id="agentNetDialingTime">7h 0m</span></div>
+      <div class="stat-card"><span class="stat-label">Net Dialing Time <span title="Net Dialing Time = 8h shift - Break - Meeting - Washroom - TL Mode (time available for actual calling)" style="cursor:help;opacity:.7">&#9432;</span></span><span class="stat-value tl" id="agentNetDialingTime">8h 0m</span></div>
       <div class="stat-card"><span class="stat-label">Break Used</span><span class="stat-value amber" id="agentBreakUsed">0:00</span></div>
       <div class="stat-card"><span class="stat-label">Washroom</span><span class="stat-value" style="color:#818cf8" id="agentWashroomUsed">0:00</span></div>
       <div class="stat-card"><span class="stat-label">Meeting</span><span class="stat-value" style="color:#22d3ee" id="agentMeetingUsed">0:00</span></div>
@@ -548,11 +555,15 @@
       <div class="stat-card"><span class="stat-label">Followups</span><span class="stat-value blue" id="agentFollowupsCount">0</span></div>
     </div>
 
-    <!-- Dialer Panel -->
-    <div class="panel dialer-panel" style="margin-bottom:22px">
-      <div class="panel-header" style="background:rgba(124,58,237,.05)">
-        <h2 style="color:var(--tl)">&#128222; Current Lead (TL Dialing Mode)</h2>
-      </div>
+    <!-- Grid-2: Dialer + Disposition Stats side by side -->
+    <div class="grid-2">
+
+      <!-- Dialer Panel -->
+      <div class="panel dialer-panel">
+        <div class="panel-header" style="background:rgba(124,58,237,.05)">
+          <h2 style="color:var(--tl)">&#128222; Current Lead</h2>
+          <span style="font-size:11px;color:var(--muted)">Active Dialer</span>
+        </div>
       <div id="agentNumberDisplay" style="display:none">
         <div class="number-block">
           <div class="number-label">Lead to Dial</div>
@@ -577,7 +588,7 @@
       <div id="agentDispositionPanel" class="dispo-wrap">
         <div class="dispo-grid">
           <button class="dispo-btn dispo-dead" onclick="agentSubmitDisposition('dead')">&#9760;&#65039; Call Not Connected</button>
-          <button class="dispo-btn dispo-not-received" onclick="agentSubmitDisposition('not_received')">&#128245; Not Received</button>
+          <button class="dispo-btn dispo-not-received" onclick="agentSubmitDisposition('not_received')">&#128245; Call Not Received</button>
           <button class="dispo-btn dispo-not-interested" onclick="agentSubmitDisposition('not_interested')">&#128683; Not Interested</button>
           <button class="dispo-btn dispo-followup" onclick="agentSubmitDisposition('followup')">&#128197; Followup</button>
           <button class="dispo-btn dispo-switch-off" onclick="agentSubmitDisposition('switch_off')">&#128244; Switch OFF</button>
@@ -593,33 +604,34 @@
         <button class="action-btn" id="agentBtnMeeting" onclick="agentTakeMeeting()" style="background:rgba(8,145,178,.1);color:#22d3ee;border:1.5px solid rgba(8,145,178,.3);display:none">&#128203; Meeting</button>
         <button class="action-btn" id="agentBtnEndMeeting" onclick="agentEndMeeting()" style="background:#0891b2;color:#fff;display:none">&#9654; Meeting Done &#8212; Resume</button>
       </div>
-    </div>
+    </div><!-- end dialer panel -->
 
-    <!-- Disposition Stats (Agent Mode) -->
-    <div class="panel" style="margin-bottom:20px">
-      <div class="panel-header" style="background:rgba(167,139,250,.06);flex-wrap:wrap;gap:10px">
-        <h2 style="color:var(--tl);margin:0">&#128202; My Disposition Stats</h2>
-        <div class="admin-stats-tabs" id="tla-dispo-tabs">
-          <button class="admin-stats-tab active" data-tla-dispo="daily" onclick="switchAgentDispoPeriod('daily')">Daily</button>
-          <button class="admin-stats-tab" data-tla-dispo="weekly" onclick="switchAgentDispoPeriod('weekly')">Weekly</button>
-          <button class="admin-stats-tab" data-tla-dispo="monthly" onclick="switchAgentDispoPeriod('monthly')">Monthly</button>
-          <button class="admin-stats-tab" data-tla-dispo="yearly" onclick="switchAgentDispoPeriod('yearly')">Yearly</button>
+      <!-- My Disposition Stats Panel -->
+      <div class="panel">
+        <div class="panel-header" style="background:rgba(167,139,250,.06);flex-wrap:wrap;gap:10px">
+          <h2 style="color:var(--tl);margin:0">&#128202; My Disposition Stats</h2>
+          <div class="admin-stats-tabs" id="tla-dispo-tabs">
+            <button class="admin-stats-tab active" data-tla-dispo="daily" onclick="switchAgentDispoPeriod('daily')">Daily</button>
+            <button class="admin-stats-tab" data-tla-dispo="weekly" onclick="switchAgentDispoPeriod('weekly')">Weekly</button>
+            <button class="admin-stats-tab" data-tla-dispo="monthly" onclick="switchAgentDispoPeriod('monthly')">Monthly</button>
+            <button class="admin-stats-tab" data-tla-dispo="yearly" onclick="switchAgentDispoPeriod('yearly')">Yearly</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="dispo-stats-grid">
+            <div class="dispo-stat-card dispo-stat-total"><div class="dispo-stat-val" id="tla-totalCalls">0</div><div class="dispo-stat-lbl">Total Calls</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#dc2626"></div><div class="dispo-stat-val" id="tla-dead">0</div><div class="dispo-stat-lbl">Not Connected</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#d97706"></div><div class="dispo-stat-val" id="tla-notReceived">0</div><div class="dispo-stat-lbl">Not Received</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#64748b"></div><div class="dispo-stat-val" id="tla-notInterested">0</div><div class="dispo-stat-lbl">Not Interested</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#2563eb"></div><div class="dispo-stat-val" id="tla-followup">0</div><div class="dispo-stat-lbl">Followup</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#f59e0b"></div><div class="dispo-stat-val" id="tla-switchOff">0</div><div class="dispo-stat-lbl">Switch OFF</div></div>
+            <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#059669"></div><div class="dispo-stat-val" id="tla-interested">0</div><div class="dispo-stat-lbl">Interested</div></div>
+          </div>
         </div>
       </div>
-      <div class="panel-body">
-        <div class="dispo-stats-grid">
-          <div class="dispo-stat-card dispo-stat-total"><div class="dispo-stat-val" id="tla-totalCalls">0</div><div class="dispo-stat-lbl">Total Calls</div></div>
-          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#dc2626"></div><div class="dispo-stat-val" id="tla-dead">0</div><div class="dispo-stat-lbl">Not Connected</div></div>
-          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#d97706"></div><div class="dispo-stat-val" id="tla-notReceived">0</div><div class="dispo-stat-lbl">Not Received</div></div>
-          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#64748b"></div><div class="dispo-stat-val" id="tla-notInterested">0</div><div class="dispo-stat-lbl">Not Interested</div></div>
-          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#2563eb"></div><div class="dispo-stat-val" id="tla-followup">0</div><div class="dispo-stat-lbl">Followup</div></div>
-          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#f59e0b"></div><div class="dispo-stat-val" id="tla-switchOff">0</div><div class="dispo-stat-lbl">Switch OFF</div></div>
-          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#059669"></div><div class="dispo-stat-val" id="tla-interested">0</div><div class="dispo-stat-lbl">Interested</div></div>
-        </div>
-      </div>
-    </div>
+    </div><!-- end grid-2: Dialer + Dispo Stats -->
 
-    <!-- Interested Leads Table (Agent Mode) -->
+    <!-- INTERESTED LEADS (full width) -->
     <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--green)">
       <div class="panel-header" style="background:rgba(16,185,129,.05)">
         <h2 style="color:var(--green)">&#11088; My Interested Leads</h2>
@@ -627,46 +639,53 @@
       </div>
       <div class="panel-body" style="padding:0;overflow-x:auto">
         <table class="leads-table">
-          <thead><tr><th>Phone</th><th>Name</th><th>Loan Type</th><th>Loan Amt</th><th>Time Remaining</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Phone</th><th>Name</th><th>Loan Type</th><th>Loan Amt</th><th>Time Left</th><th>Actions</th></tr></thead>
           <tbody id="tla-interestedTable"><tr><td colspan="6" class="empty">No interested leads yet</td></tr></tbody>
         </table>
       </div>
     </div>
 
-    <!-- Followups Table (Agent Mode) -->
-    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--accent)">
-      <div class="panel-header" style="background:rgba(99,102,241,.05)">
-        <h2 style="color:var(--accent2)">&#128197; My Followups</h2>
-        <span style="font-size:12px;color:var(--muted)" id="tla-followupsCount">0 followups</span>
-      </div>
-      <div class="panel-body" style="padding:0;overflow-x:auto">
-        <table class="leads-table">
-          <thead><tr><th>Phone</th><th>Name</th><th>Date</th><th>Time</th></tr></thead>
-          <tbody id="tla-followupsTable"><tr><td colspan="4" class="empty">No followups yet</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Grid-2: Followups + Add Lead side by side -->
+    <div class="grid-2">
 
-    <!-- Add Lead Manually (Agent Mode) -->
-    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--tl)">
-      <div class="panel-header" style="background:rgba(167,139,250,.06)">
-        <h2 style="color:var(--tl)">&#10133; Add Lead Manually</h2>
-      </div>
-      <div class="panel-body">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="field"><label>Name</label><input type="text" id="tla-addName" placeholder="Lead name"></div>
-          <div class="field"><label>Phone *</label><input type="text" id="tla-addPhone" placeholder="10-digit phone"></div>
-          <div class="field"><label>Loan Amount</label><input type="number" id="tla-addAmount" placeholder="Amount"></div>
-          <div class="field"><label>Remarks</label><input type="text" id="tla-addRemarks" placeholder="Remarks"></div>
+      <!-- Followups -->
+      <div class="panel">
+        <div class="panel-header" style="background:rgba(99,102,241,.05)">
+          <h2 style="color:var(--accent2)">&#128197; My Followups</h2>
+          <span style="font-size:12px;color:var(--muted)" id="tla-followupsCount">0 followups</span>
         </div>
-        <button class="action-btn" onclick="tlaAddInterestedManually()" style="background:var(--green);color:#fff;margin-top:12px;max-width:240px">&#10133; Add as Interested</button>
+        <div class="panel-body" style="padding:0;overflow-x:auto">
+          <table class="leads-table">
+            <thead><tr><th>Phone</th><th>Name</th><th>Date</th><th>Time</th></tr></thead>
+            <tbody id="tla-followupsTable"><tr><td colspan="4" class="empty">No followups yet</td></tr></tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Completed Leads Table (Agent Mode) -->
+      <!-- Add Interested Lead Manually -->
+      <div class="panel">
+        <div class="panel-header" style="background:rgba(167,139,250,.06)">
+          <h2 style="color:var(--tl)">&#10133; Add Interested Lead Manually</h2>
+        </div>
+        <div class="panel-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field"><label>Name <span style="color:#ef4444">*</span></label><input type="text" id="tla-addName" placeholder="e.g. Amit Kumar"></div>
+            <div class="field"><label>Mob No <span style="color:#ef4444">*</span></label><input type="text" id="tla-addPhone" placeholder="10-digit number" maxlength="10"></div>
+            <div class="field"><label>Required Amount <span style="color:#ef4444">*</span></label><input type="number" id="tla-addAmount" placeholder="e.g. 500000" min="1"></div>
+            <div class="field"><label>Remarks <span style="color:#ef4444">*</span></label><input type="text" id="tla-addRemarks" placeholder="Notes about this lead"></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px">
+            <button class="action-btn" onclick="tlaAddInterestedManually()" style="background:var(--green);color:#fff;max-width:240px">+ Add Lead</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end grid-2: Followups + Add Lead -->
+
+    <!-- COMPLETED LEADS (full width) -->
     <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--tl)">
       <div class="panel-header" style="background:rgba(167,139,250,.06)">
-        <h2 style="color:var(--tl)">&#9989; My Completed Leads</h2>
+        <h2 style="color:var(--tl)">&#9989; Documentation Completed</h2>
         <span style="font-size:12px;color:var(--muted)" id="tla-completedCount">0 leads</span>
       </div>
       <div class="panel-body" style="padding:0;overflow-x:auto">
@@ -860,10 +879,12 @@ function setMode(tlMode) {
     refreshAgentLeadSections();
     fetchAgentLeaderboard();
     fetchAgentDispoStats();
+    startAgentModeTimer();
   } else {
     // Switch back to TL mode — end TL mode timer, end meeting if active
     document.body.classList.remove('agent-mode-theme');
     socket.emit('agent-tlmode-end', {agentId: tlAgentId});
+    stopAgentModeTimer();
     if (onMeeting) {
       socket.emit('agent-meeting-end', {agentId: tlAgentId});
       onMeeting = false; meetingStartedAt = null;
@@ -929,8 +950,8 @@ function renderTLStats(data) {
         :`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalBreakMs||0)} used</span>`;
       const wCell=`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalWashroomMs||0)}</span>`;
       const mCell=`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalMeetingMs||0)}</span>`;
-      const SHIFT_MS=8*60*60*1000, BREAK_ALLOC=1*60*60*1000;
-      const netMs=Math.max(0,SHIFT_MS-BREAK_ALLOC-(a.totalMeetingMs||0)-(a.totalWashroomMs||0)-(a.totalTlModeMs||0));
+      const SHIFT_MS=8*60*60*1000;
+      const netMs=Math.max(0,SHIFT_MS-(a.totalBreakMs||0)-(a.totalMeetingMs||0)-(a.totalWashroomMs||0)-(a.totalTlModeMs||0));
       const netH=Math.floor(netMs/(60*60*1000)), netM=Math.floor((netMs%(60*60*1000))/(60*1000));
       const netTime=netH+'h '+netM+'m';
       const loginCell=a.firstLoginToday
@@ -1141,8 +1162,8 @@ function renderTLLeaderboard(data) {
   let html='<div class="lb-list">';
   data.forEach((r,idx)=>{
     const pct=Math.round((r.score/maxS)*100);
-    const avatarSize=idx===0?60:idx===1?52:idx===2?46:idx<6?40:34;
-    const fontSize=idx===0?19:idx===1?17:idx===2?15:idx<6?13:11;
+    const avatarSize=idx===0?76:idx===1?66:idx===2?58:idx<5?50:42;
+    const fontSize=idx===0?24:idx===1?21:idx===2?18:idx<5?16:13;
     const face=r.profilePhoto?`<img src="${r.profilePhoto}" alt="">`:getInit(r.name);
     const isTop3=idx<3;
     let rd;
@@ -1297,8 +1318,8 @@ function renderAgentLeaderboard(data) {
   let html='<div class="lb-list">';
   data.forEach((r,idx)=>{
     const pct=Math.round((r.score/maxS)*100);
-    const avatarSize=idx===0?60:idx===1?52:idx===2?46:idx<6?40:34;
-    const fontSize=idx===0?19:idx===1?17:idx===2?15:idx<6?13:11;
+    const avatarSize=idx===0?76:idx===1?66:idx===2?58:idx<5?50:42;
+    const fontSize=idx===0?24:idx===1?21:idx===2?18:idx<5?16:13;
     const face=r.profilePhoto?`<img src="${r.profilePhoto}" alt="">`:getInit(r.name);
     const isTop3=idx<3;
     let rd;
@@ -1475,67 +1496,71 @@ async function tlaSubmitDocZip() {
   } catch(e){showToast('Upload failed','error');}
 }
 
-// ── Hindi Motivational Quotes (TL - Team Leader) ──────────────────────────────
-const tlQuotes = [
-  '\u{1F451} Ek achha leader wo hai jo team ko usse better banaye jo wo sochte hain',
-  '\u{1F4AA} Teri team tera reflection hai - unhe inspire kar, wo targets todenge',
-  '\u{1F525} Team ka target tera target hai - sabko sath lekar chalo!',
-  '\u{1F3C6} Leaders wo nahi jo khud aage badhe, wo hain jo sabko sath lekar badhe',
-  '\u{2B50} Har agent mein ek star chhupa hai - tujhe bas usse nikalna hai',
-  '\u{1F4CA} Numbers jhooth nahi bolte - apni team ki performance track karo',
-  '\u{1F525} Tera kaam hai raasta dikhana - team khud chalegi',
-  '\u{1F451} Pressure mein hi heera banta hai - apni team ko challenge karo',
-  '\u{1F4AA} Jis din team mein belief aa gaya, us din se target miss nahi hoga',
-  '\u{1F3AF} Ek call coaching = ek agent ka transformation',
-  '\u{2B50} Sabse pehle khud example set karo - team follow karegi',
-  '\u{1F525} Agents ko motivate karo, celebrate karo - results apne aap aayenge',
-  '\u{1F451} DSA team lead ka kaam hai har agent ko loan champion banana',
-  '\u{1F4CA} Overdue leads ka follow-up = team ki credibility',
-  '\u{1F4AA} Agent ka growth = tera growth - invest karo unme',
-  '\u{1F3C6} Har week ek agent ko recognize karo - motivation double hogi',
-  '\u{2B50} Bank partners khush tab honge jab team consistently deliver karegi',
-  '\u{1F525} Team meeting mein energy lao - wo energy field pe dikhegi',
-  '\u{1F451} Leader ka kaam hai obstacles hatana - agents ko sirf dial karne do',
-  '\u{1F4AA} Chhoti team bhi bada impact de sakti hai - trust the process'
-];
-const agentQuotesForTLA = [
-  '\u{1F525} Har call ek naya mauka hai - aaj ka target tod do!',
-  '\u{1F4AA} DSA ka kaam hai loan dena, sapne poore karna - kar dikhao!',
-  '\u{1F3C6} Jeetne wale alag kaam nahi karte, wo har kaam alag tarike se karte hain',
-  '\u{1F4B0} Ek interested lead = ek kadam success ki taraf',
-  '\u{1F525} Target tod do, warna target tumhe tod dega',
-  '\u{2B50} Customer ka bharosa hi tera sabse bada asset hai',
-  '\u{1F4DE} Har number mein chupa hai ek success story',
-  '\u{1F680} Call karo, connect karo, convert karo - yahi hai DSA mantra',
-  '\u{1F4AA} Mehnat ka koi shortcut nahi hota - dial karte raho!',
-  '\u{1F3AF} Aaj ka ek extra call, kal ka bonus ban sakta hai',
-  '\u{1F525} Bank partnership ka fayda uthao - har loan ek commission hai',
-  '\u{2B50} Jo dar gaya wo haar gaya - phone uthao aur bol do!',
-  '\u{1F4B0} Loan dena sirf kaam nahi, kisi ka sapna poora karna hai',
-  '\u{1F3C6} Top agent banne ka raaz: consistency aur confidence',
-  '\u{1F4DE} Aaj ki calls, kal ki earnings - ek bhi miss mat karo',
-  '\u{1F680} Rejection se mat daro, har NO ke baad ek YES aata hai',
-  '\u{1F4AA} Sapne wo nahi jo so kar dekhte hain, sapne wo hain jo sone nahi dete',
-  '\u{1F525} Teri mehnat tujhe leaderboard ke top pe le jayegi',
-  '\u{2B50} Har interested lead tera commission badhati hai - hustle karo!',
-  '\u{1F3AF} Jab iraada pakka ho to rasta khud ban jata hai'
-];
+// ── Hindi Motivational Quotes (loaded from external files) ────────────────────
 function shuffleArr(arr) {
   const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;
 }
 function setTLQuotes() {
+  if(typeof tlQuotes === 'undefined') return;
   const shuffled = shuffleArr(tlQuotes);
   const el = document.getElementById('tlQuoteText');
   if(el) el.textContent = shuffled.join('  \u2022  ');
 }
 function setTLAQuotes() {
-  const shuffled = shuffleArr(agentQuotesForTLA);
+  if(typeof agentQuotes === 'undefined') return;
+  const shuffled = shuffleArr(agentQuotes);
   const el = document.getElementById('tlaQuoteText');
   if(el) el.textContent = shuffled.join('  \u2022  ');
 }
 setTLQuotes(); setTLAQuotes();
-setInterval(setTLQuotes, 22000);
-setInterval(setTLAQuotes, 22000);
+
+// ── Agent Mode Timer ──────────────────────────────────────────────────────────
+let agentModeStartTime = null;
+let agentModeTimerInterval = null;
+
+function startAgentModeTimer() {
+  agentModeStartTime = Date.now();
+  if(agentModeTimerInterval) clearInterval(agentModeTimerInterval);
+  agentModeTimerInterval = setInterval(tickAgentModeTimer, 1000);
+  tickAgentModeTimer();
+}
+function stopAgentModeTimer() {
+  if(agentModeTimerInterval) { clearInterval(agentModeTimerInterval); agentModeTimerInterval = null; }
+  agentModeStartTime = null;
+  const el = document.getElementById('agentModeElapsed');
+  if(el) el.textContent = '0:00:00';
+}
+function tickAgentModeTimer() {
+  if(!agentModeStartTime) return;
+  const elapsed = Date.now() - agentModeStartTime;
+  const h = Math.floor(elapsed / 3600000);
+  const m = Math.floor((elapsed % 3600000) / 60000);
+  const s = Math.floor((elapsed % 60000) / 1000);
+  const el = document.getElementById('agentModeElapsed');
+  if(el) el.textContent = h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+// ── Net Dialing Time for TL Agent Mode ────────────────────────────────────────
+function updateTLNetDialingTime() {
+  const SHIFT_MS = 8 * 60 * 60 * 1000;
+  const liveBreak = (onBreak && breakStartedAt) ? (Date.now() - breakStartedAt) : 0;
+  const liveWashroom = (onWashroom && washroomStartedAt) ? (Date.now() - washroomStartedAt) : 0;
+  const liveMeeting = (onMeeting && meetingStartedAt) ? (Date.now() - meetingStartedAt) : 0;
+  const liveTlMode = agentModeStartTime ? (Date.now() - agentModeStartTime) : 0;
+  const usedBreak = totalBreakMsUsed + liveBreak;
+  const usedWashroom = totalWashroomMsUsed + liveWashroom;
+  const usedMeeting = totalMeetingMsUsed + liveMeeting;
+  const netMs = Math.max(0, SHIFT_MS - usedBreak - usedWashroom - usedMeeting - liveTlMode);
+  const h = Math.floor(netMs / (60 * 60 * 1000));
+  const m = Math.floor((netMs % (60 * 60 * 1000)) / (60 * 1000));
+  const el = document.getElementById('agentNetDialingTime');
+  if(el) el.textContent = h + 'h ' + m + 'm';
+}
+setInterval(updateTLNetDialingTime, 1000);
+</script>
+<script src="/quotes-tl.js"></script>
+<script src="/quotes-agent.js"></script>
+<script>setTLQuotes(); setTLAQuotes();
 </script>
 </body>
 </html>

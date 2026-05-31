@@ -23,7 +23,7 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   .logo h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
   .logo-img {
-    height: 74px; padding: 10px 18px; border-radius: 14px;
+    width: 272px; height: 70px; object-fit: contain; padding: 10px 18px; border-radius: 14px;
     border: 2px solid rgba(124,58,237,.4); background: rgba(255,255,255,.04);
     filter: drop-shadow(0 0 12px rgba(124,58,237,.65)) drop-shadow(0 0 24px rgba(124,58,237,.3));
     animation: logo-glow-admin 2.5s ease-in-out infinite;
@@ -454,7 +454,7 @@
               <th>Login</th>
               <th>Status</th>
               <th>Total No. Dialed</th>
-              <th>Net Dialing Time</th>
+              <th>Net Dialing Time <span title="Net Dialing Time = 8h shift - Break - Meeting - Washroom - TL Mode (time available for actual calling)" style="cursor:help;opacity:.7">&#9432;</span></th>
               <th>Break Used</th>
               <th>&#128699; Washroom</th>
               <th>&#128203; Meeting</th>
@@ -776,8 +776,7 @@ function renderStats(data) {
 
       // Net Dialing Time calculation — Xh Ym format
       const SHIFT_MS = 8 * 60 * 60 * 1000;
-      const BREAK_ALLOC_MS = 1 * 60 * 60 * 1000;
-      const netMs = Math.max(0, SHIFT_MS - BREAK_ALLOC_MS - (a.totalMeetingMs || 0) - (a.totalWashroomMs || 0) - (a.totalTlModeMs || 0));
+      const netMs = Math.max(0, SHIFT_MS - (a.totalBreakMs || 0) - (a.totalMeetingMs || 0) - (a.totalWashroomMs || 0) - (a.totalTlModeMs || 0));
       const netH = Math.floor(netMs / (60 * 60 * 1000));
       const netM = Math.floor((netMs % (60 * 60 * 1000)) / (60 * 1000));
       const netDialingTime = netH + 'h ' + netM + 'm';
@@ -1438,8 +1437,8 @@ function renderAdminLeaderboard(data) {
   let html = '<div class="lb-list">';
   data.forEach((r, idx) => {
     const pct = Math.round((r.score / maxScore) * 100);
-    const avatarSize = idx === 0 ? 64 : idx === 1 ? 56 : idx === 2 ? 50 : idx < 6 ? 44 : 38;
-    const fontSize = idx === 0 ? 20 : idx === 1 ? 18 : idx === 2 ? 16 : idx < 6 ? 14 : 12;
+    const avatarSize = idx === 0 ? 76 : idx === 1 ? 66 : idx === 2 ? 58 : idx < 5 ? 50 : 42;
+    const fontSize = idx === 0 ? 24 : idx === 1 ? 21 : idx === 2 ? 18 : idx < 5 ? 16 : 13;
     const faceHtml = r.profilePhoto
       ? '<img src="' + r.profilePhoto + '" alt="">'
       : getInitial(r.name);
