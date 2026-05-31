@@ -469,14 +469,34 @@
 <!-- ───────────── AGENT DIALER SCREEN (TL in agent mode) ───────────── -->
 <div id="agentScreen">
   <div class="main">
+
+    <!-- Agent Mode Leaderboard -->
+    <div class="leaderboard-panel">
+      <div class="leaderboard-header">
+        <h2>&#127942; My Rankings</h2>
+        <div class="lb-period-tabs">
+          <button class="lb-period-tab active" data-tla-period="daily" onclick="switchAgentLbPeriod('daily')">Daily</button>
+          <button class="lb-period-tab" data-tla-period="weekly" onclick="switchAgentLbPeriod('weekly')">Weekly</button>
+          <button class="lb-period-tab" data-tla-period="monthly" onclick="switchAgentLbPeriod('monthly')">Monthly</button>
+        </div>
+      </div>
+      <div class="leaderboard-body" id="tla-leaderboardBody">
+        <div style="text-align:center;color:var(--muted);padding:20px">Loading rankings...</div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
     <div class="stats-grid">
       <div class="stat-card"><span class="stat-label">Dialed Today</span><span class="stat-value tl" id="agentCountToday">0</span></div>
+      <div class="stat-card"><span class="stat-label">Net Dialing Time</span><span class="stat-value tl" id="agentNetDialingTime">7h 0m</span></div>
       <div class="stat-card"><span class="stat-label">Break Used</span><span class="stat-value amber" id="agentBreakUsed">0:00</span></div>
       <div class="stat-card"><span class="stat-label">Washroom</span><span class="stat-value" style="color:#818cf8" id="agentWashroomUsed">0:00</span></div>
       <div class="stat-card"><span class="stat-label">Meeting</span><span class="stat-value" style="color:#22d3ee" id="agentMeetingUsed">0:00</span></div>
-      <div class="stat-card"><span class="stat-label">Net Dialing Time</span><span class="stat-value tl" id="agentNetDialingTime">7h 0m</span></div>
       <div class="stat-card"><span class="stat-label">Interested</span><span class="stat-value green" id="agentInterestedCount">0</span></div>
+      <div class="stat-card"><span class="stat-label">Followups</span><span class="stat-value blue" id="agentFollowupsCount">0</span></div>
     </div>
+
+    <!-- Dialer Panel -->
     <div class="panel dialer-panel" style="margin-bottom:22px">
       <div class="panel-header" style="background:rgba(124,58,237,.05)">
         <h2 style="color:var(--tl)">&#128222; Current Lead (TL Dialing Mode)</h2>
@@ -485,7 +505,7 @@
         <div class="number-block">
           <div class="number-label">Lead to Dial</div>
           <div class="lead-name" id="agentLeadName"></div>
-          <div class="phone-number-big" id="agentPhoneDisplay">—</div>
+          <div class="phone-number-big" id="agentPhoneDisplay">&#8212;</div>
           <div style="font-size:12px;color:var(--muted);margin-top:8px">Dial this number now</div>
         </div>
       </div>
@@ -521,6 +541,102 @@
         <button class="action-btn" id="agentBtnMeeting" onclick="agentTakeMeeting()" style="background:rgba(8,145,178,.1);color:#22d3ee;border:1.5px solid rgba(8,145,178,.3);display:none">&#128203; Meeting</button>
         <button class="action-btn" id="agentBtnEndMeeting" onclick="agentEndMeeting()" style="background:#0891b2;color:#fff;display:none">&#9654; Meeting Done &#8212; Resume</button>
       </div>
+    </div>
+
+    <!-- Disposition Stats (Agent Mode) -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-header" style="background:rgba(167,139,250,.06);flex-wrap:wrap;gap:10px">
+        <h2 style="color:var(--tl);margin:0">&#128202; My Disposition Stats</h2>
+        <div class="admin-stats-tabs" id="tla-dispo-tabs">
+          <button class="admin-stats-tab active" data-tla-dispo="daily" onclick="switchAgentDispoPeriod('daily')">Daily</button>
+          <button class="admin-stats-tab" data-tla-dispo="weekly" onclick="switchAgentDispoPeriod('weekly')">Weekly</button>
+          <button class="admin-stats-tab" data-tla-dispo="monthly" onclick="switchAgentDispoPeriod('monthly')">Monthly</button>
+          <button class="admin-stats-tab" data-tla-dispo="yearly" onclick="switchAgentDispoPeriod('yearly')">Yearly</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="dispo-stats-grid">
+          <div class="dispo-stat-card dispo-stat-total"><div class="dispo-stat-val" id="tla-totalCalls">0</div><div class="dispo-stat-lbl">Total Calls</div></div>
+          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#dc2626"></div><div class="dispo-stat-val" id="tla-dead">0</div><div class="dispo-stat-lbl">Not Connected</div></div>
+          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#d97706"></div><div class="dispo-stat-val" id="tla-notReceived">0</div><div class="dispo-stat-lbl">Not Received</div></div>
+          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#64748b"></div><div class="dispo-stat-val" id="tla-notInterested">0</div><div class="dispo-stat-lbl">Not Interested</div></div>
+          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#2563eb"></div><div class="dispo-stat-val" id="tla-followup">0</div><div class="dispo-stat-lbl">Followup</div></div>
+          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#f59e0b"></div><div class="dispo-stat-val" id="tla-switchOff">0</div><div class="dispo-stat-lbl">Switch OFF</div></div>
+          <div class="dispo-stat-card"><div class="dispo-stat-indicator" style="background:#059669"></div><div class="dispo-stat-val" id="tla-interested">0</div><div class="dispo-stat-lbl">Interested</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interested Leads Table (Agent Mode) -->
+    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--green)">
+      <div class="panel-header" style="background:rgba(16,185,129,.05)">
+        <h2 style="color:var(--green)">&#11088; My Interested Leads</h2>
+        <span style="font-size:12px;color:var(--muted)" id="tla-interestedCount">0 leads</span>
+      </div>
+      <div class="panel-body" style="padding:0;overflow-x:auto">
+        <table class="leads-table">
+          <thead><tr><th>Phone</th><th>Name</th><th>Loan Type</th><th>Loan Amt</th><th>Time Remaining</th><th>Actions</th></tr></thead>
+          <tbody id="tla-interestedTable"><tr><td colspan="6" class="empty">No interested leads yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Followups Table (Agent Mode) -->
+    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--accent)">
+      <div class="panel-header" style="background:rgba(99,102,241,.05)">
+        <h2 style="color:var(--accent2)">&#128197; My Followups</h2>
+        <span style="font-size:12px;color:var(--muted)" id="tla-followupsCount">0 followups</span>
+      </div>
+      <div class="panel-body" style="padding:0;overflow-x:auto">
+        <table class="leads-table">
+          <thead><tr><th>Phone</th><th>Name</th><th>Date</th><th>Time</th></tr></thead>
+          <tbody id="tla-followupsTable"><tr><td colspan="4" class="empty">No followups yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Add Lead Manually (Agent Mode) -->
+    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--tl)">
+      <div class="panel-header" style="background:rgba(167,139,250,.06)">
+        <h2 style="color:var(--tl)">&#10133; Add Lead Manually</h2>
+      </div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="field"><label>Name</label><input type="text" id="tla-addName" placeholder="Lead name"></div>
+          <div class="field"><label>Phone *</label><input type="text" id="tla-addPhone" placeholder="10-digit phone"></div>
+          <div class="field"><label>Loan Amount</label><input type="number" id="tla-addAmount" placeholder="Amount"></div>
+          <div class="field"><label>Remarks</label><input type="text" id="tla-addRemarks" placeholder="Remarks"></div>
+        </div>
+        <button class="action-btn" onclick="tlaAddInterestedManually()" style="background:var(--green);color:#fff;margin-top:12px;max-width:240px">&#10133; Add as Interested</button>
+      </div>
+    </div>
+
+    <!-- Completed Leads Table (Agent Mode) -->
+    <div class="panel" style="margin-bottom:20px;border-top:3px solid var(--tl)">
+      <div class="panel-header" style="background:rgba(167,139,250,.06)">
+        <h2 style="color:var(--tl)">&#9989; My Completed Leads</h2>
+        <span style="font-size:12px;color:var(--muted)" id="tla-completedCount">0 leads</span>
+      </div>
+      <div class="panel-body" style="padding:0;overflow-x:auto">
+        <table class="leads-table">
+          <thead><tr><th>Phone</th><th>Name</th><th>Loan Amt</th><th>Completed At</th><th>Status</th></tr></thead>
+          <tbody id="tla-completedTable"><tr><td colspan="5" class="empty">No completed leads yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Doc ZIP Upload Modal (Agent Mode) -->
+<div class="modal-overlay" id="tlaDocZipModal">
+  <div class="modal-box">
+    <h3>&#128230; Upload Documents ZIP</h3>
+    <p>Upload a ZIP file containing all required documents for this lead.</p>
+    <input type="file" id="tlaDocZipFile" accept=".zip" style="margin-bottom:16px;color:var(--text)">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="tlaCloseDocZipModal()">Cancel</button>
+      <button class="btn-confirm" onclick="tlaSubmitDocZip()">Upload</button>
     </div>
   </div>
 </div>
@@ -683,17 +799,17 @@ function setMode(tlMode) {
   inTLMode = tlMode;
   updateModeUI();
   if (!inTLMode) {
-    // Switch to agent dialing mode — start meeting timer
-    if (!onMeeting) {
-      onMeeting = true;
-      meetingStartedAt = Date.now();
-      socket.emit('agent-meeting-start', {agentId: tlAgentId});
-    }
+    // Switch to agent dialing mode — start TL mode timer (not meeting)
+    socket.emit('agent-tlmode-start', {agentId: tlAgentId});
     document.getElementById('tlScreen').style.display='none';
     document.getElementById('agentScreen').style.display='block';
     socket.emit('agent-start',{agentId:tlAgentId});
+    refreshAgentLeadSections();
+    fetchAgentLeaderboard();
+    fetchAgentDispoStats();
   } else {
-    // Switch back to TL mode — end meeting if active
+    // Switch back to TL mode — end TL mode timer, end meeting if active
+    socket.emit('agent-tlmode-end', {agentId: tlAgentId});
     if (onMeeting) {
       socket.emit('agent-meeting-end', {agentId: tlAgentId});
       onMeeting = false; meetingStartedAt = null;
@@ -760,7 +876,7 @@ function renderTLStats(data) {
       const wCell=`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalWashroomMs||0)}</span>`;
       const mCell=`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalMeetingMs||0)}</span>`;
       const SHIFT_MS=8*60*60*1000, BREAK_ALLOC=1*60*60*1000;
-      const netMs=Math.max(0,SHIFT_MS-BREAK_ALLOC-(a.totalMeetingMs||0)-(a.totalWashroomMs||0));
+      const netMs=Math.max(0,SHIFT_MS-BREAK_ALLOC-(a.totalMeetingMs||0)-(a.totalWashroomMs||0)-(a.totalTlModeMs||0));
       const netH=Math.floor(netMs/(60*60*1000)), netM=Math.floor((netMs%(60*60*1000))/(60*1000));
       const netTime=netH+'h '+netM+'m';
       const loginCell=a.firstLoginToday
@@ -1105,6 +1221,201 @@ socket.on('meeting-ended',d=>{if(d.error){alert(d.error);return;}onMeeting=false
 ['empId','tlName'].forEach(id=>{
   document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')loginTL();});
 });
+
+// ── Agent Mode: Leaderboard ───────────────────────────────────────────────────
+let agentLbPeriod='daily';
+function switchAgentLbPeriod(p) {
+  agentLbPeriod=p;
+  document.querySelectorAll('[data-tla-period]').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tla-period="'+p+'"]').classList.add('active');
+  fetchAgentLeaderboard();
+}
+async function fetchAgentLeaderboard() {
+  if(inTLMode) return;
+  try { const r=await fetch('/api/rankings?period='+agentLbPeriod); renderAgentLeaderboard(await r.json()); } catch(e){}
+}
+function renderAgentLeaderboard(data) {
+  const body=document.getElementById('tla-leaderboardBody');
+  if(!data||!data.length){body.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px">No data yet</div>';return;}
+  const maxS=Math.max(...data.map(d=>d.score),1);
+  let html='<div class="lb-list">';
+  data.forEach((r,idx)=>{
+    const pct=Math.round((r.score/maxS)*100);
+    const face=r.profilePhoto?`<img src="${r.profilePhoto}" alt="">`:getInit(r.name);
+    const isTop3=idx<3;
+    let rd;
+    if(idx===0) rd='\u{1F3C6}<br><span style="font-size:9px">#1</span>';
+    else if(isTop3) rd='\u{1F3C6}<br><span style="font-size:9px">#'+(idx+1)+'</span>';
+    else rd='\u{1F3C6}<br><span style="font-size:9px">#'+r.rank+'</span>';
+    const bs=idx===0?'font-size:18px;width:38px;height:38px;':'';
+    const rc='lb-row'+(idx===0?' rank-1-row':'')+(r.agentId===tlAgentId?' style="border-color:var(--green)"':'');
+    html+=`<div class="${rc}">
+      <div class="lb-rank-badge top3" style="${bs}text-align:center;line-height:1.2">${rd}</div>
+      <div class="lb-row-avatar${idx===0?' rank-1-avatar':''}">${face}</div>
+      <div class="lb-row-info">
+        <div class="lb-row-name">${escapeHtml(r.name)}${r.agentId===tlAgentId?' <span style="color:var(--green);font-size:11px">(You)</span>':''}</div>
+        <div class="lb-row-stats">\u2B50 ${r.interested} interested \u00B7 \u{1F4C5} ${r.followups} followups \u00B7 \u{1F4DE} ${r.totalCalls} calls</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:${pct}%"></div></div>
+      </div>
+      <div style="text-align:right;min-width:50px"><div class="lb-row-score">${r.score}</div></div>
+    </div>`;
+  });
+  html+='</div>';
+  body.innerHTML=html;
+}
+
+// ── Agent Mode: Disposition Stats ─────────────────────────────────────────────
+let agentDispoPeriod='daily';
+function switchAgentDispoPeriod(p) {
+  agentDispoPeriod=p;
+  document.querySelectorAll('[data-tla-dispo]').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tla-dispo="'+p+'"]').classList.add('active');
+  fetchAgentDispoStats();
+}
+async function fetchAgentDispoStats() {
+  if(inTLMode||!tlAgentId) return;
+  try {
+    const r=await fetch('/api/stats/dispositions?period='+agentDispoPeriod+'&agentId='+encodeURIComponent(tlAgentId));
+    const d=await r.json();
+    document.getElementById('tla-totalCalls').textContent=d.totalCalls||0;
+    document.getElementById('tla-dead').textContent=d.dead||0;
+    document.getElementById('tla-notReceived').textContent=d.not_received||0;
+    document.getElementById('tla-notInterested').textContent=d.not_interested||0;
+    document.getElementById('tla-followup').textContent=d.followup||0;
+    document.getElementById('tla-switchOff').textContent=d.switch_off||0;
+    document.getElementById('tla-interested').textContent=d.interested||0;
+  } catch(e){}
+}
+
+// ── Agent Mode: Interested Leads, Followups, Completed ────────────────────────
+let tlaRefreshInterval=null;
+function refreshAgentLeadSections() {
+  if(inTLMode) { if(tlaRefreshInterval){clearInterval(tlaRefreshInterval);tlaRefreshInterval=null;} return; }
+  fetchAgentInterested();
+  fetchAgentFollowups();
+  fetchAgentCompleted();
+  if(!tlaRefreshInterval) tlaRefreshInterval=setInterval(()=>{if(!inTLMode){fetchAgentInterested();fetchAgentFollowups();fetchAgentCompleted();}},30000);
+}
+
+async function fetchAgentInterested() {
+  if(!tlAgentId) return;
+  try {
+    const r=await fetch('/api/agent/interested/'+encodeURIComponent(tlAgentId));
+    const leads=await r.json();
+    document.getElementById('tla-interestedCount').textContent=leads.length+' lead'+(leads.length!==1?'s':'');
+    document.getElementById('agentInterestedCount').textContent=leads.length;
+    const tb=document.getElementById('tla-interestedTable');
+    if(!leads||!leads.length){tb.innerHTML='<tr><td colspan="6" class="empty">No interested leads yet</td></tr>';return;}
+    tb.innerHTML=leads.map(l=>{
+      const rem=l.hoursRemaining;
+      const tc=rem<=0?'<span class="overdue-text">OVERDUE</span>'
+        :`<span class="time-remaining" data-interested-at="${escapeHtml(l.interestedAt)}">${Math.floor(rem)}h ${Math.round((rem%1)*60)}m</span>`;
+      return `<tr${rem<=0?' class="overdue-row"':''}>
+        <td><span class="phone-number">${escapeHtml(formatPhone(l.phone))}</span></td>
+        <td>${escapeHtml(l.name)||'\u2014'}</td>
+        <td><span class="loan-type-pill">${escapeHtml(l.loanType)||'\u2014'}</span></td>
+        <td style="font-family:var(--mono);font-size:13px">${escapeHtml(l.loanAmount)||'\u2014'}</td>
+        <td>${tc}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm tl" onclick="tlaOpenDocZipModal('${escapeHtml(l.id)}')">&#128230; Upload</button>
+          <button class="btn-sm danger" onclick="tlaRemoveInterested('${escapeHtml(l.id)}')">Remove</button>
+        </td></tr>`;
+    }).join('');
+  } catch(e){}
+}
+
+async function fetchAgentFollowups() {
+  if(!tlAgentId) return;
+  try {
+    const r=await fetch('/api/agent/followups/'+encodeURIComponent(tlAgentId));
+    const fs=await r.json();
+    document.getElementById('tla-followupsCount').textContent=fs.length+' followup'+(fs.length!==1?'s':'');
+    document.getElementById('agentFollowupsCount').textContent=fs.length;
+    const tb=document.getElementById('tla-followupsTable');
+    if(!fs||!fs.length){tb.innerHTML='<tr><td colspan="4" class="empty">No followups yet</td></tr>';return;}
+    tb.innerHTML=fs.map(f=>`<tr>
+      <td><span class="phone-number">${escapeHtml(formatPhone(f.phone))}</span></td>
+      <td>${escapeHtml(f.name)||'\u2014'}</td>
+      <td style="font-family:var(--mono);font-size:13px">${escapeHtml(f.followupDate||'\u2014')}</td>
+      <td style="font-family:var(--mono);font-size:13px">${escapeHtml(f.followupTime||'\u2014')}</td></tr>`).join('');
+  } catch(e){}
+}
+
+async function fetchAgentCompleted() {
+  if(!tlAgentId) return;
+  try {
+    const r=await fetch('/api/agent/completed/'+encodeURIComponent(tlAgentId));
+    const leads=await r.json();
+    document.getElementById('tla-completedCount').textContent=leads.length+' lead'+(leads.length!==1?'s':'');
+    const tb=document.getElementById('tla-completedTable');
+    if(!leads||!leads.length){tb.innerHTML='<tr><td colspan="5" class="empty">No completed leads yet</td></tr>';return;}
+    tb.innerHTML=leads.map(l=>`<tr>
+      <td><span class="phone-number">${escapeHtml(formatPhone(l.phone))}</span></td>
+      <td>${escapeHtml(l.name)||'\u2014'}</td>
+      <td style="font-family:var(--mono);font-size:13px">${escapeHtml(l.loanAmount)||'\u2014'}</td>
+      <td style="font-size:12px;font-family:var(--mono)">${formatTimestamp(l.documentationCompletedAt)}</td>
+      <td><span class="loan-type-pill">${escapeHtml(l.adminStatus)||'Pending'}</span></td></tr>`).join('');
+  } catch(e){}
+}
+
+// ── Agent Mode: Add Lead Manually ────────────────────────────────────────────
+async function tlaAddInterestedManually() {
+  const phone=document.getElementById('tla-addPhone').value.trim();
+  const leadName=document.getElementById('tla-addName').value.trim();
+  const loanAmount=document.getElementById('tla-addAmount').value.trim();
+  const remarks=document.getElementById('tla-addRemarks').value.trim();
+  if(!phone||phone.length<7){showToast('Enter a valid phone number','error');return;}
+  try {
+    const r=await fetch('/api/agent/add-interested',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({agentId:tlAgentId,phone,leadName,loanAmount,remarks})
+    });
+    const d=await r.json();
+    if(d.error){showToast('Error: '+d.error,'error');return;}
+    showToast('Lead added successfully','success');
+    ['tla-addPhone','tla-addName','tla-addAmount','tla-addRemarks'].forEach(id=>document.getElementById(id).value='');
+    refreshAgentLeadSections();
+  } catch(e){showToast('Failed to add lead','error');}
+}
+
+// ── Agent Mode: Remove Interested ────────────────────────────────────────────
+async function tlaRemoveInterested(numberId) {
+  if(!confirm('Remove this lead?')) return;
+  try {
+    const r=await fetch('/api/agent/remove-interested',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agentId:tlAgentId,numberId})});
+    const d=await r.json();
+    if(d.error){showToast('Error: '+d.error,'error');return;}
+    showToast('Lead removed','success');
+    refreshAgentLeadSections();
+  } catch(e){showToast('Failed to remove','error');}
+}
+
+// ── Agent Mode: Doc ZIP Upload ────────────────────────────────────────────────
+let tlaDocZipNumberId=null;
+function tlaOpenDocZipModal(numberId) {
+  tlaDocZipNumberId=numberId;
+  document.getElementById('tlaDocZipFile').value='';
+  document.getElementById('tlaDocZipModal').classList.add('active');
+}
+function tlaCloseDocZipModal() {
+  document.getElementById('tlaDocZipModal').classList.remove('active');
+  tlaDocZipNumberId=null;
+}
+async function tlaSubmitDocZip() {
+  const fileInput=document.getElementById('tlaDocZipFile');
+  if(!fileInput.files||!fileInput.files[0]){showToast('Select a ZIP file','error');return;}
+  const formData=new FormData();
+  formData.append('docZip',fileInput.files[0]);
+  formData.append('agentId',tlAgentId);
+  try {
+    const r=await fetch('/api/agent/upload-doc-zip/'+tlaDocZipNumberId,{method:'POST',body:formData});
+    const d=await r.json();
+    if(d.error){showToast('Error: '+d.error,'error');return;}
+    showToast('Documents uploaded successfully','success');
+    tlaCloseDocZipModal();
+    refreshAgentLeadSections();
+  } catch(e){showToast('Upload failed','error');}
+}
 </script>
 </body>
 </html>

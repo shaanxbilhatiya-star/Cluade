@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Implement TL Mode timer logic: When TL switches to Agent Mode, track time as 'TL Mode Time' (not meeting). When switching back to TL Mode, auto-end any active meeting and show dialer. TL Mode Time is visible only to Admin and subtracts from Net Dialing Time. Also fully replicate the agent page modules into TL's agent mode section (leaderboard, stats, interested leads table, followups, add lead form, completed leads, disposition stats).",
+  "status": "in_progress",
+  "steps": [
+    "SERVER (server.js): Add tlModeMs and tlModeStartedAt fields to agent state. Add helper functions startTlMode(agentId) and endTlMode(agentId) similar to meeting helpers. Add socket events 'agent-tlmode-start' and 'agent-tlmode-end'. In checkDailyReset, reset tlModeMs fields. In getAdminStats, include totalTlModeMs in agent stats. Modify Net Dialing Time calculation in getAdminStats to also subtract totalTlModeMs.",
+    "SERVER (server.js): Add a new API endpoint POST /api/admin/hard-reset that calls createFreshState(), also deletes all files in uploads/lead_docs/ and uploads/agent_photos/, emits force-stop to all, saves state, and returns success.",
+    "TL PAGE (public/tl/index.html) - Mode switch logic: In setMode function, when switching to Agent Mode (inTLMode=false): instead of starting a meeting, emit 'agent-tlmode-start'. When switching back to TL Mode (inTLMode=true): emit 'agent-tlmode-end' (instead of meeting-end), and if there's an active meeting end that too. Auto-end meeting on mode switch back.",
+    "TL PAGE (public/tl/index.html) - Full Agent Mode: Replace the minimal agentScreen div with a complete agent experience. Add: leaderboard panel (same as agent page), full stats grid (dialed today, net dialing time, break used, washroom, meeting, interested count, followups count), disposition stats panel with period tabs, interested leads table with timer and actions (form link, upload doc zip, remove), followups table, add lead manually form, completed leads table. Copy the HTML structure from public/agent/index.html and adapt element IDs to avoid conflicts (prefix with 'tl-agent-').",
+    "TL PAGE (public/tl/index.html) - Agent Mode JS: Add the JavaScript functions for the full agent mode experience: leaderboard fetching/rendering, interested leads fetching/rendering with countdown timers, followups fetching/rendering, completed leads rendering, add lead manually functionality, doc zip upload modal and logic, disposition stats with period switching. These mirror the agent page functions but use the tl-agent- prefixed element IDs.",
+    "ADMIN PAGE (public/admin/index.html): In the agents table, add a new column 'TL Mode' that shows totalTlModeMs for each agent (similar to how Meeting column works). Include it in the Net Dialing Time calculation display (subtract from the 8h shift). Only show this column - this satisfies the 'visible only to Admin' requirement."
+  ],
+  "acceptance_criteria": [
+    "TL switching to Agent Mode starts a 'TL Mode' timer (not meeting)",
+    "TL switching back to TL Mode auto-ends the TL Mode timer and any active meeting, returns to dialer/TL dashboard",
+    "TL Agent Mode shows full agent experience: leaderboard, all stats, dialer, disposition stats, interested leads table with countdown, followups, add lead form, completed leads",
+    "Admin panel shows TL Mode time column in agents table",
+    "Net Dialing Time in admin subtracts TL Mode time",
+    "Server syntax validates with node -c server.js"
+  ],
+  "verification": [
+    "Run node -c server.js to validate server syntax",
+    "Run grep -c 'tlMode' server.js to confirm TL mode tracking is added",
+    "Verify the admin HTML references totalTlModeMs in the agents table rendering"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

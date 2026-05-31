@@ -457,10 +457,11 @@
               <th>Break Used</th>
               <th>&#128699; Washroom</th>
               <th>&#128203; Meeting</th>
+              <th>&#128203; TL Mode</th>
             </tr>
           </thead>
           <tbody id="agentTable">
-            <tr><td colspan="8" class="empty">No agents registered</td></tr>
+            <tr><td colspan="9" class="empty">No agents registered</td></tr>
           </tbody>
         </table>
       </div>
@@ -726,7 +727,7 @@ function renderStats(data) {
   const meetingAgents  = data.agentStats.filter(a => a.onMeeting);
 
   if (!data.agentStats.length) {
-    at.innerHTML = '<tr><td colspan="8" class="empty">No agents registered</td></tr>';
+    at.innerHTML = '<tr><td colspan="9" class="empty">No agents registered</td></tr>';
   } else {
     at.innerHTML = data.agentStats.map(a => {
       let statusDot, statusText;
@@ -774,10 +775,14 @@ function renderStats(data) {
       // Net Dialing Time calculation — Xh Ym format
       const SHIFT_MS = 8 * 60 * 60 * 1000;
       const BREAK_ALLOC_MS = 1 * 60 * 60 * 1000;
-      const netMs = Math.max(0, SHIFT_MS - BREAK_ALLOC_MS - (a.totalMeetingMs || 0) - (a.totalWashroomMs || 0));
+      const netMs = Math.max(0, SHIFT_MS - BREAK_ALLOC_MS - (a.totalMeetingMs || 0) - (a.totalWashroomMs || 0) - (a.totalTlModeMs || 0));
       const netH = Math.floor(netMs / (60 * 60 * 1000));
       const netM = Math.floor((netMs % (60 * 60 * 1000)) / (60 * 1000));
       const netDialingTime = netH + 'h ' + netM + 'm';
+
+      const tlModeCell = a.onTlMode
+        ? `<span style="font-family:var(--mono);font-size:12px;color:#a78bfa;font-weight:700">${formatMs(a.totalTlModeMs||0)} &#9654;</span>`
+        : `<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalTlModeMs||0)}</span>`;
 
       return `<tr>
         <td style="font-weight:600">${escapeHtml(a.name)}</td>
@@ -788,6 +793,7 @@ function renderStats(data) {
         <td>${breakCell}</td>
         <td>${washroomCell}</td>
         <td>${meetingCell}</td>
+        <td>${tlModeCell}</td>
       </tr>`;
     }).join('');
   }
