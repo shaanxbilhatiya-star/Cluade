@@ -890,6 +890,12 @@ function updateModeUI() {
 // ── TL Monitor: fetch stats ───────────────────────────────────────────────────
 socket.on('stats-update', function(data) { if(inTLMode) renderTLStats(data); });
 let lastTLStats=null;
+window._tlBreakStartTimes = {};
+window._tlBreakMsAtRender = {};
+window._tlWashroomStartTimes = {};
+window._tlWashroomMsAtRender = {};
+window._tlMeetingStartTimes = {};
+window._tlMeetingMsAtRender = {};
 setInterval(()=>{if(lastTLStats&&inTLMode)tickTLBreakTimers();},1000);
 
 async function fetchTLData() {
@@ -923,12 +929,21 @@ function renderTLStats(data) {
       else if(a.onWashroom){sDot='break';sTxt='<span class="break-badge" style="background:rgba(99,102,241,.12);color:#818cf8;border-color:rgba(99,102,241,.3)">&#128699; Washroom</span>';}
       else if(a.onMeeting){sDot='break';sTxt='<span class="break-badge" style="background:rgba(8,145,178,.1);color:#22d3ee;border-color:rgba(8,145,178,.3)">&#128203; Meeting</span>';}
       else{sDot=a.active?'active':'idle';sTxt=a.active?'Dialing':'Idle';}
+
+      if(a.onBreak){window._tlBreakStartTimes[a.id]=Date.now();window._tlBreakMsAtRender[a.id]=a.totalBreakMs||0;}
+      if(a.onWashroom){window._tlWashroomStartTimes[a.id]=Date.now();window._tlWashroomMsAtRender[a.id]=a.totalWashroomMs||0;}
+      if(a.onMeeting){window._tlMeetingStartTimes[a.id]=Date.now();window._tlMeetingMsAtRender[a.id]=a.totalMeetingMs||0;}
+
       const rem=Math.max(0,(a.breakAllowedMs||3600000)-(a.totalBreakMs||0));
       const breakCell=a.onBreak
-        ?`<span class="break-timer-admin" style="font-family:var(--mono);font-size:12px;color:var(--warn)">${formatMs(rem)}</span>`
+        ?`<span id="tl-break-timer-${a.id}" class="break-timer-admin" style="font-family:var(--mono);font-size:12px;color:var(--warn)">${formatMs(rem)}</span>`
         :`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalBreakMs||0)} used</span>`;
-      const wCell=`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalWashroomMs||0)}</span>`;
-      const mCell=`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalMeetingMs||0)}</span>`;
+      const wCell=a.onWashroom
+        ?`<span id="tl-washroom-timer-${a.id}" style="font-family:var(--mono);font-size:12px;color:#818cf8;font-weight:700">${formatMs(a.totalWashroomMs||0)} &#9654;</span>`
+        :`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalWashroomMs||0)}</span>`;
+      const mCell=a.onMeeting
+        ?`<span id="tl-meeting-timer-${a.id}" style="font-family:var(--mono);font-size:12px;color:#22d3ee;font-weight:700">${formatMs(a.totalMeetingMs||0)} &#9654;</span>`
+        :`<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${formatMs(a.totalMeetingMs||0)}</span>`;
       const SHIFT_MS=8*60*60*1000;
       const netMs=Math.max(0,SHIFT_MS-(a.totalBreakMs||0)-(a.totalMeetingMs||0)-(a.totalWashroomMs||0)-(a.totalTlModeMs||0));
       const netH=Math.floor(netMs/(60*60*1000)), netM=Math.floor((netMs%(60*60*1000))/(60*1000));
@@ -941,7 +956,7 @@ function renderTLStats(data) {
         <td>${loginCell}</td>
         <td><span class="status-dot ${sDot}"></span>${sTxt}</td>
         <td><span class="dialed-count">${a.totalDialedToday}</span></td>
-        <td style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--tl)">${netTime}</td>
+        <td id="tl-net-dialing-${a.id}" style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--tl)">${netTime}</td>
         <td>${breakCell}</td><td>${wCell}</td><td>${mCell}</td>
       </tr>`;
     }).join('');
@@ -958,7 +973,57 @@ function renderTLStats(data) {
   if(pills.length){bs.style.display='block';bal.innerHTML=pills.join('');}else{bs.style.display='none';}
 }
 
-function tickTLBreakTimers(){}
+function tickTLBreakTimers(){
+  if(!lastTLStats||!lastTLStats.agentStats)return;
+  const now=Date.now();
+  lastTLStats.agentStats.forEach(a=>{
+    if(a.onBreak){
+      const el=document.getElementById('tl-break-timer-'+a.id);
+      if(el){
+        const elapsed=now-(window._tlBreakStartTimes[a.id]||now);
+        const used=(window._tlBreakMsAtRender[a.id]||0)+elapsed;
+        const remaining=Math.max(0,(a.breakAllowedMs||3600000)-used);
+        el.textContent=formatMs(remaining);
+      }
+    }
+    if(a.onWashroom){
+      const el=document.getElementById('tl-washroom-timer-'+a.id);
+      if(el){
+        const elapsed=now-(window._tlWashroomStartTimes[a.id]||now);
+        const used=(window._tlWashroomMsAtRender[a.id]||0)+elapsed;
+        el.textContent=formatMs(used);
+      }
+    }
+    if(a.onMeeting){
+      const el=document.getElementById('tl-meeting-timer-'+a.id);
+      if(el){
+        const elapsed=now-(window._tlMeetingStartTimes[a.id]||now);
+        const used=(window._tlMeetingMsAtRender[a.id]||0)+elapsed;
+        el.textContent=formatMs(used);
+      }
+    }
+    const ndEl=document.getElementById('tl-net-dialing-'+a.id);
+    if(ndEl){
+      const SHIFT_MS=8*60*60*1000;
+      let liveBreak=a.totalBreakMs||0;
+      if(a.onBreak&&window._tlBreakStartTimes[a.id]){
+        liveBreak=(window._tlBreakMsAtRender[a.id]||0)+(now-window._tlBreakStartTimes[a.id]);
+      }
+      let liveWashroom=a.totalWashroomMs||0;
+      if(a.onWashroom&&window._tlWashroomStartTimes[a.id]){
+        liveWashroom=(window._tlWashroomMsAtRender[a.id]||0)+(now-window._tlWashroomStartTimes[a.id]);
+      }
+      let liveMeeting=a.totalMeetingMs||0;
+      if(a.onMeeting&&window._tlMeetingStartTimes[a.id]){
+        liveMeeting=(window._tlMeetingMsAtRender[a.id]||0)+(now-window._tlMeetingStartTimes[a.id]);
+      }
+      const netMs=Math.max(0,SHIFT_MS-liveBreak-liveWashroom-liveMeeting-(a.totalTlModeMs||0));
+      const netH=Math.floor(netMs/(60*60*1000));
+      const netM=Math.floor((netMs%(60*60*1000))/(60*1000));
+      ndEl.textContent=netH+'h '+netM+'m';
+    }
+  });
+}
 </script>
 
 
