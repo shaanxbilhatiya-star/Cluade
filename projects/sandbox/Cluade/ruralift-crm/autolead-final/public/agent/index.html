@@ -1725,7 +1725,7 @@ function showToast(msg, type='success') {
 }
 
 // ── Periodic refresh ──────────────────────────────────────────────────────────
-setInterval(() => { if (agentId) { refreshLeadSections(); fetchMyStats(); } }, 30000);
+setInterval(() => { if (agentId) { refreshLeadSections(); fetchMyStats(); } }, 10000);
 setInterval(() => { if (agentId) socket.emit('ping-alive', { agentId }); }, 30000);
 
 ['empId','agentName'].forEach(id => {

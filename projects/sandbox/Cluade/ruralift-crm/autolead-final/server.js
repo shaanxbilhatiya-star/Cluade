@@ -135,6 +135,11 @@ setInterval(() => {
   try { saveState(appState); } catch {}
 }, 1000);
 
+// Broadcast admin stats every 5 seconds for live timer feel
+setInterval(() => {
+  try { broadcastAdminStats(); } catch {}
+}, 5000);
+
 // ─── Number helpers ───────────────────────────────────────────────────────────
 function getNextNumber(agentId) {
   appState = checkDailyReset(appState);

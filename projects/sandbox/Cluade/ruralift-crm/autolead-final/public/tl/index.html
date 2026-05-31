@@ -834,7 +834,7 @@ function showTLDashboard() {
   if(dateEl) dateEl.textContent=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
   populateTLAgentFilter();
   fetchTLDispoStats();
-  setInterval(()=>{fetchTLData();fetchTLLeaderboard();fetchTLDispoStats();},10000);
+  setInterval(()=>{fetchTLData();fetchTLLeaderboard();fetchTLDispoStats();},5000);
   setInterval(fetchTLLeaderboard,5000);
 }
 
