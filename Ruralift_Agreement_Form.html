@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruralift - Loan Facility Consultancy Agreement</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans Devanagari', 'Mangal', 'Kokila', 'Devanagari MT', sans-serif;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #000;
+            background: #fff;
+            padding: 20px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+        }
+
+        .header img {
+            max-width: 180px;
+            filter: grayscale(100%);
+            margin-bottom: 8px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .header .owner-info {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .title-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .title-section h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .title-section .subtitle {
+            font-size: 13px;
+            font-style: italic;
+        }
+
+        .party-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .party-table td {
+            padding: 6px 10px;
+            border: 1px solid #000;
+            vertical-align: middle;
+        }
+
+        .party-table td:first-child {
+            font-weight: 600;
+            width: 35%;
+        }
+
+        .section {
+            margin: 18px 0;
+        }
+
+        .section-heading {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+        }
+
+        .subsection {
+            margin: 8px 0 8px 20px;
+            text-align: justify;
+        }
+
+        .subsection-number {
+            font-weight: 600;
+        }
+
+        input[type="text"], input[type="number"] {
+            border: none;
+            border-bottom: 1px solid #000;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 2px 5px;
+            outline: none;
+            min-width: 150px;
+        }
+
+        input.small-input {
+            min-width: 40px;
+            width: 40px;
+            text-align: center;
+        }
+
+        input.medium-input {
+            min-width: 100px;
+            width: 100px;
+        }
+
+        input.large-input {
+            min-width: 250px;
+            width: 250px;
+        }
+
+        input.full-input {
+            min-width: 90%;
+            width: 90%;
+        }
+
+        .signature-section {
+            margin-top: 40px;
+            page-break-before: always;
+        }
+
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+
+        .signature-block {
+            width: 45%;
+            text-align: center;
+        }
+
+        .signature-box {
+            border: 1px solid #000;
+            height: 150px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .thumb-box {
+            border: 1px solid #000;
+            height: 80px;
+            width: 80px;
+            margin: 10px auto;
+        }
+
+        .signature-label {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .pdc-receipt {
+            page-break-before: always;
+            margin-top: 40px;
+            border-top: 3px solid #000;
+            padding-top: 20px;
+        }
+
+        .witness-section {
+            margin-top: 30px;
+        }
+
+        .witness-block {
+            border: 1px solid #000;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .btn-container {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: 2px solid #000;
+            background: #fff;
+            color: #000;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .items-list {
+            margin: 8px 0 8px 40px;
+        }
+
+        .items-list li {
+            margin: 4px 0;
+            text-align: justify;
+        }
+
+        table.cheque-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        table.cheque-table td {
+            padding: 5px 10px;
+            border: 1px solid #000;
+        }
+
+        table.cheque-table td:first-child {
+            font-weight: 600;
+            width: 40%;
+        }
+
+        @media print {
+            .btn-container {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+                font-size: 12px;
+            }
+
+            input[type="text"], input[type="number"] {
+                border: none !important;
+                border-bottom: none !important;
+                font-weight: 600;
+            }
+
+            .signature-section {
+                page-break-before: always;
+            }
+
+            .pdc-receipt {
+                page-break-before: always;
+            }
+
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="btn-container">
+    <button class="btn" onclick="saveForm()">Save</button>
+    <button class="btn" onclick="clearForm()">Clear</button>
+    <button class="btn" onclick="window.print()">Print</button>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+    <img src="logo.jpg" alt="Ruralift Logo">
+    <h1>RURALIFT</h1>
+    <div class="owner-info">
+        Proprietor: Shaan Singh Bilhatiya<br>
+        Udyam Registration: UDYAM-MP-29-0021193
+    </div>
+</div>
+
+<!-- TITLE -->
+<div class="title-section">
+    <h2>ऋण सुविधा परामर्श अनुबंध</h2>
+    <h2>Loan Facility Consultancy Agreement</h2>
+    <div class="subtitle">(सफलता-आधारित शुल्क | भारतीय अनुबंध अधिनियम, 1872 के अंतर्गत)</div>
+</div>
+
+<!-- PARTY DETAILS TABLE -->
+<table class="party-table">
+    <tr>
+        <td>ग्राहक का नाम / Customer Name</td>
+        <td><input type="text" id="customerName" class="large-input" data-save="customerName"></td>
+    </tr>
+    <tr>
+        <td>आधार संख्या / Aadhaar No.</td>
+        <td><input type="text" id="customerAadhaar" class="medium-input" data-save="customerAadhaar" maxlength="12"></td>
+    </tr>
+    <tr>
+        <td>पता / Address</td>
+        <td><input type="text" id="customerAddress" class="full-input" data-save="customerAddress"></td>
+    </tr>
+    <tr>
+        <td>मोबाइल नं. / Mobile No.</td>
+        <td><input type="text" id="customerMobile" class="medium-input" data-save="customerMobile" maxlength="10"></td>
+    </tr>
+    <tr>
+        <td>सहमत ऋण राशि (अंकों में) / Agreed Loan Amount</td>
+        <td>रु. <input type="text" id="loanAmountDigits" class="medium-input" data-save="loanAmountDigits"> /-</td>
+    </tr>
+    <tr>
+        <td>सहमत ऋण राशि (शब्दों में) / In Words</td>
+        <td>रुपये <input type="text" id="loanAmountWords" class="large-input" data-save="loanAmountWords"> मात्र</td>
+    </tr>
+    <tr>
+        <td>अनुबंध तिथि / Agreement Date</td>
+        <td>
+            <input type="text" id="dateDD" class="small-input" data-save="dateDD" maxlength="2" placeholder="DD"> /
+            <input type="text" id="dateMM" class="small-input" data-save="dateMM" maxlength="2" placeholder="MM"> /
+            <input type="text" id="dateYYYY" class="small-input" style="width:60px;min-width:60px;" data-save="dateYYYY" maxlength="4" placeholder="YYYY">
+        </td>
+    </tr>
+    <tr>
+        <td>स्थान / Place</td>
+        <td><input type="text" id="agreementPlace" class="medium-input" data-save="agreementPlace"></td>
+    </tr>
+</table>
+
+<p style="margin:15px 0; text-align:justify;">
+    यह अनुबंध <strong>Ruralift</strong> (स्वामी: शान सिंह बिलहटिया, उद्यम पंजीकरण: UDYAM-MP-29-0021193), जिन्हें आगे <strong>"परामर्शदाता / Consultant"</strong> कहा जाएगा, तथा उपर्युक्त ग्राहक, जिन्हें आगे <strong>"ग्राहक / Client"</strong> कहा जाएगा, के बीच निष्पादित किया जा रहा है।
+</p>
+<p style="margin:10px 0; text-align:justify;">
+    <strong>जबकि</strong> ग्राहक ने Ruralift से ऋण सुविधा प्राप्त करने हेतु सहायता/परामर्श सेवा का अनुरोध किया है; और Ruralift इस कार्य को सफलता-आधारित शुल्क पर करने को सहमत है; अतः दोनों पक्ष निम्नलिखित शर्तों पर सहमत होते हैं:
+</p>
+
+<!-- SECTION 1 -->
+<div class="section">
+    <div class="section-heading">1. सेवाओं का विवरण एवं सेवा की प्रकृति</div>
+    <div class="subsection">
+        <span class="subsection-number">1.1</span> Ruralift ग्राहक की ऋण आवश्यकता, पात्रता एवं दस्तावेज़ों का विश्लेषण कर उचित ऋणदाता (बैंक/NBFC/फिनटेक) की पहचान करेगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">1.2</span> Ruralift ग्राहक की ओर से आवेदन तैयार करेगा, दस्तावेज़ जमा करेगा एवं ऋणदाता के साथ समन्वय करेगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">1.3</span> Ruralift किसी भी स्थिति में स्वयं ऋण प्रदान नहीं करता; यह केवल एक परामर्श एवं सुविधा सेवा है।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">1.4</span> ऋण स्वीकृति/अस्वीकृति का अंतिम निर्णय पूर्णतः ऋणदाता संस्था पर निर्भर है।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">1.5</span> सेवा में शामिल है: प्रोफ़ाइल मूल्यांकन, दस्तावेज़ सहायता, आवेदन प्रस्तुति, ऋणदाता समन्वय एवं स्थिति अद्यतन।
+    </div>
+</div>
+
+<!-- SECTION 2 -->
+<div class="section">
+    <div class="section-heading">2. परामर्श शुल्क — सफलता-आधारित</div>
+    <div class="subsection">
+        <span class="subsection-number">2.1</span> ग्राहक Ruralift को परामर्श शुल्क के रूप में <strong>रु. <input type="text" id="feeAmountDigits" class="medium-input" data-save="feeAmountDigits"> /-</strong> (रुपये <input type="text" id="feeAmountWords" class="large-input" data-save="feeAmountWords"> मात्र) का भुगतान करेगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">2.2</span> यह शुल्क केवल तभी देय होगा जब ऋण राशि ग्राहक के खाते में वितरित (disburse) हो जाए — अर्थात यह पूर्णतः <strong>सफलता-आधारित (success-based)</strong> है।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">2.3</span> ऋण वितरण के <strong>3 (तीन) कार्य-दिवसों</strong> के भीतर ग्राहक उक्त शुल्क का भुगतान करेगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">2.4</span> भुगतान का तरीका: नकद / UPI / बैंक हस्तांतरण / अग्रदिनांकित चेक (PDC) — जो भी दोनों पक्षों ने सहमति दी हो।
+    </div>
+</div>
+
+<!-- SECTION 3 -->
+<div class="section">
+    <div class="section-heading">3. अग्रदिनांकित चेक (PDC) — सुरक्षा साधन</div>
+    <div class="subsection">
+        <span class="subsection-number">3.1</span> ग्राहक अनुबंध के समय एक अग्रदिनांकित चेक (Post-Dated Cheque) Ruralift को सौंपेगा, जो परामर्श शुल्क की सुरक्षा के रूप में रहेगा।
+    </div>
+
+    <table class="cheque-table">
+        <tr>
+            <td>चेक संख्या / Cheque No.</td>
+            <td><input type="text" id="chequeNumber" class="medium-input" data-save="chequeNumber"></td>
+        </tr>
+        <tr>
+            <td>बैंक का नाम एवं शाखा / Bank &amp; Branch</td>
+            <td><input type="text" id="bankNameBranch" class="large-input" data-save="bankNameBranch"></td>
+        </tr>
+        <tr>
+            <td>खाताधारक का नाम / Account Holder</td>
+            <td><input type="text" id="accountHolder" class="large-input" data-save="accountHolder"></td>
+        </tr>
+        <tr>
+            <td>चेक राशि / Cheque Amount</td>
+            <td>रु. <input type="text" id="chequeAmount" class="medium-input" data-save="chequeAmount"> /-</td>
+        </tr>
+        <tr>
+            <td>चेक दिनांक / Cheque Date</td>
+            <td>
+                <input type="text" id="chequeDateDD" class="small-input" data-save="chequeDateDD" maxlength="2" placeholder="DD"> /
+                <input type="text" id="chequeDateMM" class="small-input" data-save="chequeDateMM" maxlength="2" placeholder="MM"> /
+                <input type="text" id="chequeDateYYYY" class="small-input" style="width:60px;min-width:60px;" data-save="chequeDateYYYY" maxlength="4" placeholder="YYYY">
+            </td>
+        </tr>
+    </table>
+
+    <div class="subsection">
+        <span class="subsection-number">3.2</span> यदि ऋण सफलतापूर्वक वितरित हो जाता है और ग्राहक 3 कार्य-दिवसों में शुल्क का भुगतान कर देता है, तो चेक बिना प्रस्तुत किए वापस कर दिया जाएगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">3.3</span> यदि ग्राहक भुगतान में चूक करता है, तो Ruralift को उक्त चेक बैंक में प्रस्तुत करने का पूर्ण अधिकार होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">3.4</span> चेक बाउंस होने पर ग्राहक परक्राम्य लिखत अधिनियम, 1881 की धारा 138 के अंतर्गत दंडात्मक कार्यवाही का पात्र होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">3.5</span> यदि ऋण स्वीकृत नहीं होता (बिना ग्राहक की गलती के), तो चेक 7 कार्य-दिवसों में ग्राहक को वापस कर दिया जाएगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">3.6</span> ग्राहक PDC के रूप में दिया गया चेक स्टॉप / कैंसिल नहीं करवाएगा, अन्यथा यह अनुबंध भंग माना जाएगा।
+    </div>
+</div>
+
+<!-- SECTION 4 -->
+<div class="section">
+    <div class="section-heading">4. ग्राहक द्वारा अनुबंध भंग एवं क्षतिपूर्ति</div>
+    <div class="subsection">
+        <span class="subsection-number">4.1</span> यदि ग्राहक Ruralift की सेवा प्रक्रिया के दौरान (ऋण आवेदन प्रस्तुत होने के बाद) स्वयं किसी अन्य माध्यम से या सीधे ऋणदाता से ऋण प्राप्त कर लेता है, तो यह अनुबंध भंग माना जाएगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">4.2</span> ऐसी स्थिति में ग्राहक सहमत परामर्श शुल्क की <strong>पूर्ण राशि</strong> Ruralift को क्षतिपूर्ति के रूप में देने के लिए बाध्य होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">4.3</span> यदि ग्राहक सेवा अवधि के दौरान बिना वैध कारण (जैसे: स्थानांतरण, गंभीर बीमारी, मृत्यु) अनुबंध रद्द करता है, तो Ruralift प्रशासनिक व्यय के रूप में रु. 1,000/- (एक हज़ार रुपये) तक की राशि की मांग कर सकता है।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">4.4</span> क्षतिपूर्ति राशि 7 दिनों के भीतर देय होगी; अन्यथा PDC प्रस्तुत किया जाएगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">4.5</span> "अनुबंध भंग" की परिभाषा में शामिल है: (अ) किसी अन्य एजेंट/DSA के माध्यम से ऋण लेना; (ब) Ruralift द्वारा पहचाने गए ऋणदाता से सीधे संपर्क कर ऋण लेना; (स) जानबूझकर गलत जानकारी देना जिससे प्रक्रिया बाधित हो; (द) बिना सूचना सहयोग बंद करना।
+    </div>
+</div>
+
+<!-- SECTION 5 -->
+<div class="section">
+    <div class="section-heading">5. गैर-प्रतिस्पर्धा एवं गैर-परिवर्जन</div>
+    <div class="subsection">
+        <span class="subsection-number">5.1</span> ग्राहक इस अनुबंध की अवधि एवं उसके बाद 6 माह तक Ruralift द्वारा पहचाने गए/संपर्कित ऋणदाता से सीधे (Ruralift को दरकिनार कर) ऋण सुविधा प्राप्त नहीं करेगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">5.2</span> इस खंड का उल्लंघन अनुबंध भंग (खंड 4) माना जाएगा एवं खंड 4.2 के अनुसार क्षतिपूर्ति देय होगी।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">5.3</span> ग्राहक Ruralift के किसी कर्मचारी/प्रतिनिधि को प्रत्यक्ष या अप्रत्यक्ष रूप से अपनी सेवा में नहीं लेगा (अनुबंध अवधि + 1 वर्ष)।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">5.4</span> यह खंड केवल उन ऋणदाताओं पर लागू होगा जिनसे Ruralift ने ग्राहक की ओर से संपर्क किया हो।
+    </div>
+</div>
+
+<!-- SECTION 6 -->
+<div class="section">
+    <div class="section-heading">6. दायित्व की सीमा</div>
+    <div class="subsection">
+        <span class="subsection-number">6.1</span> Ruralift का कुल दायित्व किसी भी स्थिति में प्राप्त परामर्श शुल्क की राशि से अधिक नहीं होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">6.2</span> Ruralift किसी भी अप्रत्यक्ष, परिणामी, विशेष या दंडात्मक क्षति के लिए उत्तरदायी नहीं होगा।
+    </div>
+</div>
+
+<!-- SECTION 7 -->
+<div class="section">
+    <div class="section-heading">7. क्षतिपूर्ति</div>
+    <div class="subsection">
+        <span class="subsection-number">7.1</span> ग्राहक Ruralift को किसी भी तृतीय-पक्ष दावे, हानि, व्यय या कार्यवाही से क्षतिपूर्ति (indemnify) करेगा जो ग्राहक द्वारा दी गई गलत/अधूरी जानकारी, अवैध दस्तावेज़, या अनुबंध भंग से उत्पन्न हो।
+    </div>
+</div>
+
+<!-- SECTION 8 -->
+<div class="section">
+    <div class="section-heading">8. गोपनीयता एवं डेटा सहमति</div>
+    <div class="subsection">
+        <span class="subsection-number">8.1</span> Ruralift ग्राहक की व्यक्तिगत जानकारी (नाम, आधार, बैंक विवरण, आय दस्तावेज़) को केवल ऋण आवेदन प्रक्रिया हेतु उपयोग करेगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">8.2</span> ग्राहक Ruralift को अपनी जानकारी ऋणदाता संस्थाओं के साथ साझा करने की सहमति प्रदान करता है।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">8.3</span> दोनों पक्ष इस अनुबंध की शर्तों एवं वित्तीय विवरण को गोपनीय रखेंगे, सिवाय कानूनी आवश्यकता के।
+    </div>
+</div>
+
+<!-- SECTION 9 -->
+<div class="section">
+    <div class="section-heading">9. Ruralift के दायित्व</div>
+    <ul class="items-list">
+        <li><strong>अ.</strong> ग्राहक की ऋण आवश्यकता का ईमानदारी से मूल्यांकन करना।</li>
+        <li><strong>ब.</strong> उपयुक्त ऋणदाता की पहचान एवं आवेदन प्रस्तुति में सहायता।</li>
+        <li><strong>स.</strong> आवेदन की स्थिति की नियमित सूचना ग्राहक को देना।</li>
+        <li><strong>द.</strong> ऋण अस्वीकृत होने पर PDC निर्धारित अवधि में वापस करना।</li>
+    </ul>
+</div>
+
+<!-- SECTION 10 -->
+<div class="section">
+    <div class="section-heading">10. ग्राहक के दायित्व</div>
+    <ul class="items-list">
+        <li><strong>अ.</strong> सही, पूर्ण एवं सत्य जानकारी तथा दस्तावेज़ प्रदान करना।</li>
+        <li><strong>ब.</strong> Ruralift/ऋणदाता द्वारा मांगे गए अतिरिक्त दस्तावेज़ समय पर उपलब्ध कराना।</li>
+        <li><strong>स.</strong> ऋण प्रक्रिया के दौरान सहयोग करना एवं संपर्क में रहना।</li>
+        <li><strong>द.</strong> ऋण वितरण के बाद निर्धारित समय में परामर्श शुल्क का भुगतान करना।</li>
+        <li><strong>य.</strong> किसी अन्य माध्यम से ऋण प्राप्त करने पर Ruralift को तुरंत सूचित करना।</li>
+        <li><strong>फ.</strong> CIBIL/क्रेडिट स्कोर संबंधी समस्या होने पर पहले ही सूचित करना।</li>
+    </ul>
+</div>
+
+<!-- SECTION 11 -->
+<div class="section">
+    <div class="section-heading">11. अस्वीकरण — Ruralift ऋणदाता नहीं है</div>
+    <div class="subsection">
+        <span class="subsection-number">11.1</span> Ruralift एक परामर्श सेवा प्रदाता है, ऋणदाता नहीं।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">11.2</span> Ruralift ऋण स्वीकृति की कोई गारंटी नहीं देता।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">11.3</span> ऋणदाता की शर्तें, ब्याज दर, प्रक्रिया शुल्क आदि Ruralift के नियंत्रण में नहीं हैं।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">11.4</span> ग्राहक की पात्रता, CIBIL स्कोर, या दस्तावेज़ संबंधी कमी से ऋण अस्वीकृत होने पर Ruralift उत्तरदायी नहीं होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">11.5</span> ग्राहक यह स्वीकार करता है कि उसने यह अनुबंध पूर्ण जानकारी एवं स्वेच्छा से किया है।
+    </div>
+</div>
+
+<!-- SECTION 12 -->
+<div class="section">
+    <div class="section-heading">12. अप्रत्याशित घटना (Force Majeure)</div>
+    <div class="subsection">
+        <span class="subsection-number">12.1</span> यदि किसी प्राकृतिक आपदा, महामारी, सरकारी आदेश, युद्ध, दंगा, या किसी अन्य अनियंत्रणीय परिस्थिति के कारण सेवा में देरी या बाधा आती है, तो किसी भी पक्ष को उत्तरदायी नहीं ठहराया जाएगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">12.2</span> ऐसी स्थिति में अनुबंध निलंबित (suspend) रहेगा जब तक सामान्य स्थिति बहाल न हो।
+    </div>
+</div>
+
+<!-- SECTION 13 -->
+<div class="section">
+    <div class="section-heading">13. संचार का माध्यम</div>
+    <div class="subsection">
+        <span class="subsection-number">13.1</span> दोनों पक्षों के बीच संचार WhatsApp, फ़ोन कॉल, ई-मेल या व्यक्तिगत भेंट द्वारा हो सकता है।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">13.2</span> कोई भी महत्वपूर्ण सूचना/नोटिस लिखित (WhatsApp संदेश सहित) में होगी।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">13.3</span> ग्राहक अपना मोबाइल नंबर/ई-मेल बदलने पर Ruralift को तुरंत सूचित करेगा।
+    </div>
+</div>
+
+<!-- SECTION 14 -->
+<div class="section">
+    <div class="section-heading">14. प्रशासनिक कानून एवं विवाद समाधान</div>
+    <div class="subsection">
+        <span class="subsection-number">14.1</span> यह अनुबंध भारतीय अनुबंध अधिनियम, 1872 एवं भारतीय कानूनों के अधीन है।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">14.2</span> किसी भी विवाद की स्थिति में दोनों पक्ष पहले आपसी बातचीत द्वारा समाधान का प्रयास करेंगे।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">14.3</span> बातचीत से हल न होने पर मध्यस्थता (Mediation) का प्रयास किया जाएगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">14.4</span> मध्यस्थता विफल होने पर माध्यस्थम् (Arbitration) — माध्यस्थम् एवं सुलह अधिनियम, 1996 के अंतर्गत — एकल मध्यस्थ द्वारा की जाएगी।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">14.5</span> विवाद का अधिकार क्षेत्र (Jurisdiction): मध्य प्रदेश के सक्षम न्यायालय।
+    </div>
+</div>
+
+<!-- SECTION 15 -->
+<div class="section">
+    <div class="section-heading">15. विविध प्रावधान</div>
+    <div class="subsection">
+        <span class="subsection-number">15.1</span> यह अनुबंध दोनों पक्षों के हस्ताक्षर की तिथि से प्रभावी होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">15.2</span> इस अनुबंध में कोई भी संशोधन दोनों पक्षों की लिखित सहमति से ही होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">15.3</span> यदि इस अनुबंध का कोई खंड अमान्य/अवैध पाया जाता है, तो शेष खंड यथावत् लागू रहेंगे।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">15.4</span> यह अनुबंध हिंदी में तैयार किया गया है; विवाद की स्थिति में हिंदी पाठ मान्य होगा।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">15.5</span> अनुबंध की 2 प्रतियां तैयार की जाएंगी — एक Ruralift के पास, एक ग्राहक के पास।
+    </div>
+    <div class="subsection">
+        <span class="subsection-number">15.6</span> यह अनुबंध दोनों पक्षों के उत्तराधिकारियों एवं अनुमत समनुदेशितियों (assignees) पर बाध्यकारी होगा।
+    </div>
+</div>
+
+<!-- SECTION 16 -->
+<div class="section">
+    <div class="section-heading">16. ग्राहक द्वारा घोषणा</div>
+    <p style="margin-bottom:10px;">मैं, उपर्युक्त ग्राहक, निम्नलिखित घोषणा करता/करती हूँ:</p>
+    <ul class="items-list">
+        <li><strong>अ.</strong> मैंने इस अनुबंध की सभी शर्तें पढ़ ली हैं / मुझे पढ़कर सुनाई गई हैं, और मैं इन्हें समझता/समझती हूँ।</li>
+        <li><strong>ब.</strong> मैं यह अनुबंध स्वेच्छा से, बिना किसी दबाव, भय या अनुचित प्रभाव के कर रहा/रही हूँ।</li>
+        <li><strong>स.</strong> मैंने जो जानकारी एवं दस्तावेज़ दिए हैं वे सत्य एवं सही हैं।</li>
+        <li><strong>द.</strong> मुझे ज्ञात है कि Ruralift ऋणदाता नहीं है एवं ऋण स्वीकृति की गारंटी नहीं देता।</li>
+        <li><strong>य.</strong> मुझे ज्ञात है कि परामर्श शुल्क केवल ऋण वितरण की सफलता पर देय है।</li>
+        <li><strong>र.</strong> मुझे PDC (अग्रदिनांकित चेक) की शर्तें एवं चेक बाउंस के कानूनी परिणाम ज्ञात हैं।</li>
+        <li><strong>ल.</strong> मैं Ruralift को अपनी जानकारी ऋणदाता के साथ साझा करने की अनुमति देता/देती हूँ।</li>
+        <li><strong>व.</strong> मुझे ज्ञात है कि अनुबंध भंग करने पर क्षतिपूर्ति देनी होगी।</li>
+        <li><strong>ट.</strong> मैंने यह अनुबंध पूर्ण चेतना एवं विधिक क्षमता (18 वर्ष से अधिक, स्वस्थ मस्तिष्क) में किया है।</li>
+    </ul>
+</div>
+
+<!-- SECTION 17: SIGNATURES -->
+<div class="signature-section">
+    <div class="section-heading">17. हस्ताक्षर</div>
+    <p style="margin-bottom:20px;">दोनों पक्षों ने उपर्युक्त शर्तों को स्वीकार करते हुए, नीचे अपने हस्ताक्षर / अंगूठे का निशान किए हैं:</p>
+
+    <div class="signature-row">
+        <div class="signature-block">
+            <p><strong>Ruralift की ओर से (परामर्शदाता)</strong></p>
+            <p>नाम: Shaan Singh Bilhatiya</p>
+            <p>Udyam: UDYAM-MP-29-0021193</p>
+            <div class="signature-box"></div>
+            <div class="signature-label">हस्ताक्षर / Signature</div>
+            <div style="margin-top:15px;">
+                <div class="thumb-box"></div>
+                <div class="signature-label">अंगूठे का निशान / Thumb Impression</div>
+            </div>
+            <p style="margin-top:10px;">दिनांक:
+                <input type="text" class="small-input" data-save="sigDateRuraliftDD" maxlength="2" placeholder="DD"> /
+                <input type="text" class="small-input" data-save="sigDateRuraliftMM" maxlength="2" placeholder="MM"> /
+                <input type="text" class="small-input" style="width:60px;min-width:60px;" data-save="sigDateRuraliftYYYY" maxlength="4" placeholder="YYYY">
+            </p>
+        </div>
+
+        <div class="signature-block">
+            <p><strong>ग्राहक (Client)</strong></p>
+            <p>नाम: <input type="text" id="sigCustomerName" class="medium-input" data-save="sigCustomerName"></p>
+            <p>आधार: <input type="text" id="sigCustomerAadhaar" class="medium-input" data-save="sigCustomerAadhaar" maxlength="12"></p>
+            <div class="signature-box"></div>
+            <div class="signature-label">हस्ताक्षर / Signature</div>
+            <div style="margin-top:15px;">
+                <div class="thumb-box"></div>
+                <div class="signature-label">अंगूठे का निशान / Thumb Impression</div>
+            </div>
+            <p style="margin-top:10px;">दिनांक:
+                <input type="text" class="small-input" data-save="sigDateCustomerDD" maxlength="2" placeholder="DD"> /
+                <input type="text" class="small-input" data-save="sigDateCustomerMM" maxlength="2" placeholder="MM"> /
+                <input type="text" class="small-input" style="width:60px;min-width:60px;" data-save="sigDateCustomerYYYY" maxlength="4" placeholder="YYYY">
+            </p>
+        </div>
+    </div>
+
+    <!-- WITNESSES -->
+    <div class="witness-section">
+        <h3 style="margin-bottom:15px;">गवाह / Witnesses</h3>
+
+        <div class="witness-block">
+            <p><strong>गवाह 1 / Witness 1:</strong></p>
+            <p>नाम: <input type="text" class="large-input" data-save="witness1Name"></p>
+            <p>आधार संख्या: <input type="text" class="medium-input" data-save="witness1Aadhaar" maxlength="12"></p>
+            <p>संपर्क नं.: <input type="text" class="medium-input" data-save="witness1Contact" maxlength="10"></p>
+            <div style="border:1px solid #000; height:80px; width:200px; margin:10px 0;"></div>
+            <div class="signature-label">हस्ताक्षर / Signature</div>
+        </div>
+
+        <div class="witness-block">
+            <p><strong>गवाह 2 / Witness 2:</strong></p>
+            <p>नाम: <input type="text" class="large-input" data-save="witness2Name"></p>
+            <p>आधार संख्या: <input type="text" class="medium-input" data-save="witness2Aadhaar" maxlength="12"></p>
+            <p>संपर्क नं.: <input type="text" class="medium-input" data-save="witness2Contact" maxlength="10"></p>
+            <div style="border:1px solid #000; height:80px; width:200px; margin:10px 0;"></div>
+            <div class="signature-label">हस्ताक्षर / Signature</div>
+        </div>
+    </div>
+</div>
+
+<!-- PDC RECEIPT - SEPARATE PAGE -->
+<div class="pdc-receipt">
+    <div class="header" style="border-bottom:2px solid #000; padding-bottom:15px; margin-bottom:20px;">
+        <img src="logo.jpg" alt="Ruralift Logo" style="max-width:120px; filter:grayscale(100%);">
+        <h1 style="font-size:20px;">RURALIFT</h1>
+        <h2 style="font-size:16px; margin-top:10px;">अग्रदिनांकित चेक (PDC) स्वीकृति रसीद</h2>
+        <p style="font-size:12px;">Post-Dated Cheque Acknowledgement Receipt</p>
+    </div>
+
+    <p style="margin-bottom:15px; text-align:justify;">
+        यह प्रमाणित किया जाता है कि Ruralift (स्वामी: शान सिंह बिलहटिया) ने निम्नलिखित ग्राहक से, ऋण सुविधा परामर्श अनुबंध के अंतर्गत, एक अग्रदिनांकित चेक (PDC) सुरक्षा साधन के रूप में प्राप्त किया है:
+    </p>
+
+    <table class="cheque-table">
+        <tr>
+            <td>ग्राहक का नाम / Customer Name</td>
+            <td><input type="text" class="large-input" data-save="pdcCustomerName"></td>
+        </tr>
+        <tr>
+            <td>मोबाइल नं. / Mobile No.</td>
+            <td><input type="text" class="medium-input" data-save="pdcMobile" maxlength="10"></td>
+        </tr>
+        <tr>
+            <td>आधार संख्या / Aadhaar No.</td>
+            <td><input type="text" class="medium-input" data-save="pdcAadhaar" maxlength="12"></td>
+        </tr>
+        <tr>
+            <td>चेक संख्या / Cheque No.</td>
+            <td><input type="text" class="medium-input" data-save="pdcChequeNumber"></td>
+        </tr>
+        <tr>
+            <td>बैंक का नाम एवं शाखा / Bank &amp; Branch</td>
+            <td><input type="text" class="large-input" data-save="pdcBankBranch"></td>
+        </tr>
+        <tr>
+            <td>चेक राशि / Cheque Amount</td>
+            <td>रु. <input type="text" class="medium-input" data-save="pdcChequeAmount"> /-</td>
+        </tr>
+        <tr>
+            <td>चेक दिनांक / Cheque Date</td>
+            <td>
+                <input type="text" class="small-input" data-save="pdcChequeDateDD" maxlength="2" placeholder="DD"> /
+                <input type="text" class="small-input" data-save="pdcChequeDateMM" maxlength="2" placeholder="MM"> /
+                <input type="text" class="small-input" style="width:60px;min-width:60px;" data-save="pdcChequeDateYYYY" maxlength="4" placeholder="YYYY">
+            </td>
+        </tr>
+        <tr>
+            <td>रसीद दिनांक / Receipt Date</td>
+            <td>
+                <input type="text" class="small-input" data-save="pdcReceiptDateDD" maxlength="2" placeholder="DD"> /
+                <input type="text" class="small-input" data-save="pdcReceiptDateMM" maxlength="2" placeholder="MM"> /
+                <input type="text" class="small-input" style="width:60px;min-width:60px;" data-save="pdcReceiptDateYYYY" maxlength="4" placeholder="YYYY">
+            </td>
+        </tr>
+    </table>
+
+    <div style="margin-top:20px; padding:10px; border:1px solid #000;">
+        <p><strong>शर्तें:</strong></p>
+        <ul style="margin:8px 0 8px 20px; font-size:12px;">
+            <li>यह चेक परामर्श शुल्क की सुरक्षा हेतु है।</li>
+            <li>ऋण वितरण के बाद शुल्क भुगतान करने पर चेक वापस किया जाएगा।</li>
+            <li>भुगतान न करने पर Ruralift चेक बैंक में प्रस्तुत कर सकता है।</li>
+            <li>ऋण अस्वीकृत होने पर (बिना ग्राहक की गलती) चेक 7 दिनों में वापस होगा।</li>
+        </ul>
+    </div>
+
+    <div class="signature-row" style="margin-top:30px;">
+        <div class="signature-block">
+            <p><strong>Ruralift की ओर से</strong></p>
+            <p>नाम: Shaan Singh Bilhatiya</p>
+            <div class="signature-box" style="height:100px;"></div>
+            <div class="signature-label">हस्ताक्षर एवं मोहर / Signature &amp; Stamp</div>
+        </div>
+
+        <div class="signature-block">
+            <p><strong>ग्राहक (प्राप्तकर्ता प्रति)</strong></p>
+            <p>नाम: <input type="text" class="medium-input" data-save="pdcSigCustomerName"></p>
+            <div class="signature-box" style="height:100px;"></div>
+            <div class="signature-label">ग्राहक हस्ताक्षर / Customer Signature</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Save form data to localStorage
+    function saveForm() {
+        const inputs = document.querySelectorAll('input[data-save]');
+        const data = {};
+        inputs.forEach(input => {
+            data[input.getAttribute('data-save')] = input.value;
+        });
+        localStorage.setItem('ruralift_agreement_data', JSON.stringify(data));
+        alert('Form data saved successfully! / फॉर्म डेटा सफलतापूर्वक सहेजा गया!');
+    }
+
+    // Load form data from localStorage
+    function loadForm() {
+        const saved = localStorage.getItem('ruralift_agreement_data');
+        if (saved) {
+            const data = JSON.parse(saved);
+            Object.keys(data).forEach(key => {
+                const input = document.querySelector(`input[data-save="${key}"]`);
+                if (input) {
+                    input.value = data[key];
+                }
+            });
+        }
+    }
+
+    // Clear form data
+    function clearForm() {
+        if (confirm('Are you sure you want to clear all data? / क्या आप सभी डेटा मिटाना चाहते हैं?')) {
+            const inputs = document.querySelectorAll('input[data-save]');
+            inputs.forEach(input => {
+                input.value = '';
+            });
+            localStorage.removeItem('ruralift_agreement_data');
+            alert('Form cleared! / फॉर्म साफ़ किया गया!');
+        }
+    }
+
+    // Auto-load saved data on page load
+    window.addEventListener('load', loadForm);
+</script>
+
+</body>
+</html>

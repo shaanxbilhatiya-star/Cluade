@@ -1,0 +1,19 @@
+{
+  "project_type": "Static HTML form - single-file fillable agreement document",
+  "language": "HTML/CSS/JavaScript",
+  "build_system": "None - single HTML file, no build required",
+  "test_framework": "Manual - open in browser and verify",
+  "build_command": "N/A",
+  "test_command": "N/A - verify by opening HTML in browser",
+  "verification_instructions": "Open the generated HTML file in a browser, verify all fields are fillable, verify print preview shows black and white with signature blanks",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "No setup needed - just open the HTML file",
+  "environment_constraints": "No network access for package installation. Must use only standard HTML/CSS/JavaScript. The logo.jpg has been extracted from the .docx file already.",
+  "contribution_requirements": "N/A",
+  "key_patterns": "The agreement is in Hindi (Devanagari script) with some English terms. It has 17 sections plus a PDC receipt section. Fillable fields include: customer name, Aadhaar number, address, mobile, loan amount, dates, consultancy fee amount, cheque details (number, bank, account holder, amount, date). Signature areas needed for: Ruralift representative, Customer, 2 Witnesses.",
+  "relevant_files": [
+    "/projects/sandbox/Cluade/Ruralift_Agreement_Updated.docx",
+    "/projects/sandbox/Cluade/logo.jpg"
+  ],
+  "directory_structure": "Single repository with one .docx file and extracted logo.jpg. Output will be a single HTML file in the same directory."
+}
