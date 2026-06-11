@@ -1,0 +1,41 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Create a complete, self-contained HTML file that renders the Ruralift Loan Facility Consultancy Agreement as a black-and-white, PC-fillable form with print-friendly layout and blank signature spaces for physical signing.",
+  "status": "completed",
+  "steps": [
+    "Create /projects/sandbox/Cluade/Ruralift_Agreement_Form.html as a single self-contained HTML file",
+    "Include the Ruralift logo (from /projects/sandbox/Cluade/logo.jpg) as a base64-embedded image in the header, rendered in grayscale",
+    "Render the full agreement content in Hindi (Devanagari) with proper formatting: centered header with company name and Udyam number, section headings (bold), numbered paragraphs, tables for party details, fee structure, and cheque details",
+    "Replace all blank fields (____) in the agreement with HTML input fields (text inputs for names/numbers, date inputs for dates, number inputs for amounts) - these are the PC-fillable parts the user types into",
+    "Specifically create input fields for: Customer Name, Aadhaar Number, Address, Mobile Number, Agreed Loan Amount (in digits and words), Agreement Date and Place, Consultancy Fee Amount (in digits and words), Cheque Number, Bank Name and Branch, Account Holder Name, Cheque Amount, Cheque Date",
+    "Create signature blocks at the end with clear labeled blank spaces (bordered boxes) for: Ruralift representative signature, Customer signature, Thumb impressions, Dates, 2 Witnesses (name, signature, Aadhaar, contact)",
+    "Include a second page/section for the PDC (Post-Dated Cheque) Receipt with its own fillable fields and signature blocks",
+    "Style everything in strict black and white - no colors, grayscale logo, black borders, white background",
+    "Add print-friendly CSS (@media print) that: hides the Print button, removes box shadows, ensures page breaks at appropriate places (before signature section, before PDC receipt), makes input field values visible when printed (remove input borders, show text inline)",
+    "Add a prominent Print button at the top/bottom of the page that triggers window.print()",
+    "Add a Save/Clear form functionality using localStorage so the user can save progress and come back",
+    "Ensure the HTML uses UTF-8 encoding for proper Hindi text rendering",
+    "Add page-break-before on the PDC receipt section so it prints on a separate page"
+  ],
+  "acceptance_criteria": [
+    "Opening the HTML file in any modern browser shows the complete agreement in black and white",
+    "All blank fields from the original document are replaced with fillable input fields",
+    "The user can type customer details, amounts, dates, and cheque information directly in the browser",
+    "Print preview shows a clean black-and-white document with typed values visible and signature areas left blank",
+    "The Print button is hidden in print view",
+    "Signature blocks show clearly labeled empty spaces for physical signatures and thumb impressions",
+    "The PDC receipt section appears as a separate printable page",
+    "All Hindi text renders correctly with proper Devanagari script"
+  ],
+  "verification": [
+    "Verify the file /projects/sandbox/Cluade/Ruralift_Agreement_Form.html exists and is valid HTML",
+    "Verify the HTML contains UTF-8 meta charset declaration",
+    "Verify the HTML contains input elements for all fillable fields",
+    "Verify the HTML contains @media print CSS rules",
+    "Verify the HTML contains the complete agreement text (all 17 sections plus PDC receipt)",
+    "Verify signature blocks are present with appropriate spacing for physical signatures"
+  ],
+  "blocked_reason": null,
+  "findings": "Created complete HTML form with 820 lines, 45 fillable input fields, all 17 sections, PDC receipt section, signature/thumb boxes, print CSS, and localStorage save/load. No build system needed - single file works offline in any browser."
+}
