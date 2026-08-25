@@ -15,21 +15,6 @@
       '</button>';
   }
 
-  function cinemaRow(cinema) {
-    return '<button class="card cinema-card" data-action="cinema" data-id="' + UI.esc(cinema.id) + '" style="text-align:left">' +
-      '<div class="cinema-card__top">' +
-        '<div style="flex:1;min-width:0">' +
-          '<h3 class="cinema-card__name">' + UI.esc(cinema.name) + '</h3>' +
-          '<p class="cinema-card__area">' + UI.esc(cinema.area) + ', ' + UI.esc(cinema.city) + '</p>' +
-        '</div>' +
-        '<span class="cinema-card__dist">' + UI.esc(cinema.distanceKm) + ' km</span>' +
-      '</div>' +
-      '<div class="tag-row">' +
-        (cinema.facilities || []).slice(0, 3).map(function (f) { return '<span class="tag">' + UI.esc(f) + '</span>'; }).join('') +
-      '</div>' +
-      '</button>';
-  }
-
   function nextBookingCard(booking) {
     return '<div class="section"><div class="stack">' +
       '<button class="card" data-action="ticket" data-id="' + UI.esc(booking.id) + '" style="text-align:left">' +
@@ -47,27 +32,6 @@
       '</div></div>';
   }
 
-  function cityPicker(cities, current) {
-    var body = UI.h('<div>' +
-      cities.map(function (city) {
-        return '<button class="option" data-city="' + UI.esc(city) + '" aria-pressed="' + (city === current ? 'true' : 'false') + '" style="margin:0 16px 10px;width:calc(100% - 32px)">' +
-          '<span class="option__icon">' + UI.icon('map-pin', 21) + '</span>' +
-          '<span class="option__text"><span class="option__title">' + UI.esc(city) + '</span></span>' +
-          '<span class="option__radio"></span>' +
-          '</button>';
-      }).join('') +
-      '</div>');
-
-    var sheet = UI.sheet({ title: 'Choose your city', body: body });
-    body.addEventListener('click', function (event) {
-      var btn = event.target.closest('[data-city]');
-      if (!btn) return;
-      Store.setCity(btn.getAttribute('data-city'));
-      sheet.close();
-      App.render();
-    });
-  }
-
   window.Screens.home = {
     tab: 'home',
     render: async function () {
@@ -79,8 +43,8 @@
           '<header class="locbar">' +
             '<img class="locbar__avatar" src="' + UI.esc((user && user.avatarUrl) || '/img/avatars/guest.svg') + '" alt="" data-fallback="/img/avatars/guest.svg">' +
             '<div class="locbar__text">' +
-              '<div class="locbar__label">Your location</div>' +
-              '<button class="locbar__city" data-action="city">' + UI.esc(data.city) + UI.icon('chevron-down', 17) + '</button>' +
+              '<div class="locbar__label">Your Location</div>' +
+              '<span class="locbar__city">Mandla, MP</span>' +
             '</div>' +
             '<button class="icon-btn icon-btn--ring icon-btn--badge" data-action="notifications" data-count="' + (data.unreadNotifications || 0) + '" aria-label="Notifications">' +
               UI.icon('bell', 21) +
@@ -88,11 +52,6 @@
           '</header>' +
 
           '<div class="scroll">' +
-            '<div class="search-field" data-action="search" role="button" tabindex="0">' +
-              UI.icon('search', 19) +
-              '<input type="text" placeholder="Search movies, cinemas, snacks" readonly tabindex="-1">' +
-            '</div>' +
-
             '<div class="section" style="margin-top:16px">' +
               (data.hero.length ? UI.carousel(data.hero.map(heroSlide), { autoplay: 4500 }) : '') +
             '</div>' +
@@ -100,16 +59,11 @@
             (data.nextBooking ? nextBookingCard(data.nextBooking) : '') +
 
             '<div class="section">' +
-              UI.sectionHead('Now Playing', 'all-now-playing') +
+              UI.sectionHead('Currently Released', 'all-now-playing') +
               (data.nowPlaying.length
                 ? '<div class="rail">' + data.nowPlaying.map(function (m) { return UI.movieCard(m); }).join('') + '</div>'
                 : UI.empty({ icon: 'projector', title: 'No shows in ' + data.city, text: 'Try picking another city from the header.' })) +
             '</div>' +
-
-            (data.recommended.length
-              ? '<div class="section">' + UI.sectionHead('Because you like ' + (Store.user && Store.user.interests[0] ? Store.user.interests[0] : 'movies')) +
-                '<div class="rail">' + data.recommended.map(function (m) { return UI.movieCard(m, { book: false }); }).join('') + '</div></div>'
-              : '') +
 
             '<div class="section">' +
               UI.sectionHead('Coming Soon', 'all-coming-soon') +
@@ -120,20 +74,13 @@
               ? '<div class="section">' + UI.sectionHead('Offers for you') + UI.carousel(data.offers.map(offerSlide), { autoplay: 6000 }) + '</div>'
               : '') +
 
-            '<div class="section">' +
-              UI.sectionHead('Cinemas near you', 'all-cinemas') +
-              '<div class="stack">' + data.cinemas.map(cinemaRow).join('') + '</div>' +
-            '</div>' +
-
             '<div class="spacer-24"></div>' +
           '</div>' +
         '</div>'
       );
 
       UI.actions(view, {
-        city: function () { cityPicker(data.cities.length ? data.cities : [data.city], data.city); },
         notifications: function () { App.navigate('/notifications'); },
-        search: function () { App.navigate('/search'); },
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
         book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
         cinema: function (el) { App.navigate('/cinema/' + el.getAttribute('data-id')); },
@@ -145,11 +92,6 @@
         },
         'all-now-playing': function () { App.navigate('/movies/now_playing'); },
         'all-coming-soon': function () { App.navigate('/movies/coming_soon'); },
-        'all-cinemas': function () { App.navigate('/cinemas'); },
-      });
-
-      view.querySelector('.search-field').addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); App.navigate('/search'); }
       });
 
       return view;
