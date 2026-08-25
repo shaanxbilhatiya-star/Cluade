@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Build complete movie booking system backend with Node.js built-in http module (zero external dependencies) and all API endpoints for movies, showtimes, bookings, food orders, and user accounts. Include file-based JSON storage with seed data.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create movie-booking/ directory structure: server.js, data/, public/",
     "Implement server.js using Node.js built-in http module with: static file serving for public/ directory, JSON body parsing, URL routing, CORS headers",
@@ -33,5 +33,5 @@
     "curl -X POST http://localhost:3000/api/bookings with valid payload should return 201"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Server starts successfully with `unset NODE_OPTIONS && node server.js`. All endpoints tested: GET/POST/PUT/DELETE movies, GET/POST/DELETE showtimes, GET/POST/DELETE bookings (with seat validation and cancellation), GET/POST food-orders, GET/PUT users, GET stats. CORS preflight returns 204. Static file serving works for public/ directory with SPA fallback. Data persists to JSON files. Node.js v22 requires `unset NODE_OPTIONS` before running."
 }
