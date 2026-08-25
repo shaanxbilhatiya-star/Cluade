@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>My Bookings — CineBook</title>
+<style>
+  :root{--bg:#0d0d14;--card:#161622;--card2:#1e1e2e;--gold:#f5c518;--text:#f0f0f5;--muted:#8888aa;--green:#22c55e;--red:#ff4560;--border:rgba(255,255,255,0.07);--radius:14px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
+  nav{display:flex;align-items:center;gap:14px;padding:18px 40px;background:rgba(13,13,20,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);}
+  .logo{font-size:1.4rem;font-weight:800;letter-spacing:-1px;color:var(--gold);}
+  .logo span{color:var(--text);}
+  .back-btn{background:var(--card2);border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:7px 14px;border-radius:8px;font-size:.82rem;font-weight:600;text-decoration:none;}
+  .page{max-width:720px;margin:0 auto;padding:30px 20px;}
+  h1{font-size:1.4rem;font-weight:800;margin-bottom:22px;}
+  .booking-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:16px;}
+  .bc-info h3{font-size:1rem;font-weight:700;margin-bottom:4px;}
+  .bc-meta{font-size:.8rem;color:var(--muted);line-height:1.7;}
+  .bc-seats{font-size:.8rem;color:var(--gold);font-weight:600;margin-top:4px;}
+  .bc-right{text-align:right;flex-shrink:0;}
+  .bc-total{font-size:1.2rem;font-weight:800;color:var(--green);}
+  .bc-status{font-size:.75rem;padding:3px 10px;border-radius:6px;font-weight:700;margin-top:6px;display:inline-block;}
+  .bc-status.confirmed{background:#0a2a14;color:var(--green);}
+  .bc-status.cancelled{background:#2a0a0a;color:var(--red);}
+  .cancel-btn{display:block;margin-top:10px;background:transparent;border:1px solid var(--red);color:var(--red);padding:5px 12px;border-radius:7px;font-size:.75rem;font-weight:700;cursor:pointer;}
+  .cancel-btn:hover{background:var(--red);color:#fff;}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);}
+</style>
+</head>
+<body>
+<nav>
+  <a class="back-btn" href="/">← Back</a>
+  <div class="logo">Cine<span>Book</span></div>
+</nav>
+<div class="page">
+  <h1 id="pageTitle">My Bookings</h1>
+  <div id="list"></div>
+</div>
+<script>
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const phone = params.get('phone');
+  if (!phone) { location.href='/'; return; }
+  document.getElementById('pageTitle').textContent = `Bookings for ${phone}`;
+
+  const [bRes, sRes, mRes] = await Promise.all([
+    fetch(`/api/bookings?phone=${phone}`),
+    fetch('/api/showtimes'),
+    fetch('/api/movies')
+  ]);
+  const [bookings, shows, movies] = await Promise.all([bRes.json(), sRes.json(), mRes.json()]);
+  const list = document.getElementById('list');
+  if (!bookings.length) { list.innerHTML='<div class="empty">No bookings found for this number.</div>'; return; }
+
+  list.innerHTML = bookings.map(b => {
+    const show = shows.find(s=>s.id===b.showtimeId)||{};
+    const movie = movies.find(m=>m.id===show.movieId)||{};
+    return `<div class="booking-card">
+      <div class="bc-info">
+        <h3>${movie.title||'Unknown Movie'}</h3>
+        <div class="bc-meta">${show.date||''} • ${show.time||''} • ${show.screen||''}</div>
+        <div class="bc-seats">Seats: ${b.seats?.join(', ')||''}</div>
+        ${b.status==='confirmed'?`<button class="cancel-btn" onclick="cancel('${b.id}')">Cancel Booking</button>`:''}
+      </div>
+      <div class="bc-right">
+        <div class="bc-total">₹${b.total||0}</div>
+        <div class="bc-id" style="font-size:.7rem;color:var(--muted);margin-top:4px">${b.id}</div>
+        <div class="bc-status ${b.status}">${b.status}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function cancel(id) {
+  if (!confirm('Cancel this booking? This cannot be undone.')) return;
+  await fetch(`/api/bookings/${id}`,{method:'DELETE'});
+  init();
+}
+init();
+</script>
+</body>
+</html>
