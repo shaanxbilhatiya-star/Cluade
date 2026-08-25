@@ -14,7 +14,9 @@
     "totalSeats": 120,
     "bookedSeats": [
       "F7",
-      "F8"
+      "F8",
+      "G3",
+      "G4"
     ],
     "cinema": "PVR Cinemas"
   },
