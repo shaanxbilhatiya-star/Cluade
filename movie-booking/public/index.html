@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CineBook — Now Showing</title>
+<style>
+  :root{
+    --bg:#0d0d14;--card:#161622;--card2:#1e1e2e;
+    --gold:#f5c518;--gold2:#e6b400;
+    --text:#f0f0f5;--muted:#8888aa;
+    --accent:#6c63ff;--red:#ff4560;
+    --green:#22c55e;--border:rgba(255,255,255,0.07);
+    --radius:14px;--shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
+
+  /* NAV */
+  nav{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;background:rgba(13,13,20,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+  .logo{font-size:1.5rem;font-weight:800;letter-spacing:-1px;color:var(--gold);}
+  .logo span{color:var(--text);}
+  .nav-links{display:flex;gap:8px;}
+  .nav-btn{padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:.85rem;font-weight:600;transition:.2s;}
+  .nav-btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .nav-btn.ghost:hover{color:var(--text);border-color:var(--gold);}
+  .nav-btn.primary{background:var(--gold);color:#000;}
+  .nav-btn.primary:hover{background:var(--gold2);}
+
+  /* HERO */
+  .hero{background:linear-gradient(135deg,#0d0d14 0%,#1a1030 50%,#0d0d14 100%);padding:60px 40px 40px;text-align:center;}
+  .hero h1{font-size:2.8rem;font-weight:900;letter-spacing:-2px;margin-bottom:10px;}
+  .hero h1 em{color:var(--gold);font-style:normal;}
+  .hero p{color:var(--muted);font-size:1.05rem;margin-bottom:30px;}
+  
+  /* FILTERS */
+  .filters{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;}
+  .filter-btn{padding:8px 18px;border-radius:30px;border:1px solid var(--border);background:var(--card2);color:var(--muted);cursor:pointer;font-size:.82rem;font-weight:600;transition:.2s;}
+  .filter-btn:hover,.filter-btn.active{background:var(--gold);color:#000;border-color:var(--gold);}
+
+  /* DATE TABS */
+  .date-tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+  .date-tab{padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--muted);cursor:pointer;font-size:.8rem;font-weight:600;transition:.2s;text-align:center;}
+  .date-tab .dow{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:1px;}
+  .date-tab .day{display:block;font-size:1.2rem;font-weight:800;}
+  .date-tab:hover,.date-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  /* MOVIE GRID */
+  .section{padding:0 40px 60px;}
+  .section-title{font-size:1.2rem;font-weight:700;margin-bottom:24px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  .section-title span{color:var(--gold);}
+  .movie-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:22px;}
+  
+  .movie-card{background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:.25s;position:relative;}
+  .movie-card:hover{transform:translateY(-6px);box-shadow:var(--shadow);border-color:var(--gold);}
+  .movie-card img{width:100%;aspect-ratio:2/3;object-fit:cover;}
+  .movie-card-body{padding:14px;}
+  .movie-title{font-size:1rem;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .movie-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .badge{font-size:.68rem;padding:3px 8px;border-radius:5px;font-weight:700;background:var(--card2);}
+  .badge.rating{background:#2a1f00;color:var(--gold);}
+  .badge.genre{background:#1a2240;color:#7eb8ff;}
+  .badge.lang{background:#1a2a1a;color:#5ef083;}
+  .movie-duration{font-size:.75rem;color:var(--muted);margin-bottom:12px;}
+  .book-btn{width:100%;padding:9px;border-radius:9px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:.85rem;cursor:pointer;transition:.2s;}
+  .book-btn:hover{background:var(--gold2);}
+  .book-btn.soon{background:var(--card2);color:var(--muted);cursor:default;}
+
+  .coming-soon-badge{position:absolute;top:12px;right:12px;background:var(--red);color:#fff;font-size:.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:.5px;}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty .icon{font-size:3rem;margin-bottom:12px;}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:30px;right:30px;background:var(--green);color:#000;padding:12px 20px;border-radius:10px;font-weight:700;font-size:.85rem;display:none;z-index:999;box-shadow:var(--shadow);}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--card);border-radius:var(--radius);max-width:580px;width:100%;border:1px solid var(--border);max-height:90vh;overflow-y:auto;}
+  .modal-header{padding:22px 24px 0;display:flex;justify-content:space-between;align-items:center;}
+  .modal-header h2{font-size:1.25rem;font-weight:800;}
+  .close-btn{background:var(--card2);border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;}
+  .close-btn:hover{color:var(--text);}
+  .modal-body{padding:20px 24px 24px;}
+  .modal-poster{width:100%;border-radius:10px;aspect-ratio:16/9;object-fit:cover;margin-bottom:16px;}
+  .modal-desc{color:var(--muted);font-size:.9rem;line-height:1.6;margin-bottom:16px;}
+  .modal-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .info-item label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+  .info-item p{font-size:.9rem;font-weight:600;margin-top:2px;}
+  .showtime-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .showtime-chip{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card2);cursor:pointer;transition:.2s;text-align:center;}
+  .showtime-chip:hover{border-color:var(--gold);color:var(--gold);}
+  .showtime-chip .time{font-weight:700;font-size:.9rem;}
+  .showtime-chip .screen{font-size:.7rem;color:var(--muted);margin-top:2px;}
+  .showtime-chip .seats-left{font-size:.68rem;color:var(--green);margin-top:2px;}
+  .showtime-chip.full .seats-left{color:var(--red);}
+  .showtime-chip.full{opacity:.5;cursor:not-allowed;}
+
+  @media(max-width:600px){
+    nav{padding:14px 20px;}
+    .hero{padding:40px 20px 30px;}
+    .hero h1{font-size:1.8rem;}
+    .section{padding:0 16px 40px;}
+    .movie-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Cine<span>Book</span></div>
+  <div class="nav-links">
+    <button class="nav-btn ghost" onclick="window.open('/admin','_blank')">Admin</button>
+    <button class="nav-btn primary" onclick="openMyBookings()">My Bookings</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Book Your <em>Perfect</em> Seat</h1>
+  <p>Choose a movie, pick a showtime, and you're in.</p>
+  <div class="filters" id="filters">
+    <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('now_showing',this)">Now Showing</button>
+    <button class="filter-btn" onclick="setFilter('coming_soon',this)">Coming Soon</button>
+  </div>
+  <div class="date-tabs" id="dateTabs"></div>
+</div>
+
+<div class="section">
+  <div class="section-title">Movies <span id="movieCount"></span></div>
+  <div class="movie-grid" id="movieGrid"></div>
+</div>
+
+<!-- Movie Detail Modal -->
+<div class="modal-overlay" id="movieModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Movie Title</h2>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <img class="modal-poster" id="modalPoster" src="" alt="">
+      <p class="modal-desc" id="modalDesc"></p>
+      <div class="modal-info">
+        <div class="info-item"><label>Director</label><p id="modalDirector"></p></div>
+        <div class="info-item"><label>Duration</label><p id="modalDuration"></p></div>
+        <div class="info-item"><label>Language</label><p id="modalLang"></p></div>
+        <div class="info-item"><label>Rating</label><p id="modalRating"></p></div>
+        <div class="info-item" style="grid-column:1/-1"><label>Cast</label><p id="modalCast"></p></div>
+      </div>
+      <div class="section-title" style="margin-bottom:12px">Select Showtime</div>
+      <div class="showtime-list" id="showtimeList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let allMovies = [];
+let activeFilter = 'all';
+let activeDate = '';
+let currentMovieId = null;
+
+// Build date tabs for next 7 days
+function buildDateTabs() {
+  const tabs = document.getElementById('dateTabs');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    const iso = d.toISOString().split('T')[0];
+    if (i === 0) activeDate = iso;
+    const btn = document.createElement('button');
+    btn.className = 'date-tab' + (i===0?' active':'');
+    btn.innerHTML = `<span class="dow">${i===0?'Today':days[d.getDay()]}</span><span class="day">${d.getDate()} ${months[d.getMonth()]}</span>`;
+    btn.dataset.date = iso;
+    btn.onclick = () => {
+      document.querySelectorAll('.date-tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
+      activeDate = iso;
+      renderMovies();
+    };
+    tabs.appendChild(btn);
+  }
+}
+
+function setFilter(val, btn) {
+  activeFilter = val;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMovies();
+}
+
+async function fetchMovies() {
+  const res = await fetch('/api/movies');
+  allMovies = await res.json();
+  renderMovies();
+}
+
+function renderMovies() {
+  let movies = allMovies;
+  if (activeFilter !== 'all') movies = movies.filter(m => m.status === activeFilter);
+  const grid = document.getElementById('movieGrid');
+  document.getElementById('movieCount').textContent = `(${movies.length})`;
+  if (!movies.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="icon">🎬</div><p>No movies found</p></div>`;
+    return;
+  }
+  grid.innerHTML = movies.map(m => `
+    <div class="movie-card" onclick="openMovie('${m.id}')">
+      ${m.status==='coming_soon'?'<div class="coming-soon-badge">COMING SOON</div>':''}
+      <img src="${m.poster}" alt="${m.title}" onerror="this.src='https://via.placeholder.com/400x600/1e1e2e/f5c518?text=🎬'">
+      <div class="movie-card-body">
+        <div class="movie-title">${m.title}</div>
+        <div class="movie-meta">
+          <span class="badge rating">${m.rating}</span>
+          ${m.genre.slice(0,2).map(g=>`<span class="badge genre">${g}</span>`).join('')}
+          <span class="badge lang">${m.language}</span>
+        </div>
+        <div class="movie-duration">⏱ ${m.duration} mins</div>
+        <button class="book-btn ${m.status==='coming_soon'?'soon':''}" onclick="event.stopPropagation();${m.status!=='coming_soon'?`openMovie('${m.id}')`:''}">
+          ${m.status==='coming_soon'?'Coming Soon':'Book Tickets'}
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function openMovie(movieId) {
+  currentMovieId = movieId;
+  const movie = allMovies.find(m => m.id === movieId);
+  if (!movie) return;
+
+  document.getElementById('modalTitle').textContent = movie.title;
+  document.getElementById('modalPoster').src = movie.poster;
+  document.getElementById('modalDesc').textContent = movie.description;
+  document.getElementById('modalDirector').textContent = movie.director;
+  document.getElementById('modalDuration').textContent = movie.duration + ' mins';
+  document.getElementById('modalLang').textContent = movie.language;
+  document.getElementById('modalRating').textContent = movie.rating;
+  document.getElementById('modalCast').textContent = movie.cast.join(', ');
+
+  // Load showtimes
+  const res = await fetch(`/api/showtimes?movieId=${movieId}&date=${activeDate}`);
+  const shows = await res.json();
+  const list = document.getElementById('showtimeList');
+  if (!shows.length) {
+    list.innerHTML = `<p style="color:var(--muted);font-size:.85rem">No shows on this date. Try another date.</p>`;
+  } else {
+    list.innerHTML = shows.map(s => {
+      const avail = s.totalSeats - s.bookedSeats.length;
+      const full = avail === 0;
+      return `<div class="showtime-chip ${full?'full':''}" onclick="${full?'':'goBook(\''+s.id+'\')'}">
+        <div class="time">${s.time}</div>
+        <div class="screen">${s.screen}</div>
+        <div class="seats-left">${full?'HOUSEFULL':avail+' seats left'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('movieModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('movieModal').classList.remove('open');
+}
+
+function goBook(showtimeId) {
+  window.location.href = `/user/book.html?show=${showtimeId}`;
+}
+
+function openMyBookings() {
+  const phone = prompt('Enter your phone number to find your bookings:');
+  if (phone) window.location.href = `/user/my-bookings.html?phone=${phone}`;
+}
+
+document.getElementById('movieModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+buildDateTabs();
+fetchMovies();
+</script>
+</body>
+</html>
