@@ -1982,8 +1982,8 @@
                 </defs>
                 <rect width="100" height="130" rx="8" fill="url(#grad-${movieId})"/>
                 ${icon}
-                <text x="50" y="90" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="bold" font-family="system-ui">${title.length > 14 ? title.substring(0, 12) + '..' : title}</text>
-                <text x="50" y="105" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="6" font-family="system-ui">${genre}</text>
+                <text x="50" y="90" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="bold" font-family="system-ui">${escapeHTML(title.length > 14 ? title.substring(0, 12) + '..' : title)}</text>
+                <text x="50" y="105" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="6" font-family="system-ui">${escapeHTML(genre)}</text>
             </svg>`;
         }
 
@@ -2166,9 +2166,9 @@
                 return;
             }
             grid.innerHTML = showtimes.map(s => `
-                <div class="time-slot" onclick="selectTimeSlot('${s.id}', this)">
-                    <div class="time-text">${s.time}</div>
-                    <div class="time-cinema">${s.cinema} - ${s.screen}</div>
+                <div class="time-slot" data-showtime-id="${escapeHTML(s.id)}" onclick="selectTimeSlot(this.dataset.showtimeId, this)">
+                    <div class="time-text">${escapeHTML(s.time)}</div>
+                    <div class="time-cinema">${escapeHTML(s.cinema)} - ${escapeHTML(s.screen)}</div>
                 </div>
             `).join('');
         }
@@ -2404,7 +2404,7 @@
                         </div>
                         <div class="success-ticket-row">
                             <span class="success-ticket-label">Time</span>
-                            <span class="success-ticket-value">${s.time} - ${s.endTime || ''}</span>
+                            <span class="success-ticket-value">${escapeHTML(s.time)} - ${escapeHTML(s.endTime || '')}</span>
                         </div>
                         <div class="success-ticket-row">
                             <span class="success-ticket-label">Seats</span>

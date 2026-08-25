@@ -416,70 +416,76 @@ async function handleCreateBooking(req, res) {
       return;
     }
 
-    // Get showtime and validate seats
-    const showtimes = readJSON('showtimes.json');
-    const showtimeIndex = showtimes.findIndex(s => s.id === body.showtimeId);
+    // Acquire lock to prevent double-sell race condition
+    const release = await acquireLock('showtimes.json');
+    try {
+      // Get showtime and validate seats
+      const showtimes = readJSON('showtimes.json');
+      const showtimeIndex = showtimes.findIndex(s => s.id === body.showtimeId);
 
-    if (showtimeIndex === -1) {
-      sendError(res, 404, 'Showtime not found');
-      return;
+      if (showtimeIndex === -1) {
+        sendError(res, 404, 'Showtime not found');
+        return;
+      }
+
+      const showtime = showtimes[showtimeIndex];
+
+      // Check if seats are already booked
+      const alreadyBooked = body.seats.filter(seat => showtime.bookedSeats.includes(seat));
+      if (alreadyBooked.length > 0) {
+        sendError(res, 409, `Seats already booked: ${alreadyBooked.join(', ')}`);
+        return;
+      }
+
+      // Check if enough seats available
+      if (showtime.bookedSeats.length + body.seats.length > showtime.totalSeats) {
+        sendError(res, 409, 'Not enough seats available');
+        return;
+      }
+
+      // Calculate pricing
+      const seatType = body.seatType || 'standard';
+      const pricePerSeat = showtime.price[seatType] || showtime.price.standard;
+      const totalAmount = pricePerSeat * body.seats.length;
+
+      // Mark seats as booked
+      showtimes[showtimeIndex].bookedSeats = [...showtime.bookedSeats, ...body.seats];
+      writeJSON('showtimes.json', showtimes);
+
+      // Get movie info
+      const movies = readJSON('movies.json');
+      const movie = movies.find(m => m.id === showtime.movieId);
+
+      // Create booking
+      const bookings = readJSON('bookings.json');
+      const newBooking = {
+        id: generateId('booking'),
+        showtimeId: body.showtimeId,
+        movieId: showtime.movieId,
+        movieTitle: movie ? movie.title : 'Unknown',
+        name: body.name,
+        phone: body.phone,
+        email: body.email || '',
+        seats: body.seats,
+        seatType: seatType,
+        pricePerSeat: pricePerSeat,
+        totalAmount: totalAmount,
+        screen: showtime.screen,
+        cinema: showtime.cinema,
+        date: showtime.date,
+        time: showtime.time,
+        endTime: showtime.endTime,
+        status: 'confirmed',
+        foodOrders: body.foodOrders || [],
+        createdAt: new Date().toISOString()
+      };
+
+      bookings.push(newBooking);
+      writeJSON('bookings.json', bookings);
+      sendJSON(res, 201, newBooking);
+    } finally {
+      releaseLock('showtimes.json', release);
     }
-
-    const showtime = showtimes[showtimeIndex];
-
-    // Check if seats are already booked
-    const alreadyBooked = body.seats.filter(seat => showtime.bookedSeats.includes(seat));
-    if (alreadyBooked.length > 0) {
-      sendError(res, 409, `Seats already booked: ${alreadyBooked.join(', ')}`);
-      return;
-    }
-
-    // Check if enough seats available
-    if (showtime.bookedSeats.length + body.seats.length > showtime.totalSeats) {
-      sendError(res, 409, 'Not enough seats available');
-      return;
-    }
-
-    // Calculate pricing
-    const seatType = body.seatType || 'standard';
-    const pricePerSeat = showtime.price[seatType] || showtime.price.standard;
-    const totalAmount = pricePerSeat * body.seats.length;
-
-    // Mark seats as booked
-    showtimes[showtimeIndex].bookedSeats = [...showtime.bookedSeats, ...body.seats];
-    writeJSON('showtimes.json', showtimes);
-
-    // Get movie info
-    const movies = readJSON('movies.json');
-    const movie = movies.find(m => m.id === showtime.movieId);
-
-    // Create booking
-    const bookings = readJSON('bookings.json');
-    const newBooking = {
-      id: generateId('booking'),
-      showtimeId: body.showtimeId,
-      movieId: showtime.movieId,
-      movieTitle: movie ? movie.title : 'Unknown',
-      name: body.name,
-      phone: body.phone,
-      email: body.email || '',
-      seats: body.seats,
-      seatType: seatType,
-      pricePerSeat: pricePerSeat,
-      totalAmount: totalAmount,
-      screen: showtime.screen,
-      cinema: showtime.cinema,
-      date: showtime.date,
-      time: showtime.time,
-      endTime: showtime.endTime,
-      status: 'confirmed',
-      foodOrders: body.foodOrders || [],
-      createdAt: new Date().toISOString()
-    };
-
-    bookings.push(newBooking);
-    writeJSON('bookings.json', bookings);
-    sendJSON(res, 201, newBooking);
   } catch (err) {
     sendError(res, 400, err.message);
   }
