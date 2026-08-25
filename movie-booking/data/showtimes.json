@@ -1,0 +1,62 @@
+[
+  {
+    "id": "show-001",
+    "movieId": "movie-001",
+    "date": "2026-08-26",
+    "time": "10:00",
+    "screen": "Screen 1",
+    "totalSeats": 60,
+    "price": { "normal": 180, "premium": 300 },
+    "bookedSeats": ["A1","A2","B5","C3"]
+  },
+  {
+    "id": "show-002",
+    "movieId": "movie-001",
+    "date": "2026-08-26",
+    "time": "14:30",
+    "screen": "Screen 2",
+    "totalSeats": 60,
+    "price": { "normal": 180, "premium": 300 },
+    "bookedSeats": ["D4","D5"]
+  },
+  {
+    "id": "show-003",
+    "movieId": "movie-001",
+    "date": "2026-08-26",
+    "time": "19:00",
+    "screen": "Screen 1",
+    "totalSeats": 60,
+    "price": { "normal": 200, "premium": 350 },
+    "bookedSeats": []
+  },
+  {
+    "id": "show-004",
+    "movieId": "movie-002",
+    "date": "2026-08-26",
+    "time": "11:00",
+    "screen": "Screen 3",
+    "totalSeats": 60,
+    "price": { "normal": 180, "premium": 300 },
+    "bookedSeats": ["A3","B1","B2"]
+  },
+  {
+    "id": "show-005",
+    "movieId": "movie-002",
+    "date": "2026-08-26",
+    "time": "17:00",
+    "screen": "Screen 2",
+    "totalSeats": 60,
+    "price": { "normal": 180, "premium": 300 },
+    "bookedSeats": []
+  },
+  {
+    "id": "show-006",
+    "movieId": "movie-003",
+    "date": "2026-08-26",
+    "time": "15:00",
+    "screen": "Screen 3",
+    "totalSeats": 60,
+    "price": { "normal": 160, "premium": 260 },
+    "bookedSeats": ["C5","C6"]
+  }
+]
