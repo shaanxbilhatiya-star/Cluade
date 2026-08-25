@@ -96,10 +96,15 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* ── Device frame (desktop only) ─────────────────────────────────────────── */
 .device {
   width: 100%;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   background: var(--bg);
   display: flex;
   flex-direction: column;
+  /* No overflow:hidden here (see desktop clip-path note below) — it would
+     block wheel/touch scroll from reaching the inner .scroll container.
+     A fixed height (not min-height) is what actually keeps this box locked
+     to the viewport and the tabbar pinned; that alone is enough. */
 }
 
 .desktop-note { display: none; }
