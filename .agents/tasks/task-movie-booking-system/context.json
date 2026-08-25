@@ -1,0 +1,26 @@
+{
+  "project_type": "Node.js movie booking web application (backend API + frontend SPA)",
+  "language": "JavaScript",
+  "build_system": "None - zero external dependencies, uses Node.js built-in http module",
+  "test_framework": "None currently - will use Node.js built-in test runner (node --test)",
+  "build_command": "No build step needed - vanilla JS",
+  "test_command": "unset NODE_OPTIONS && node server.js & sleep 2 && node test.js; kill %1",
+  "verification_instructions": "1. Run `unset NODE_OPTIONS && node server.js` to start server. 2. Visit http://localhost:3000 in browser. 3. Verify mobile-first UI loads with purple theme. 4. Check all 5 bottom nav tabs work. 5. Test booking flow end-to-end.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "No setup needed - zero external dependencies. Just run `node server.js`.",
+  "environment_constraints": "INTEGRATIONS_ONLY network - cannot install npm packages from registry. Must use Node.js built-in modules only (http, fs, path, url, crypto). Cannot load external CDN resources. All CSS/JS must be inline or served locally. Node.js v22 available.",
+  "contribution_requirements": "Commit to main branch in the Cluade repository. Project goes in movie-booking/ directory.",
+  "key_patterns": "Existing branch feature/movie-booking-system has an Express-based implementation. We are rebuilding from scratch with zero dependencies, mobile-first purple UI, and 5-tab navigation matching user's design specs.",
+  "relevant_files": [
+    "movie-booking/server.js",
+    "movie-booking/public/index.html",
+    "movie-booking/public/user/book.html",
+    "movie-booking/public/user/confirm.html",
+    "movie-booking/public/user/my-bookings.html",
+    "movie-booking/public/admin/index.html",
+    "movie-booking/data/movies.json",
+    "movie-booking/data/showtimes.json",
+    "movie-booking/data/bookings.json"
+  ],
+  "directory_structure": "movie-booking/ is the project root containing: server.js (main entry), public/ (static HTML/CSS/JS files), data/ (JSON file-based storage), README.md, package.json"
+}

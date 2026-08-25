@@ -1,0 +1,11 @@
+[
+  {
+    "id": "user-001",
+    "name": "Andrew Ainsely",
+    "email": "andrew@email.com",
+    "phone": "9876543210",
+    "city": "Mumbai",
+    "avatar": "avatar-default",
+    "createdAt": "2023-11-01T10:00:00Z"
+  }
+]

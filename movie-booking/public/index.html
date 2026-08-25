@@ -1,0 +1,2722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CineBook - Movie Booking</title>
+    <style>
+        :root {
+            --primary: #6C3CE1;
+            --primary-dark: #2D1B69;
+            --white: #FFFFFF;
+            --bg-light: #F5F5F8;
+            --orange: #FF6B35;
+            --text-dark: #1A1A2E;
+            --text-muted: #6B7280;
+            --radius-card: 14px;
+            --radius-btn: 24px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --nav-height: 70px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #E8E8EC;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--text-dark);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--white);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+        }
+
+        /* Screen management */
+        .screen {
+            display: none;
+            padding-bottom: calc(var(--nav-height) + 20px);
+            animation: fadeIn 0.25s ease;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            height: var(--nav-height);
+            background: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            border-top: 1px solid #EBEBF0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 12px;
+            transition: all 0.2s;
+            min-width: 60px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .nav-item.active svg {
+            stroke: var(--primary);
+        }
+
+        .nav-item.active span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Header styles */
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+        }
+
+        .header-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        /* HOME SCREEN */
+        .home-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+        }
+
+        .home-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .greeting {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .greeting-text {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .greeting-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .location-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-light);
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .location-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* Hero Banner */
+        .hero-banner {
+            margin: 12px 20px;
+            height: 280px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--primary-dark), #4B2AA0, var(--primary));
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            padding: 24px;
+            cursor: pointer;
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.6) 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: var(--orange);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .hero-title {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .hero-subtitle {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 14px;
+        }
+
+        .hero-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--orange);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-btn);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .hero-btn:active {
+            transform: scale(0.95);
+        }
+
+        .hero-movie-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 120px;
+            height: 160px;
+            opacity: 0.3;
+        }
+
+        /* Section header */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 20px 12px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .section-link {
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* Movie cards scroll */
+        .movie-scroll {
+            display: flex;
+            gap: 14px;
+            padding: 0 20px 16px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .movie-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .movie-card {
+            min-width: 165px;
+            max-width: 165px;
+            scroll-snap-align: start;
+            border-radius: var(--radius-card);
+            background: var(--white);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .movie-card:active {
+            transform: scale(0.97);
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .movie-poster svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .movie-info {
+            padding: 12px;
+        }
+
+        .movie-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .movie-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .movie-rating {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-bottom: 10px;
+        }
+
+        .star-icon {
+            width: 14px;
+            height: 14px;
+            fill: #FFB800;
+        }
+
+        .rating-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .book-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: var(--radius-btn);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .book-btn:active {
+            transform: scale(0.96);
+            background: var(--primary-dark);
+        }
+
+        .notify-btn {
+            width: 100%;
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 9px;
+            border-radius: var(--radius-btn);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .notify-btn:active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* CINEMAS SCREEN */
+        .search-bar {
+            margin: 0 20px 16px;
+            position: relative;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 14px 20px 14px 44px;
+            border: 2px solid #EBEBF0;
+            border-radius: 14px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            background: var(--bg-light);
+        }
+
+        .search-bar input:focus {
+            border-color: var(--primary);
+            background: var(--white);
+        }
+
+        .search-bar svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .cinema-card {
+            margin: 0 20px 14px;
+            padding: 18px;
+            background: var(--bg-light);
+            border-radius: var(--radius-card);
+            transition: box-shadow 0.2s;
+        }
+
+        .cinema-card:active {
+            box-shadow: 0 4px 16px rgba(108,60,225,0.15);
+        }
+
+        .cinema-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .cinema-address {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .cinema-screens {
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .cinema-view-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-btn);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .cinema-view-btn:active {
+            background: var(--primary-dark);
+        }
+
+        /* FOOD SCREEN */
+        .food-promo {
+            margin: 0 20px 16px;
+            padding: 20px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: white;
+        }
+
+        .food-promo-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .food-promo-sub {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 14px;
+        }
+
+        .food-promo-btn {
+            display: inline-block;
+            background: var(--orange);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-btn);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .food-scroll {
+            display: flex;
+            gap: 14px;
+            padding: 0 20px 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .food-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .food-card {
+            min-width: 150px;
+            max-width: 150px;
+            background: var(--bg-light);
+            border-radius: var(--radius-card);
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .food-card:active {
+            transform: scale(0.96);
+        }
+
+        .food-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .food-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .food-price {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .food-add-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .food-add-btn:active {
+            transform: scale(0.9);
+        }
+
+        .food-qty-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .food-qty-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .food-qty-num {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .cart-floating {
+            position: fixed;
+            bottom: calc(var(--nav-height) + 16px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 8px 24px rgba(108,60,225,0.4);
+            cursor: pointer;
+            z-index: 999;
+            transition: transform 0.3s;
+            display: none;
+        }
+
+        .cart-floating.visible {
+            display: flex;
+        }
+
+        .cart-floating:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        .cart-badge {
+            background: var(--orange);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* TICKETS SCREEN */
+        .tabs-bar {
+            display: flex;
+            gap: 0;
+            padding: 0 20px;
+            border-bottom: 2px solid #EBEBF0;
+            margin-bottom: 16px;
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 14px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tab-item.active {
+            color: var(--primary);
+        }
+
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 20%;
+            width: 60%;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 10px;
+            padding: 0 20px 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .filter-pills::-webkit-scrollbar {
+            display: none;
+        }
+
+        .pill {
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1.5px solid #EBEBF0;
+            background: var(--white);
+            color: var(--text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .pill.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .ticket-card {
+            margin: 0 20px 16px;
+            border-radius: var(--radius-card);
+            background: var(--white);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            border: 1px solid #EBEBF0;
+        }
+
+        .ticket-stripe {
+            width: 6px;
+            background: var(--primary);
+        }
+
+        .ticket-poster {
+            width: 80px;
+            min-height: 120px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ticket-poster svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ticket-details {
+            flex: 1;
+            padding: 14px;
+        }
+
+        .ticket-movie-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .ticket-datetime {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .ticket-cinema {
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .ticket-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .ticket-action-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .ticket-action-icon svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .remind-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            margin: 0 20px 16px;
+            background: var(--bg-light);
+            border-radius: 12px;
+        }
+
+        .remind-text {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            width: 48px;
+            height: 26px;
+            border-radius: 13px;
+            background: #D1D5DB;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.on {
+            background: var(--primary);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.on::after {
+            transform: translateX(22px);
+        }
+
+        /* ACCOUNT SCREEN */
+        .profile-card {
+            margin: 0 20px 24px;
+            padding: 24px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        .profile-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 28px;
+            font-weight: 700;
+            border: 3px solid rgba(255,255,255,0.4);
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .profile-email {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .profile-qr {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .profile-qr svg {
+            width: 20px;
+            height: 20px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .menu-section {
+            margin: 0 20px 20px;
+        }
+
+        .menu-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            padding-left: 4px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--bg-light);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .menu-item:active {
+            background: #EBEBF0;
+        }
+
+        .menu-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+        }
+
+        .menu-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .menu-label {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .menu-value {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-right: 8px;
+        }
+
+        .menu-badge {
+            background: var(--orange);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 8px;
+        }
+
+        .menu-chevron svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* BOOKING FLOW */
+        .booking-overlay {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            background: var(--white);
+            z-index: 2000;
+            overflow-y: auto;
+            display: none;
+            animation: slideUp 0.3s ease;
+        }
+
+        .booking-overlay.active {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(100%); }
+            to { transform: translateX(-50%) translateY(0); }
+        }
+
+        .booking-header {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #EBEBF0;
+            position: sticky;
+            top: 0;
+            background: var(--white);
+            z-index: 10;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            margin-right: 12px;
+        }
+
+        .back-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-dark);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .booking-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .movie-detail-poster {
+            width: 100%;
+            height: 220px;
+            position: relative;
+        }
+
+        .movie-detail-poster svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .movie-detail-info {
+            padding: 20px;
+        }
+
+        .movie-detail-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .movie-detail-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .meta-tag {
+            padding: 4px 12px;
+            background: var(--bg-light);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .movie-detail-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .movie-detail-cast {
+            font-size: 13px;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+        }
+
+        .movie-detail-cast strong {
+            color: var(--primary);
+        }
+
+        /* Date selector */
+        .date-selector {
+            padding: 0 20px 16px;
+        }
+
+        .date-selector-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-dark);
+        }
+
+        .date-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+        }
+
+        .date-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .date-item {
+            min-width: 60px;
+            padding: 12px 8px;
+            border-radius: 14px;
+            text-align: center;
+            border: 2px solid #EBEBF0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .date-item.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .date-item.active .date-day,
+        .date-item.active .date-num {
+            color: white;
+        }
+
+        .date-day {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .date-num {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        /* Time slots */
+        .time-slots {
+            padding: 0 20px 20px;
+        }
+
+        .time-slots-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-dark);
+        }
+
+        .time-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .time-slot {
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 2px solid #EBEBF0;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .time-slot.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .time-slot.active .time-text,
+        .time-slot.active .time-cinema {
+            color: white;
+        }
+
+        .time-text {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .time-cinema {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Seat selection */
+        .seat-section {
+            padding: 0 20px 20px;
+        }
+
+        .seat-section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-dark);
+        }
+
+        .screen-indicator {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .screen-indicator::after {
+            content: '';
+            display: block;
+            width: 60%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            border-radius: 2px;
+            margin: 8px auto 0;
+        }
+
+        .screen-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .seat-grid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .seat-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .seat-row-label {
+            width: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .seat {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: #E8F5E9;
+            color: #4CAF50;
+            border: 1px solid #C8E6C9;
+        }
+
+        .seat.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .seat.booked {
+            background: #E0E0E0;
+            color: #9E9E9E;
+            border-color: #D5D5D5;
+            cursor: not-allowed;
+        }
+
+        .seat-legend {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .legend-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+        }
+
+        .legend-available {
+            background: #E8F5E9;
+            border: 1px solid #C8E6C9;
+        }
+
+        .legend-selected {
+            background: var(--primary);
+        }
+
+        .legend-booked {
+            background: #E0E0E0;
+        }
+
+        /* Price summary */
+        .price-summary {
+            padding: 16px 20px;
+            background: var(--bg-light);
+            border-radius: var(--radius-card);
+            margin: 0 20px 16px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .price-row.total {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-dark);
+            margin-bottom: 0;
+            padding-top: 8px;
+            border-top: 1px solid #EBEBF0;
+        }
+
+        .confirm-btn {
+            display: block;
+            width: calc(100% - 40px);
+            margin: 16px 20px 30px;
+            padding: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-btn);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .confirm-btn:active {
+            background: var(--primary-dark);
+            transform: scale(0.98);
+        }
+
+        .confirm-btn:disabled {
+            background: #D1D5DB;
+            cursor: not-allowed;
+        }
+
+        /* Booking form */
+        .booking-form {
+            padding: 0 20px 20px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #EBEBF0;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Success screen */
+        .success-screen {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #E8F5E9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: #4CAF50;
+            fill: none;
+            stroke-width: 3;
+        }
+
+        .success-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .success-sub {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .success-ticket {
+            background: var(--bg-light);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .success-ticket-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .success-ticket-label {
+            color: var(--text-muted);
+        }
+
+        .success-ticket-value {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .success-id {
+            text-align: center;
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+            padding: 10px;
+            background: rgba(108,60,225,0.08);
+            border-radius: 10px;
+            margin-top: 12px;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+
+        .done-btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: var(--radius-btn);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            stroke: #D1D5DB;
+            fill: none;
+            stroke-width: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #EBEBF0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Cinema shows view */
+        .cinema-shows {
+            padding: 0 20px 20px;
+        }
+
+        .cinema-show-movie {
+            background: var(--bg-light);
+            border-radius: var(--radius-card);
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .cinema-show-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
+        .cinema-show-times {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .cinema-show-time {
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1.5px solid var(--primary);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cinema-show-time:active {
+            background: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- HOME SCREEN -->
+        <div class="screen active" data-screen="home" id="screen-home">
+            <div class="home-header">
+                <div class="home-header-left">
+                    <div class="avatar">AA</div>
+                    <div class="greeting">
+                        <span class="greeting-text">Hi,</span>
+                        <span class="greeting-name">Andrew</span>
+                    </div>
+                </div>
+                <button class="location-btn">
+                    <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Mumbai
+                    <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:var(--text-muted)"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </div>
+
+            <div class="hero-banner" onclick="openBooking('movie-002')">
+                <svg class="hero-movie-icon" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="100" height="140" rx="8" fill="rgba(255,255,255,0.1)"/>
+                    <circle cx="50" cy="55" r="25" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+                    <polygon points="44,43 44,67 64,55" fill="rgba(255,255,255,0.3)"/>
+                </svg>
+                <div class="hero-content">
+                    <span class="hero-badge">NOW SHOWING</span>
+                    <h2 class="hero-title">The Nun II</h2>
+                    <p class="hero-subtitle">Horror &bull; English &bull; 110 min</p>
+                    <button class="hero-btn" onclick="event.stopPropagation(); openBooking('movie-002')">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Watch Now
+                    </button>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <h3 class="section-title">Now Playing</h3>
+                <a class="section-link">See All</a>
+            </div>
+            <div class="movie-scroll" id="now-playing-list">
+                <div class="loading"><div class="loading-spinner"></div><p>Loading movies...</p></div>
+            </div>
+
+            <div class="section-header">
+                <h3 class="section-title">Coming Soon</h3>
+                <a class="section-link">See All</a>
+            </div>
+            <div class="movie-scroll" id="coming-soon-list">
+                <div class="loading"><div class="loading-spinner"></div><p>Loading movies...</p></div>
+            </div>
+        </div>
+
+        <!-- CINEMAS SCREEN -->
+        <div class="screen" data-screen="cinemas" id="screen-cinemas">
+            <div class="header-bar">
+                <h1 class="header-title">Cinemas</h1>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="cursor:pointer"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="Search cinemas..." id="cinema-search">
+            </div>
+            <div id="cinemas-list">
+                <div class="cinema-card">
+                    <div class="cinema-name">PVR Cinemas</div>
+                    <div class="cinema-address">Phoenix Mall, Lower Parel, Mumbai</div>
+                    <div class="cinema-screens">4 Screens</div>
+                    <button class="cinema-view-btn" onclick="viewCinemaShows('PVR Cinemas')">View Shows</button>
+                </div>
+                <div class="cinema-card">
+                    <div class="cinema-name">INOX</div>
+                    <div class="cinema-address">R-City Mall, Ghatkopar, Mumbai</div>
+                    <div class="cinema-screens">3 Screens</div>
+                    <button class="cinema-view-btn" onclick="viewCinemaShows('INOX')">View Shows</button>
+                </div>
+                <div class="cinema-card">
+                    <div class="cinema-name">Cinepolis</div>
+                    <div class="cinema-address">Viviana Mall, Thane, Mumbai</div>
+                    <div class="cinema-screens">5 Screens</div>
+                    <button class="cinema-view-btn" onclick="viewCinemaShows('Cinepolis')">View Shows</button>
+                </div>
+                <div class="cinema-card">
+                    <div class="cinema-name">Rajhans Cinema</div>
+                    <div class="cinema-address">Rajhans Complex, Surat</div>
+                    <div class="cinema-screens">3 Screens</div>
+                    <button class="cinema-view-btn" onclick="viewCinemaShows('Rajhans Cinema')">View Shows</button>
+                </div>
+            </div>
+            <div id="cinema-shows-container" style="display:none">
+                <div style="padding:0 20px 12px;display:flex;align-items:center;gap:10px;">
+                    <button class="back-btn" onclick="closeCinemaShows()">
+                        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <span style="font-size:16px;font-weight:700;" id="cinema-shows-title">Cinema</span>
+                </div>
+                <div class="cinema-shows" id="cinema-shows-list"></div>
+            </div>
+        </div>
+
+        <!-- FOOD SCREEN -->
+        <div class="screen" data-screen="food" id="screen-food">
+            <div class="header-bar">
+                <h1 class="header-title">Food & Beverages</h1>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="cursor:pointer"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+
+            <div class="food-promo">
+                <div class="food-promo-title">Best Movie Ticket Offers</div>
+                <div class="food-promo-sub">Get up to 50% off on combos when you book tickets!</div>
+                <button class="food-promo-btn">Order Now</button>
+            </div>
+
+            <div class="section-header">
+                <h3 class="section-title">Most Popular</h3>
+                <a class="section-link">View All</a>
+            </div>
+            <div class="food-scroll" id="food-popular-list">
+                <div class="loading"><div class="loading-spinner"></div><p>Loading...</p></div>
+            </div>
+
+            <div class="section-header">
+                <h3 class="section-title">New Beverages</h3>
+                <a class="section-link">View All</a>
+            </div>
+            <div class="food-scroll" id="food-beverages-list">
+                <div class="loading"><div class="loading-spinner"></div><p>Loading...</p></div>
+            </div>
+
+            <div class="cart-floating" id="cart-floating">
+                <span class="cart-badge" id="cart-count">0</span>
+                <span>View Cart</span>
+                <span id="cart-total">$0.00</span>
+            </div>
+        </div>
+
+        <!-- TICKETS SCREEN -->
+        <div class="screen" data-screen="tickets" id="screen-tickets">
+            <div class="header-bar">
+                <h1 class="header-title">My Tickets</h1>
+            </div>
+
+            <div class="tabs-bar">
+                <div class="tab-item active" onclick="switchTicketTab('upcoming')">Upcoming</div>
+                <div class="tab-item" onclick="switchTicketTab('passed')">Passed</div>
+                <div class="tab-item" onclick="switchTicketTab('cancelled')">Cancelled</div>
+            </div>
+
+            <div class="filter-pills">
+                <div class="pill active">All</div>
+                <div class="pill">Movie</div>
+                <div class="pill">Food</div>
+                <div class="pill">Event</div>
+            </div>
+
+            <div id="tickets-list">
+                <div class="loading"><div class="loading-spinner"></div><p>Loading tickets...</p></div>
+            </div>
+
+            <div class="remind-toggle">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="remind-text">Remind me 30 minutes earlier</span>
+                <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+            </div>
+        </div>
+
+        <!-- ACCOUNT SCREEN -->
+        <div class="screen" data-screen="account" id="screen-account">
+            <div class="header-bar">
+                <h1 class="header-title">Account</h1>
+            </div>
+
+            <div class="profile-card">
+                <div class="profile-qr">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+                </div>
+                <div class="profile-avatar">AA</div>
+                <div class="profile-name">Andrew Ainsely</div>
+                <div class="profile-email">andrew@email.com</div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">My Stuff</div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </div>
+                    <span class="menu-label">Watchlist</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
+                    <span class="menu-label">Movie Interest</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    </div>
+                    <span class="menu-label">Payment Methods</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">General</div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <span class="menu-label">Personal Info</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    </div>
+                    <span class="menu-label">Notification</span>
+                    <span class="menu-badge">3</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <span class="menu-label">Security</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                    <span class="menu-label">Language</span>
+                    <span class="menu-value">English (US)</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </div>
+                    <span class="menu-label">Dark Mode</span>
+                    <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">About</div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <span class="menu-label">Help Center</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                    </div>
+                    <span class="menu-label">Privacy Policy</span>
+                    <span class="menu-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOOKING OVERLAY -->
+        <div class="booking-overlay" id="booking-overlay">
+            <div id="booking-content"></div>
+        </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="switchScreen('home')">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Home</span>
+            </div>
+            <div class="nav-item" onclick="switchScreen('cinemas')">
+                <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
+                <span>Cinemas</span>
+            </div>
+            <div class="nav-item" onclick="switchScreen('food')">
+                <svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                <span>Food Order</span>
+            </div>
+            <div class="nav-item" onclick="switchScreen('tickets')">
+                <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>
+                <span>My Tickets</span>
+            </div>
+            <div class="nav-item" onclick="switchScreen('account')">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>Account</span>
+            </div>
+        </nav>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        let movies = [];
+        let showtimes = [];
+        let foodItems = [];
+        let cart = {};
+        let selectedMovie = null;
+        let selectedDate = null;
+        let selectedShowtime = null;
+        let selectedSeats = [];
+        let currentBookingStep = 'detail'; // detail, seats, form, success
+        let currentTicketTab = 'upcoming';
+        let currentTicketFilter = 'All';
+
+        // ===== XSS PROTECTION =====
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ===== PHONE NUMBER MANAGEMENT =====
+        function getStoredPhone() {
+            return localStorage.getItem('cinebook_phone') || '';
+        }
+
+        function setStoredPhone(phone) {
+            if (phone) localStorage.setItem('cinebook_phone', phone);
+        }
+
+        // ===== NAVIGATION =====
+        function switchScreen(name) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            const screen = document.querySelector(`[data-screen="${name}"]`);
+            if (screen) screen.classList.add('active');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            const screenNames = ['home', 'cinemas', 'food', 'tickets', 'account'];
+            const idx = screenNames.indexOf(name);
+            if (idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
+
+            // Load data when switching
+            if (name === 'tickets') loadTickets();
+            if (name === 'food') loadFoodItems();
+        }
+
+        // ===== POSTER GENERATOR =====
+        function generatePosterSVG(movieId, title, genre) {
+            const gradients = {
+                'movie-001': ['#FF6B35', '#FF2E63', '#8B0000'],
+                'movie-002': ['#1A1A2E', '#16213E', '#0F3460'],
+                'movie-003': ['#FF9A9E', '#FECFEF', '#A18CD1'],
+                'movie-004': ['#F7971E', '#FFD200', '#FF6B35'],
+                'movie-005': ['#0077B6', '#00B4D8', '#90E0EF'],
+                'movie-006': ['#2D1B69', '#6C3CE1', '#A855F7']
+            };
+            const colors = gradients[movieId] || ['#6C3CE1', '#2D1B69', '#FF6B35'];
+            
+            const icons = {
+                'Action': '<path d="M35 45 L50 25 L65 45 L60 45 L60 70 L40 70 L40 45 Z" fill="rgba(255,255,255,0.3)"/><circle cx="50" cy="18" r="7" fill="rgba(255,255,255,0.3)"/>',
+                'Horror': '<circle cx="50" cy="40" r="20" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/><circle cx="43" cy="37" r="3" fill="rgba(255,255,255,0.3)"/><circle cx="57" cy="37" r="3" fill="rgba(255,255,255,0.3)"/><path d="M40 50 Q50 58 60 50" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>',
+                'Romance': '<path d="M50 65 L30 45 A14 14 0 0 1 50 32 A14 14 0 0 1 70 45 Z" fill="rgba(255,255,255,0.25)"/>',
+                'Adventure': '<path d="M50 20 L65 60 L35 60 Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/><circle cx="50" cy="45" r="8" fill="rgba(255,255,255,0.2)"/>',
+                'Drama': '<circle cx="50" cy="40" r="22" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/><path d="M38 45 Q44 55 50 45 Q56 35 62 45" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>'
+            };
+            const icon = icons[genre] || icons['Action'];
+            
+            return `<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad-${movieId}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:${colors[0]}"/>
+                        <stop offset="50%" style="stop-color:${colors[1]}"/>
+                        <stop offset="100%" style="stop-color:${colors[2]}"/>
+                    </linearGradient>
+                </defs>
+                <rect width="100" height="130" rx="8" fill="url(#grad-${movieId})"/>
+                ${icon}
+                <text x="50" y="90" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="bold" font-family="system-ui">${escapeHTML(title.length > 14 ? title.substring(0, 12) + '..' : title)}</text>
+                <text x="50" y="105" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="6" font-family="system-ui">${escapeHTML(genre)}</text>
+            </svg>`;
+        }
+
+        function generateFoodIcon(category, name) {
+            const colors = {
+                'snacks': { bg: '#FFF3E0', icon: '#FF6B35' },
+                'beverages': { bg: '#E3F2FD', icon: '#1976D2' },
+                'combos': { bg: '#F3E5F5', icon: '#6C3CE1' }
+            };
+            const c = colors[category] || colors['snacks'];
+            
+            let iconPath = '';
+            if (name.includes('Popcorn')) {
+                iconPath = '<circle cx="30" cy="22" r="6" fill="' + c.icon + '" opacity="0.8"/><circle cx="22" cy="28" r="5" fill="' + c.icon + '" opacity="0.7"/><circle cx="38" cy="28" r="5" fill="' + c.icon + '" opacity="0.7"/><circle cx="26" cy="32" r="5" fill="' + c.icon + '" opacity="0.6"/><circle cx="34" cy="32" r="5" fill="' + c.icon + '" opacity="0.6"/><path d="M20 35 L22 50 L38 50 L40 35" fill="' + c.icon + '" opacity="0.9"/>';
+            } else if (name.includes('Cola') || name.includes('Water')) {
+                iconPath = '<rect x="23" y="18" width="14" height="30" rx="3" fill="' + c.icon + '" opacity="0.8"/><rect x="21" y="16" width="18" height="5" rx="2" fill="' + c.icon + '"/><ellipse cx="30" cy="48" rx="7" ry="2" fill="' + c.icon + '" opacity="0.3"/>';
+            } else if (name.includes('Fries')) {
+                iconPath = '<rect x="22" y="30" width="16" height="18" rx="2" fill="' + c.icon + '" opacity="0.8"/><rect x="24" y="15" width="2" height="18" rx="1" fill="' + c.icon + '"/><rect x="28" y="12" width="2" height="20" rx="1" fill="' + c.icon + '"/><rect x="32" y="14" width="2" height="18" rx="1" fill="' + c.icon + '"/><rect x="36" y="17" width="2" height="15" rx="1" fill="' + c.icon + '" opacity="0.7"/>';
+            } else if (name.includes('Nachos')) {
+                iconPath = '<path d="M18 45 L30 20 L42 45 Z" fill="' + c.icon + '" opacity="0.7"/><path d="M22 45 L34 22 L46 45 Z" fill="' + c.icon + '" opacity="0.5"/><circle cx="30" cy="38" r="4" fill="' + c.icon + '" opacity="0.9"/>';
+            } else {
+                iconPath = '<rect x="18" y="20" width="24" height="24" rx="4" fill="' + c.icon + '" opacity="0.8"/><circle cx="30" cy="32" r="6" fill="white" opacity="0.4"/>';
+            }
+            
+            return `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="30" cy="30" r="30" fill="${c.bg}"/>
+                ${iconPath}
+            </svg>`;
+        }
+
+        // ===== MOVIES =====
+        async function loadMovies() {
+            try {
+                const res = await fetch('/api/movies');
+                movies = await res.json();
+                renderMovies();
+            } catch (err) {
+                console.error('Failed to load movies:', err);
+                document.getElementById('now-playing-list').innerHTML = '<p style="padding:20px;color:var(--text-muted)">Failed to load movies</p>';
+            }
+        }
+
+        function renderMovies() {
+            const nowPlaying = movies.filter(m => m.status === 'now_showing');
+            const comingSoon = movies.filter(m => m.status === 'coming_soon');
+
+            document.getElementById('now-playing-list').innerHTML = nowPlaying.map(m => `
+                <div class="movie-card" onclick="openBooking('${escapeHTML(m.id)}')">
+                    <div class="movie-poster">${generatePosterSVG(m.id, m.title, m.genre)}</div>
+                    <div class="movie-info">
+                        <div class="movie-title">${escapeHTML(m.title)}</div>
+                        <div class="movie-meta">${escapeHTML(m.language)} &bull; ${escapeHTML(m.genre)}</div>
+                        <div class="movie-rating">
+                            <svg class="star-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span class="rating-text">${escapeHTML(String(m.rating))}/10</span>
+                        </div>
+                        <button class="book-btn" onclick="event.stopPropagation(); openBooking('${escapeHTML(m.id)}')">Book Now</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('coming-soon-list').innerHTML = comingSoon.map(m => `
+                <div class="movie-card">
+                    <div class="movie-poster">${generatePosterSVG(m.id, m.title, m.genre)}</div>
+                    <div class="movie-info">
+                        <div class="movie-title">${escapeHTML(m.title)}</div>
+                        <div class="movie-meta">${escapeHTML(m.language)} &bull; ${escapeHTML(m.genre)}</div>
+                        <div class="movie-rating">
+                            <svg class="star-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span class="rating-text">${escapeHTML(String(m.rating))}/10</span>
+                        </div>
+                        <button class="notify-btn" onclick="event.stopPropagation(); alert('You will be notified when ' + escapeHTML('${m.title.replace(/'/g, "\\'")}') + ' is available!')">Notify</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ===== BOOKING FLOW =====
+        function openBooking(movieId) {
+            selectedMovie = movies.find(m => m.id === movieId);
+            if (!selectedMovie) return;
+            selectedDate = null;
+            selectedShowtime = null;
+            selectedSeats = [];
+            currentBookingStep = 'detail';
+            renderBookingDetail();
+            document.getElementById('booking-overlay').classList.add('active');
+        }
+
+        function closeBooking() {
+            document.getElementById('booking-overlay').classList.remove('active');
+            selectedMovie = null;
+            selectedDate = null;
+            selectedShowtime = null;
+            selectedSeats = [];
+        }
+
+        function renderBookingDetail() {
+            const m = selectedMovie;
+            // Generate dates for next 7 days
+            const dates = [];
+            const today = new Date();
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() + i);
+                dates.push(d);
+            }
+
+            const content = `
+                <div class="booking-header">
+                    <button class="back-btn" onclick="closeBooking()">
+                        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <span class="booking-title">Movie Details</span>
+                </div>
+                <div class="movie-detail-poster">${generatePosterSVG(m.id, m.title, m.genre)}</div>
+                <div class="movie-detail-info">
+                    <div class="movie-detail-title">${escapeHTML(m.title)}</div>
+                    <div class="movie-detail-meta">
+                        <span class="meta-tag">${escapeHTML(m.language)}</span>
+                        <span class="meta-tag">${escapeHTML(m.genre)}</span>
+                        <span class="meta-tag">${escapeHTML(String(m.duration))} min</span>
+                        <span class="meta-tag">Rating: ${escapeHTML(String(m.rating))}/10</span>
+                    </div>
+                    <p class="movie-detail-desc">${escapeHTML(m.description)}</p>
+                    <p class="movie-detail-cast"><strong>Cast:</strong> ${escapeHTML(m.cast.join(', '))}</p>
+                    <p class="movie-detail-cast"><strong>Director:</strong> ${escapeHTML(m.director)}</p>
+                </div>
+                <div class="date-selector">
+                    <div class="date-selector-title">Select Date</div>
+                    <div class="date-scroll">
+                        ${dates.map((d, i) => {
+                            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            const dateStr = d.toISOString().split('T')[0];
+                            return `<div class="date-item ${i === 0 ? 'active' : ''}" onclick="selectDate('${dateStr}', this)" data-date="${dateStr}">
+                                <div class="date-day">${dayNames[d.getDay()]}</div>
+                                <div class="date-num">${d.getDate()}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+                <div class="time-slots" id="time-slots-section">
+                    <div class="time-slots-title">Select Time</div>
+                    <div class="time-grid" id="time-grid">
+                        <p style="color:var(--text-muted);font-size:13px;">Select a date to see available times</p>
+                    </div>
+                </div>
+                <button class="confirm-btn" id="btn-select-seats" onclick="goToSeatSelection()" disabled>Select Seats</button>
+            `;
+            document.getElementById('booking-content').innerHTML = content;
+            
+            // Auto-select first date
+            const firstDate = dates[0].toISOString().split('T')[0];
+            selectDate(firstDate, document.querySelector('.date-item'));
+        }
+
+        async function selectDate(dateStr, el) {
+            selectedDate = dateStr;
+            selectedShowtime = null;
+            
+            document.querySelectorAll('.date-item').forEach(d => d.classList.remove('active'));
+            if (el) el.classList.add('active');
+
+            // Fetch showtimes for this movie and date
+            try {
+                const res = await fetch(`/api/showtimes?movieId=${selectedMovie.id}&date=${dateStr}`);
+                const data = await res.json();
+                showtimes = data;
+                renderTimeSlots();
+            } catch (err) {
+                console.error('Failed to load showtimes:', err);
+                document.getElementById('time-grid').innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No shows available</p>';
+            }
+        }
+
+        function renderTimeSlots() {
+            const grid = document.getElementById('time-grid');
+            if (showtimes.length === 0) {
+                grid.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No shows available for this date</p>';
+                return;
+            }
+            grid.innerHTML = showtimes.map(s => `
+                <div class="time-slot" data-showtime-id="${escapeHTML(s.id)}" onclick="selectTimeSlot(this.dataset.showtimeId, this)">
+                    <div class="time-text">${escapeHTML(s.time)}</div>
+                    <div class="time-cinema">${escapeHTML(s.cinema)} - ${escapeHTML(s.screen)}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectTimeSlot(showtimeId, el) {
+            selectedShowtime = showtimes.find(s => s.id === showtimeId);
+            document.querySelectorAll('.time-slot').forEach(t => t.classList.remove('active'));
+            if (el) el.classList.add('active');
+            document.getElementById('btn-select-seats').disabled = false;
+        }
+
+        function goToSeatSelection() {
+            if (!selectedShowtime) return;
+            currentBookingStep = 'seats';
+            renderSeatSelection();
+        }
+
+        function renderSeatSelection() {
+            const s = selectedShowtime;
+            const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+            const cols = 10;
+            const bookedSeats = s.bookedSeats || [];
+
+            let seatGridHTML = '';
+            rows.forEach(row => {
+                let rowHTML = `<div class="seat-row"><span class="seat-row-label">${row}</span>`;
+                for (let c = 1; c <= cols; c++) {
+                    const seatId = `${row}${c}`;
+                    const isBooked = bookedSeats.includes(seatId);
+                    const isSelected = selectedSeats.includes(seatId);
+                    let cls = 'seat';
+                    if (isBooked) cls += ' booked';
+                    else if (isSelected) cls += ' selected';
+                    rowHTML += `<div class="${cls}" onclick="${isBooked ? '' : `toggleSeat('${seatId}')`}" data-seat="${seatId}">${c}</div>`;
+                }
+                rowHTML += `<span class="seat-row-label">${row}</span></div>`;
+                seatGridHTML += rowHTML;
+            });
+
+            const price = s.price ? (s.price.standard || s.price.normal || 250) : 250;
+            const total = selectedSeats.length * price;
+
+            const content = `
+                <div class="booking-header">
+                    <button class="back-btn" onclick="renderBookingDetail()">
+                        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <span class="booking-title">Select Seats</span>
+                </div>
+                <div class="seat-section">
+                    <div class="screen-indicator">
+                        <span class="screen-label">SCREEN</span>
+                    </div>
+                    <div class="seat-grid">${seatGridHTML}</div>
+                    <div class="seat-legend">
+                        <div class="legend-item"><div class="legend-box legend-available"></div>Available</div>
+                        <div class="legend-item"><div class="legend-box legend-selected"></div>Selected</div>
+                        <div class="legend-item"><div class="legend-box legend-booked"></div>Booked</div>
+                    </div>
+                </div>
+                <div class="price-summary" id="price-summary">
+                    <div class="price-row">
+                        <span>Movie</span>
+                        <span>${escapeHTML(selectedMovie.title)}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Date & Time</span>
+                        <span>${escapeHTML(selectedDate)} ${escapeHTML(s.time)}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Seats (${selectedSeats.length})</span>
+                        <span>${escapeHTML(selectedSeats.join(', ') || 'None')}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Price per seat</span>
+                        <span>$${price.toFixed(2)}</span>
+                    </div>
+                    <div class="price-row total">
+                        <span>Total</span>
+                        <span>$${total.toFixed(2)}</span>
+                    </div>
+                </div>
+                <button class="confirm-btn" id="btn-confirm-booking" onclick="goToBookingForm()" ${selectedSeats.length === 0 ? 'disabled' : ''}>Continue to Booking</button>
+            `;
+            document.getElementById('booking-content').innerHTML = content;
+        }
+
+        function toggleSeat(seatId) {
+            const idx = selectedSeats.indexOf(seatId);
+            if (idx >= 0) {
+                selectedSeats.splice(idx, 1);
+            } else {
+                if (selectedSeats.length >= 10) {
+                    alert('Maximum 10 seats can be selected');
+                    return;
+                }
+                selectedSeats.push(seatId);
+            }
+            renderSeatSelection();
+        }
+
+        function goToBookingForm() {
+            if (selectedSeats.length === 0) return;
+            currentBookingStep = 'form';
+            renderBookingForm();
+        }
+
+        function renderBookingForm() {
+            const s = selectedShowtime;
+            const price = s.price ? (s.price.standard || s.price.normal || 250) : 250;
+            const total = selectedSeats.length * price;
+
+            const content = `
+                <div class="booking-header">
+                    <button class="back-btn" onclick="renderSeatSelection()">
+                        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <span class="booking-title">Confirm Booking</span>
+                </div>
+                <div class="price-summary" style="margin-top:20px">
+                    <div class="price-row">
+                        <span>Movie</span>
+                        <span>${escapeHTML(selectedMovie.title)}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Cinema</span>
+                        <span>${escapeHTML(s.cinema)}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Date & Time</span>
+                        <span>${escapeHTML(selectedDate)} at ${escapeHTML(s.time)}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>Seats</span>
+                        <span>${escapeHTML(selectedSeats.join(', '))}</span>
+                    </div>
+                    <div class="price-row total">
+                        <span>Total</span>
+                        <span>$${total.toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="booking-form">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input class="form-input" type="text" id="booking-name" value="Andrew Ainsely" placeholder="Enter your name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input class="form-input" type="tel" id="booking-phone" value="${escapeHTML(getStoredPhone())}" placeholder="Enter phone number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input class="form-input" type="email" id="booking-email" value="andrew@email.com" placeholder="Enter email address">
+                    </div>
+                </div>
+                <button class="confirm-btn" onclick="submitBooking()">Confirm & Pay $${total.toFixed(2)}</button>
+            `;
+            document.getElementById('booking-content').innerHTML = content;
+        }
+
+        async function submitBooking() {
+            const name = document.getElementById('booking-name').value.trim();
+            const phone = document.getElementById('booking-phone').value.trim();
+            const email = document.getElementById('booking-email').value.trim();
+
+            if (!name || !phone) {
+                alert('Please enter your name and phone number');
+                return;
+            }
+
+            // Store phone number for future ticket lookups
+            setStoredPhone(phone);
+
+            const body = {
+                showtimeId: selectedShowtime.id,
+                seats: selectedSeats,
+                name: name,
+                phone: phone,
+                email: email
+            };
+
+            try {
+                const res = await fetch('/api/bookings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    renderBookingSuccess(data);
+                } else {
+                    const err = await res.json();
+                    alert('Booking failed: ' + (err.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error. Please try again.');
+                console.error('Booking error:', err);
+            }
+        }
+
+        function renderBookingSuccess(booking) {
+            currentBookingStep = 'success';
+            const s = selectedShowtime;
+            const price = s.price ? (s.price.standard || s.price.normal || 250) : 250;
+            const total = selectedSeats.length * price;
+
+            const content = `
+                <div class="booking-header">
+                    <button class="back-btn" onclick="closeBooking(); switchScreen('tickets'); loadTickets();">
+                        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                    <span class="booking-title">Booking Confirmed</span>
+                </div>
+                <div class="success-screen">
+                    <div class="success-icon">
+                        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h2 class="success-title">Booking Successful!</h2>
+                    <p class="success-sub">Your tickets have been booked successfully</p>
+                    <div class="success-ticket">
+                        <div class="success-ticket-row">
+                            <span class="success-ticket-label">Movie</span>
+                            <span class="success-ticket-value">${escapeHTML(selectedMovie.title)}</span>
+                        </div>
+                        <div class="success-ticket-row">
+                            <span class="success-ticket-label">Cinema</span>
+                            <span class="success-ticket-value">${escapeHTML(s.cinema)}</span>
+                        </div>
+                        <div class="success-ticket-row">
+                            <span class="success-ticket-label">Date</span>
+                            <span class="success-ticket-value">${selectedDate}</span>
+                        </div>
+                        <div class="success-ticket-row">
+                            <span class="success-ticket-label">Time</span>
+                            <span class="success-ticket-value">${escapeHTML(s.time)} - ${escapeHTML(s.endTime || '')}</span>
+                        </div>
+                        <div class="success-ticket-row">
+                            <span class="success-ticket-label">Seats</span>
+                            <span class="success-ticket-value">${selectedSeats.join(', ')}</span>
+                        </div>
+                        <div class="success-ticket-row">
+                            <span class="success-ticket-label">Total Paid</span>
+                            <span class="success-ticket-value">$${total.toFixed(2)}</span>
+                        </div>
+                        <div class="success-id">${booking.id || booking.bookingId || 'BK-CONFIRMED'}</div>
+                    </div>
+                    <button class="done-btn" onclick="closeBooking(); switchScreen('tickets'); loadTickets();">View My Tickets</button>
+                </div>
+            `;
+            document.getElementById('booking-content').innerHTML = content;
+        }
+
+        // ===== CINEMAS =====
+        async function viewCinemaShows(cinemaName) {
+            document.getElementById('cinemas-list').style.display = 'none';
+            document.getElementById('cinema-shows-container').style.display = 'block';
+            document.getElementById('cinema-shows-title').textContent = cinemaName;
+            
+            try {
+                const res = await fetch('/api/showtimes');
+                const allShows = await res.json();
+                const cinemaShows = allShows.filter(s => s.cinema === cinemaName);
+                
+                // Group by movie
+                const grouped = {};
+                cinemaShows.forEach(s => {
+                    const movie = movies.find(m => m.id === s.movieId);
+                    if (!movie) return;
+                    if (!grouped[movie.id]) {
+                        grouped[movie.id] = { movie: movie, shows: [] };
+                    }
+                    grouped[movie.id].shows.push(s);
+                });
+
+                const listEl = document.getElementById('cinema-shows-list');
+                if (Object.keys(grouped).length === 0) {
+                    listEl.innerHTML = '<div class="empty-state"><p>No shows available at this cinema</p></div>';
+                    return;
+                }
+
+                listEl.innerHTML = Object.values(grouped).map(g => `
+                    <div class="cinema-show-movie">
+                        <div class="cinema-show-title">${escapeHTML(g.movie.title)} (${escapeHTML(g.movie.language)})</div>
+                        <div class="cinema-show-times">
+                            ${g.shows.map(s => `<div class="cinema-show-time" onclick="openBookingFromCinema('${escapeHTML(g.movie.id)}', '${escapeHTML(s.id)}')">${escapeHTML(s.time)} - ${escapeHTML(s.date)}</div>`).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load cinema shows:', err);
+            }
+        }
+
+        function closeCinemaShows() {
+            document.getElementById('cinemas-list').style.display = 'block';
+            document.getElementById('cinema-shows-container').style.display = 'none';
+        }
+
+        function openBookingFromCinema(movieId, showtimeId) {
+            selectedMovie = movies.find(m => m.id === movieId);
+            if (!selectedMovie) return;
+            // Open booking and pre-select the showtime
+            openBooking(movieId);
+        }
+
+        // ===== FOOD =====
+        async function loadFoodItems() {
+            try {
+                const res = await fetch('/api/food-items');
+                foodItems = await res.json();
+                renderFoodItems();
+            } catch (err) {
+                console.error('Failed to load food items:', err);
+            }
+        }
+
+        function renderFoodItems() {
+            const popular = foodItems.filter(f => f.category === 'snacks' || f.category === 'combos');
+            const beverages = foodItems.filter(f => f.category === 'beverages');
+
+            document.getElementById('food-popular-list').innerHTML = popular.map(f => `
+                <div class="food-card">
+                    <div class="food-icon">${generateFoodIcon(f.category, f.name)}</div>
+                    <div class="food-name">${escapeHTML(f.name)}</div>
+                    <div class="food-price">$${escapeHTML(f.price.toFixed(2))}</div>
+                    ${renderFoodControl(f)}
+                </div>
+            `).join('');
+
+            document.getElementById('food-beverages-list').innerHTML = beverages.map(f => `
+                <div class="food-card">
+                    <div class="food-icon">${generateFoodIcon(f.category, f.name)}</div>
+                    <div class="food-name">${escapeHTML(f.name)}</div>
+                    <div class="food-price">$${escapeHTML(f.price.toFixed(2))}</div>
+                    ${renderFoodControl(f)}
+                </div>
+            `).join('');
+
+            updateCartUI();
+        }
+
+        function renderFoodControl(item) {
+            const qty = cart[item.id] || 0;
+            if (qty === 0) {
+                return `<button class="food-add-btn" onclick="addToCart('${item.id}')">+</button>`;
+            }
+            return `<div class="food-qty-control">
+                <button class="food-qty-btn" onclick="removeFromCart('${item.id}')">-</button>
+                <span class="food-qty-num">${qty}</span>
+                <button class="food-qty-btn" onclick="addToCart('${item.id}')">+</button>
+            </div>`;
+        }
+
+        function addToCart(itemId) {
+            cart[itemId] = (cart[itemId] || 0) + 1;
+            renderFoodItems();
+        }
+
+        function removeFromCart(itemId) {
+            if (cart[itemId]) {
+                cart[itemId]--;
+                if (cart[itemId] <= 0) delete cart[itemId];
+            }
+            renderFoodItems();
+        }
+
+        function updateCartUI() {
+            const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
+            const totalPrice = Object.entries(cart).reduce((sum, [id, qty]) => {
+                const item = foodItems.find(f => f.id === id);
+                return sum + (item ? item.price * qty : 0);
+            }, 0);
+
+            const cartEl = document.getElementById('cart-floating');
+            if (totalItems > 0) {
+                cartEl.classList.add('visible');
+                document.getElementById('cart-count').textContent = totalItems;
+                document.getElementById('cart-total').textContent = '$' + totalPrice.toFixed(2);
+            } else {
+                cartEl.classList.remove('visible');
+            }
+        }
+
+        // ===== TICKETS =====
+        async function loadTickets() {
+            const phone = getStoredPhone();
+            const listEl = document.getElementById('tickets-list');
+            
+            if (!phone) {
+                // Show phone input prompt
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <p>Enter your phone number to view tickets</p>
+                        <div style="margin-top:16px;display:flex;gap:8px;align-items:center;justify-content:center;">
+                            <input type="tel" id="phone-input" placeholder="Enter phone number" style="padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;width:180px;">
+                            <button onclick="savePhoneAndLoad()" style="padding:10px 18px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">Go</button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/bookings?phone=' + encodeURIComponent(phone));
+                const bookings = await res.json();
+                filterAndRenderTickets(bookings);
+            } catch (err) {
+                console.error('Failed to load tickets:', err);
+                filterAndRenderTickets([]);
+            }
+        }
+
+        function savePhoneAndLoad() {
+            const input = document.getElementById('phone-input');
+            if (input && input.value.trim()) {
+                setStoredPhone(input.value.trim());
+                loadTickets();
+            }
+        }
+
+        function filterAndRenderTickets(bookings) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let filtered = bookings;
+
+            // Filter by tab
+            if (currentTicketTab === 'upcoming') {
+                filtered = bookings.filter(b => {
+                    if (b.status === 'cancelled') return false;
+                    const bookingDate = new Date(b.date);
+                    bookingDate.setHours(0, 0, 0, 0);
+                    return bookingDate >= today;
+                });
+            } else if (currentTicketTab === 'passed') {
+                filtered = bookings.filter(b => {
+                    if (b.status === 'cancelled') return false;
+                    const bookingDate = new Date(b.date);
+                    bookingDate.setHours(0, 0, 0, 0);
+                    return bookingDate < today;
+                });
+            } else if (currentTicketTab === 'cancelled') {
+                filtered = bookings.filter(b => b.status === 'cancelled');
+            }
+
+            // Filter by pill type
+            if (currentTicketFilter === 'Movie') {
+                filtered = filtered.filter(b => b.movieId && !b.foodOnly);
+            } else if (currentTicketFilter === 'Food') {
+                filtered = filtered.filter(b => b.foodOnly || (b.foodOrders && b.foodOrders.length > 0));
+            } else if (currentTicketFilter === 'Event') {
+                filtered = filtered.filter(b => b.type === 'event');
+            }
+            // 'All' shows everything
+
+            renderTickets(filtered);
+        }
+
+        function renderTickets(bookings) {
+            const listEl = document.getElementById('tickets-list');
+            
+            if (!bookings || bookings.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>
+                        <p>No ${escapeHTML(currentTicketTab)} tickets yet. Book a movie to see your tickets here!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = bookings.map(b => {
+                const movie = movies.find(m => m.id === b.movieId);
+                const movieTitle = movie ? movie.title : (b.movieTitle || 'Movie');
+                const movieGenre = movie ? movie.genre : 'Action';
+                const movieId = movie ? movie.id : 'movie-001';
+                const dateFormatted = b.date ? formatDate(b.date) : 'N/A';
+                const time = b.time || '';
+                const cinema = b.cinema || '';
+
+                return `
+                    <div class="ticket-card">
+                        <div class="ticket-stripe"></div>
+                        <div class="ticket-poster">${generatePosterSVG(movieId, movieTitle, movieGenre)}</div>
+                        <div class="ticket-details">
+                            <div class="ticket-movie-title">${escapeHTML(movieTitle)}</div>
+                            <div class="ticket-datetime">${escapeHTML(dateFormatted)} &bull; ${escapeHTML(time)}</div>
+                            <div class="ticket-cinema">${escapeHTML(cinema)}</div>
+                            <div class="ticket-actions">
+                                <div class="ticket-action-icon">
+                                    <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                                </div>
+                                <div class="ticket-action-icon">
+                                    <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        }
+
+        function switchTicketTab(tab) {
+            document.querySelectorAll('.tabs-bar .tab-item').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            currentTicketTab = tab;
+            loadTickets();
+        }
+
+        // ===== FILTER PILLS =====
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('pill')) {
+                const parent = e.target.parentElement;
+                parent.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+                e.target.classList.add('active');
+                // Apply filter for ticket pills
+                if (parent.closest('#screen-tickets')) {
+                    currentTicketFilter = e.target.textContent.trim();
+                    loadTickets();
+                }
+            }
+        });
+
+        // ===== CINEMA SEARCH =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('cinema-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const query = this.value.toLowerCase();
+                    document.querySelectorAll('.cinema-card').forEach(card => {
+                        const name = card.querySelector('.cinema-name').textContent.toLowerCase();
+                        card.style.display = name.includes(query) ? 'block' : 'none';
+                    });
+                });
+            }
+        });
+
+        // ===== INITIALIZE =====
+        loadMovies();
+        loadFoodItems();
+    </script>
+</body>
+</html>

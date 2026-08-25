@@ -1,0 +1,295 @@
+[
+  {
+    "id": "show-001",
+    "movieId": "movie-001",
+    "screen": "Screen 1",
+    "date": "2024-12-22",
+    "time": "10:00",
+    "endTime": "12:49",
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
+    "totalSeats": 120,
+    "bookedSeats": [
+      "F7",
+      "F8",
+      "G3",
+      "G4"
+    ],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-002",
+    "movieId": "movie-001",
+    "screen": "Screen 1",
+    "date": "2024-12-22",
+    "time": "14:00",
+    "endTime": "16:49",
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
+    "totalSeats": 120,
+    "bookedSeats": [],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-003",
+    "movieId": "movie-001",
+    "screen": "Screen 2",
+    "date": "2024-12-22",
+    "time": "17:30",
+    "endTime": "20:19",
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
+    "totalSeats": 150,
+    "bookedSeats": [],
+    "cinema": "INOX"
+  },
+  {
+    "id": "show-004",
+    "movieId": "movie-001",
+    "screen": "Screen 1",
+    "date": "2024-12-23",
+    "time": "10:00",
+    "endTime": "12:49",
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
+    "totalSeats": 120,
+    "bookedSeats": [],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-005",
+    "movieId": "movie-001",
+    "screen": "Screen 3",
+    "date": "2024-12-24",
+    "time": "20:00",
+    "endTime": "22:49",
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
+    "totalSeats": 100,
+    "bookedSeats": [],
+    "cinema": "Cinepolis"
+  },
+  {
+    "id": "show-006",
+    "movieId": "movie-002",
+    "screen": "Screen 2",
+    "date": "2024-12-22",
+    "time": "11:00",
+    "endTime": "12:50",
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
+    "totalSeats": 100,
+    "bookedSeats": [],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-007",
+    "movieId": "movie-002",
+    "screen": "Screen 2",
+    "date": "2024-12-22",
+    "time": "15:00",
+    "endTime": "16:50",
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
+    "totalSeats": 100,
+    "bookedSeats": [],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-008",
+    "movieId": "movie-002",
+    "screen": "Screen 1",
+    "date": "2024-12-23",
+    "time": "19:00",
+    "endTime": "20:50",
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
+    "totalSeats": 120,
+    "bookedSeats": [],
+    "cinema": "INOX"
+  },
+  {
+    "id": "show-009",
+    "movieId": "movie-002",
+    "screen": "Screen 3",
+    "date": "2024-12-24",
+    "time": "21:30",
+    "endTime": "23:20",
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
+    "totalSeats": 100,
+    "bookedSeats": [],
+    "cinema": "Cinepolis"
+  },
+  {
+    "id": "show-010",
+    "movieId": "movie-003",
+    "screen": "Screen 3",
+    "date": "2024-12-22",
+    "time": "12:00",
+    "endTime": "14:15",
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
+    "totalSeats": 80,
+    "bookedSeats": [],
+    "cinema": "Rajhans Cinema"
+  },
+  {
+    "id": "show-011",
+    "movieId": "movie-003",
+    "screen": "Screen 3",
+    "date": "2024-12-22",
+    "time": "18:00",
+    "endTime": "20:15",
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
+    "totalSeats": 80,
+    "bookedSeats": [],
+    "cinema": "Rajhans Cinema"
+  },
+  {
+    "id": "show-012",
+    "movieId": "movie-003",
+    "screen": "Screen 2",
+    "date": "2024-12-23",
+    "time": "15:00",
+    "endTime": "17:15",
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
+    "totalSeats": 80,
+    "bookedSeats": [],
+    "cinema": "Rajhans Cinema"
+  },
+  {
+    "id": "show-013",
+    "movieId": "movie-006",
+    "screen": "Screen 1",
+    "date": "2024-12-22",
+    "time": "13:00",
+    "endTime": "15:27",
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
+    "totalSeats": 120,
+    "bookedSeats": [],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-014",
+    "movieId": "movie-006",
+    "screen": "Screen 2",
+    "date": "2024-12-23",
+    "time": "10:00",
+    "endTime": "12:27",
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
+    "totalSeats": 100,
+    "bookedSeats": [],
+    "cinema": "INOX"
+  },
+  {
+    "id": "show-015",
+    "movieId": "movie-006",
+    "screen": "Screen 1",
+    "date": "2024-12-25",
+    "time": "16:00",
+    "endTime": "18:27",
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
+    "totalSeats": 120,
+    "bookedSeats": [],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-016",
+    "movieId": "movie-001",
+    "screen": "Screen 1",
+    "date": "2024-12-25",
+    "time": "10:00",
+    "endTime": "12:49",
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
+    "totalSeats": 120,
+    "bookedSeats": [],
+    "cinema": "PVR Cinemas"
+  },
+  {
+    "id": "show-017",
+    "movieId": "movie-002",
+    "screen": "Screen 2",
+    "date": "2024-12-25",
+    "time": "14:00",
+    "endTime": "15:50",
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
+    "totalSeats": 100,
+    "bookedSeats": [],
+    "cinema": "INOX"
+  },
+  {
+    "id": "show-018",
+    "movieId": "movie-003",
+    "screen": "Screen 3",
+    "date": "2024-12-26",
+    "time": "11:00",
+    "endTime": "13:15",
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
+    "totalSeats": 80,
+    "bookedSeats": [],
+    "cinema": "Rajhans Cinema"
+  }
+]

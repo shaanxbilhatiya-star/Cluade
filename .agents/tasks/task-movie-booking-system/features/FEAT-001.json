@@ -1,0 +1,37 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Build complete movie booking system backend with Node.js built-in http module (zero external dependencies) and all API endpoints for movies, showtimes, bookings, food orders, and user accounts. Include file-based JSON storage with seed data.",
+  "status": "completed",
+  "steps": [
+    "Create movie-booking/ directory structure: server.js, data/, public/",
+    "Implement server.js using Node.js built-in http module with: static file serving for public/ directory, JSON body parsing, URL routing, CORS headers",
+    "Implement API routes: GET/POST/PUT/DELETE /api/movies, GET/POST/PUT/DELETE /api/showtimes, GET/POST/DELETE /api/bookings, GET/POST /api/food-orders, GET/PUT /api/users/:id, GET /api/stats",
+    "Create data/movies.json with seed data including Bollywood movies like Jawan plus Hollywood like The Nun II with poster placeholder URLs using SVG data URIs",
+    "Create data/showtimes.json with sample showtimes for the next 7 days",
+    "Create data/bookings.json initialized as empty array",
+    "Create data/food-items.json with items: Jumbo Popcorn $9.00, Coca Cola $5.00, French Fries $4.00, and more",
+    "Create data/users.json with a sample user Andrew Ainsely",
+    "Create package.json with no dependencies, just metadata and start script",
+    "Create README.md with setup and usage instructions",
+    "Implement UUID generation using Node.js crypto module instead of uuid package",
+    "Add proper error handling and input validation on all endpoints"
+  ],
+  "acceptance_criteria": [
+    "Server starts with `unset NODE_OPTIONS && node movie-booking/server.js` without errors",
+    "GET /api/movies returns array of movie objects with all required fields (id, title, genre, duration, rating, language, poster, status)",
+    "GET /api/showtimes?movieId=X&date=Y returns filtered showtimes",
+    "POST /api/bookings creates a booking and marks seats as booked",
+    "GET /api/food-orders returns food menu items",
+    "No external npm packages are required - only Node.js built-in modules used",
+    "All data persists to JSON files in data/ directory"
+  ],
+  "verification": [
+    "Run `unset NODE_OPTIONS && cd /projects/sandbox/Cluade/movie-booking && node server.js &` then test endpoints with curl",
+    "curl http://localhost:3000/api/movies should return JSON array",
+    "curl http://localhost:3000/api/showtimes should return JSON array",
+    "curl -X POST http://localhost:3000/api/bookings with valid payload should return 201"
+  ],
+  "blocked_reason": null,
+  "findings": "Server starts successfully with `unset NODE_OPTIONS && node server.js`. All endpoints tested: GET/POST/PUT/DELETE movies, GET/POST/DELETE showtimes, GET/POST/DELETE bookings (with seat validation and cancellation), GET/POST food-orders, GET/PUT users, GET stats. CORS preflight returns 204. Static file serving works for public/ directory with SPA fallback. Data persists to JSON files. Node.js v22 requires `unset NODE_OPTIONS` before running."
+}
