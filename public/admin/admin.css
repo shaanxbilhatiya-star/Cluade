@@ -17,6 +17,12 @@
 }
 
 * { box-sizing: border-box; }
+
+/* `[hidden] { display: none }` in the UA stylesheet loses to any class that
+   sets `display` (e.g. `.modal-host { display: grid }`), which would leave the
+   hidden modal overlay on top of the page eating every click. Enforce it. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: 'Segoe UI', Roboto, -apple-system, 'Helvetica Neue', Arial, sans-serif;

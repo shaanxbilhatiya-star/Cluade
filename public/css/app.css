@@ -62,6 +62,13 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* The browser's own `[hidden] { display: none }` rule is weaker than any class
+   that sets `display`, so an element like `.sheet-host { display: flex }` stays
+   laid out even when the hidden attribute is present. For a full-screen fixed
+   overlay that means an invisible pane keeps swallowing every click and scroll.
+   Enforce it globally so `hidden` always means hidden. */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; }
 
 body {
@@ -104,7 +111,10 @@ ul { margin: 0; padding: 0; list-style: none; }
     height: min(860px, calc(100dvh - 56px));
     min-height: 0;
     border-radius: 40px;
-    overflow: hidden;
+    /* clip-path provides the visual round-corner clipping without setting
+       overflow:hidden, which would block wheel/touch scroll events from
+       reaching the inner .scroll container on desktop browsers. */
+    clip-path: inset(0 round 40px);
     box-shadow: 0 0 0 11px #26222F, 0 0 0 13px #3A3547, 0 40px 90px rgba(0, 0, 0, .6);
   }
   .desktop-note {
@@ -136,7 +146,9 @@ ul { margin: 0; padding: 0; list-style: none; }
   flex-direction: column;
   background: var(--bg);
   position: relative;
-  overflow: hidden;
+  /* DO NOT set overflow:hidden here — it blocks touch-scroll propagation to
+     the inner .scroll container on mobile browsers. The .device wrapper
+     handles clipping on desktop; on mobile there is nothing to clip. */
 }
 
 .screen {
@@ -153,11 +165,13 @@ ul { margin: 0; padding: 0; list-style: none; }
 .scroll {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: scroll;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
   padding-bottom: 24px;
-  scrollbar-width: none; /* native-app feel: no persistent scrollbar */
+  scrollbar-width: none;
 }
 .scroll::-webkit-scrollbar { display: none; }
 .scroll--nav { padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 20px); }
