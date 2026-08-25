@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" role="img" aria-label="Jumbo Popcorn (Salted)">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d5373e"/>
+      <stop offset="1" stop-color="#B3151C"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.44" r="0.5">
+      <stop offset="0" stop-color="#F5E3C0" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#F5E3C0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="420" height="420" fill="url(#fg)"/>
+  <circle cx="165" cy="373" r="68" fill="#ffffff" opacity="0.10"/>
+  <circle cx="228" cy="0" r="77" fill="#ffffff" opacity="0.04"/>
+  <circle cx="56" cy="113" r="70" fill="#ffffff" opacity="0.10"/>
+  <circle cx="399" cy="73" r="35" fill="#ffffff" opacity="0.06"/>
+  <circle cx="374" cy="5" r="90" fill="#ffffff" opacity="0.06"/>
+  <circle cx="253" cy="311" r="83" fill="#ffffff" opacity="0.06"/>
+  <circle cx="300" cy="122" r="84" fill="#ffffff" opacity="0.07"/>
+  <circle cx="84" cy="221" r="19" fill="#ffffff" opacity="0.04"/>
+  <circle cx="318" cy="100" r="83" fill="#ffffff" opacity="0.11"/>
+  <circle cx="210" cy="184.8" r="126" fill="url(#halo)"/>
+  <g transform="translate(92.4 67.2) scale(2.3520)">
+    <g>
+      <circle cx="34" cy="34" r="11" fill="#FFF8E7"/><circle cx="50" cy="26" r="12" fill="#FFFDF5"/>
+      <circle cx="66" cy="34" r="11" fill="#FFF8E7"/><circle cx="42" cy="42" r="9" fill="#FFFDF5"/>
+      <circle cx="58" cy="42" r="9" fill="#FFF3D6"/>
+      <path d="M28 46 h44 l-6 46 a4 4 0 0 1 -4 3.5 H38 a4 4 0 0 1 -4 -3.5 Z" fill="#F4F1EA"/>
+      <path d="M28 46 h8 l-4 49.5 h-5.6 Z" fill="#F5E3C0"/>
+      <path d="M44 46 h8 l-1.6 49.5 h-6.4 Z" fill="#F5E3C0"/>
+      <path d="M60 46 h8 l1.6 49.5 h-6.4 Z" fill="#F5E3C0"/>
+      <rect x="26" y="43" width="48" height="6" rx="3" fill="#FFFFFF" opacity="0.9"/>
+    </g></g>
+  <text x="210" y="382" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.95">POPCORN</text>
+  <text x="210" y="406" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffff" fill-opacity="0.6">Large</text>
+</svg>
