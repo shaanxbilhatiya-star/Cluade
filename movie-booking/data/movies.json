@@ -1,0 +1,58 @@
+[
+  {
+    "id": "movie-001",
+    "title": "Galactic Odyssey",
+    "genre": ["Sci-Fi", "Action"],
+    "duration": 148,
+    "rating": "U/A",
+    "language": "English",
+    "description": "A crew of astronauts embarks on a mission beyond the known galaxy, only to discover a civilisation that challenges everything humanity believes about existence.",
+    "poster": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&q=80",
+    "releaseDate": "2026-07-15",
+    "director": "James Vance",
+    "cast": ["Ryan Mercer", "Aisha Patel", "Tom Hale"],
+    "status": "now_showing"
+  },
+  {
+    "id": "movie-002",
+    "title": "The Silent Storm",
+    "genre": ["Thriller", "Drama"],
+    "duration": 122,
+    "rating": "A",
+    "language": "English",
+    "description": "A detective investigates a series of disappearances in a remote coastal town, uncovering secrets buried for decades beneath the surface.",
+    "poster": "https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?w=400&q=80",
+    "releaseDate": "2026-08-01",
+    "director": "Priya Sharma",
+    "cast": ["Daniel Cole", "Maya Reeves", "Victor Santos"],
+    "status": "now_showing"
+  },
+  {
+    "id": "movie-003",
+    "title": "Chasing Monsoon",
+    "genre": ["Romance", "Drama"],
+    "duration": 135,
+    "rating": "U",
+    "language": "Hindi",
+    "description": "Two strangers meet during a monsoon trek across the Western Ghats and find more than just shelter from the rain.",
+    "poster": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&q=80",
+    "releaseDate": "2026-08-20",
+    "director": "Rajan Kapoor",
+    "cast": ["Arjun Mehra", "Nidhi Bose"],
+    "status": "now_showing"
+  },
+  {
+    "id": "movie-004",
+    "title": "Iron Fable",
+    "genre": ["Action", "Fantasy"],
+    "duration": 160,
+    "rating": "U/A",
+    "language": "English",
+    "description": "A blacksmith's apprentice discovers a mythical sword that grants power — but at a cost that threatens the entire kingdom.",
+    "poster": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
+    "releaseDate": "2026-09-05",
+    "director": "Claire Donovan",
+    "cast": ["Sam Wick", "Lena Hart", "Omar Nassir"],
+    "status": "coming_soon"
+  }
+]
