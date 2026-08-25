@@ -6,9 +6,16 @@
     "date": "2024-12-22",
     "time": "10:00",
     "endTime": "12:49",
-    "price": { "standard": 250, "premium": 450, "vip": 700 },
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
     "totalSeats": 120,
-    "bookedSeats": [],
+    "bookedSeats": [
+      "F7",
+      "F8"
+    ],
     "cinema": "PVR Cinemas"
   },
   {
@@ -18,7 +25,11 @@
     "date": "2024-12-22",
     "time": "14:00",
     "endTime": "16:49",
-    "price": { "standard": 250, "premium": 450, "vip": 700 },
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
     "totalSeats": 120,
     "bookedSeats": [],
     "cinema": "PVR Cinemas"
@@ -30,7 +41,11 @@
     "date": "2024-12-22",
     "time": "17:30",
     "endTime": "20:19",
-    "price": { "standard": 300, "premium": 500, "vip": 800 },
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
     "totalSeats": 150,
     "bookedSeats": [],
     "cinema": "INOX"
@@ -42,7 +57,11 @@
     "date": "2024-12-23",
     "time": "10:00",
     "endTime": "12:49",
-    "price": { "standard": 250, "premium": 450, "vip": 700 },
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
     "totalSeats": 120,
     "bookedSeats": [],
     "cinema": "PVR Cinemas"
@@ -54,7 +73,11 @@
     "date": "2024-12-24",
     "time": "20:00",
     "endTime": "22:49",
-    "price": { "standard": 300, "premium": 500, "vip": 800 },
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
     "totalSeats": 100,
     "bookedSeats": [],
     "cinema": "Cinepolis"
@@ -66,7 +89,11 @@
     "date": "2024-12-22",
     "time": "11:00",
     "endTime": "12:50",
-    "price": { "standard": 200, "premium": 400, "vip": 600 },
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
     "totalSeats": 100,
     "bookedSeats": [],
     "cinema": "PVR Cinemas"
@@ -78,7 +105,11 @@
     "date": "2024-12-22",
     "time": "15:00",
     "endTime": "16:50",
-    "price": { "standard": 200, "premium": 400, "vip": 600 },
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
     "totalSeats": 100,
     "bookedSeats": [],
     "cinema": "PVR Cinemas"
@@ -90,7 +121,11 @@
     "date": "2024-12-23",
     "time": "19:00",
     "endTime": "20:50",
-    "price": { "standard": 250, "premium": 450, "vip": 700 },
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
     "totalSeats": 120,
     "bookedSeats": [],
     "cinema": "INOX"
@@ -102,7 +137,11 @@
     "date": "2024-12-24",
     "time": "21:30",
     "endTime": "23:20",
-    "price": { "standard": 300, "premium": 500, "vip": 800 },
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
     "totalSeats": 100,
     "bookedSeats": [],
     "cinema": "Cinepolis"
@@ -114,7 +153,11 @@
     "date": "2024-12-22",
     "time": "12:00",
     "endTime": "14:15",
-    "price": { "standard": 180, "premium": 350, "vip": 550 },
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
     "totalSeats": 80,
     "bookedSeats": [],
     "cinema": "Rajhans Cinema"
@@ -126,7 +169,11 @@
     "date": "2024-12-22",
     "time": "18:00",
     "endTime": "20:15",
-    "price": { "standard": 180, "premium": 350, "vip": 550 },
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
     "totalSeats": 80,
     "bookedSeats": [],
     "cinema": "Rajhans Cinema"
@@ -138,7 +185,11 @@
     "date": "2024-12-23",
     "time": "15:00",
     "endTime": "17:15",
-    "price": { "standard": 180, "premium": 350, "vip": 550 },
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
     "totalSeats": 80,
     "bookedSeats": [],
     "cinema": "Rajhans Cinema"
@@ -150,7 +201,11 @@
     "date": "2024-12-22",
     "time": "13:00",
     "endTime": "15:27",
-    "price": { "standard": 200, "premium": 400, "vip": 600 },
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
     "totalSeats": 120,
     "bookedSeats": [],
     "cinema": "PVR Cinemas"
@@ -162,7 +217,11 @@
     "date": "2024-12-23",
     "time": "10:00",
     "endTime": "12:27",
-    "price": { "standard": 200, "premium": 400, "vip": 600 },
+    "price": {
+      "standard": 200,
+      "premium": 400,
+      "vip": 600
+    },
     "totalSeats": 100,
     "bookedSeats": [],
     "cinema": "INOX"
@@ -174,7 +233,11 @@
     "date": "2024-12-25",
     "time": "16:00",
     "endTime": "18:27",
-    "price": { "standard": 250, "premium": 450, "vip": 700 },
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
     "totalSeats": 120,
     "bookedSeats": [],
     "cinema": "PVR Cinemas"
@@ -186,7 +249,11 @@
     "date": "2024-12-25",
     "time": "10:00",
     "endTime": "12:49",
-    "price": { "standard": 300, "premium": 500, "vip": 800 },
+    "price": {
+      "standard": 300,
+      "premium": 500,
+      "vip": 800
+    },
     "totalSeats": 120,
     "bookedSeats": [],
     "cinema": "PVR Cinemas"
@@ -198,7 +265,11 @@
     "date": "2024-12-25",
     "time": "14:00",
     "endTime": "15:50",
-    "price": { "standard": 250, "premium": 450, "vip": 700 },
+    "price": {
+      "standard": 250,
+      "premium": 450,
+      "vip": 700
+    },
     "totalSeats": 100,
     "bookedSeats": [],
     "cinema": "INOX"
@@ -210,7 +281,11 @@
     "date": "2024-12-26",
     "time": "11:00",
     "endTime": "13:15",
-    "price": { "standard": 180, "premium": 350, "vip": 550 },
+    "price": {
+      "standard": 180,
+      "premium": 350,
+      "vip": 550
+    },
     "totalSeats": 80,
     "bookedSeats": [],
     "cinema": "Rajhans Cinema"
