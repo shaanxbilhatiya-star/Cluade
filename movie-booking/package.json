@@ -1,0 +1,16 @@
+{
+  "name": "movie-booking-system",
+  "version": "1.0.0",
+  "description": "A mobile-first movie booking system built with Node.js (zero external dependencies)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["movie", "booking", "cinema", "nodejs"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "task_id": "task-movie-booking-system",
+  "task_description": "Create a complete movie booking system with Node.js backend (zero external dependencies) and mobile-first frontend UI with purple theme, 5-tab bottom navigation (Home, Cinemas, Food Order, My Tickets, Account), matching the user's mobile app design specifications.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}

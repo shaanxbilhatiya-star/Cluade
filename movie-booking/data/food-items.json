@@ -1,0 +1,56 @@
+[
+  {
+    "id": "food-001",
+    "name": "Jumbo Popcorn",
+    "price": 9.00,
+    "category": "snacks",
+    "description": "Large buttery popcorn bucket",
+    "image": "popcorn",
+    "available": true
+  },
+  {
+    "id": "food-002",
+    "name": "Coca Cola",
+    "price": 5.00,
+    "category": "beverages",
+    "description": "600ml chilled Coca Cola",
+    "image": "cola",
+    "available": true
+  },
+  {
+    "id": "food-003",
+    "name": "French Fries",
+    "price": 4.00,
+    "category": "snacks",
+    "description": "Crispy golden french fries with ketchup",
+    "image": "fries",
+    "available": true
+  },
+  {
+    "id": "food-004",
+    "name": "Nachos",
+    "price": 6.00,
+    "category": "snacks",
+    "description": "Crunchy nachos with salsa and cheese dip",
+    "image": "nachos",
+    "available": true
+  },
+  {
+    "id": "food-005",
+    "name": "Water Bottle",
+    "price": 2.00,
+    "category": "beverages",
+    "description": "500ml mineral water",
+    "image": "water",
+    "available": true
+  },
+  {
+    "id": "food-006",
+    "name": "Combo Deal",
+    "price": 15.00,
+    "category": "combos",
+    "description": "Large Popcorn + 2 Coca Cola + Nachos",
+    "image": "combo",
+    "available": true
+  }
+]
