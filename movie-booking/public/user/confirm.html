@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Booking Confirmed — CineBook</title>
+<style>
+  :root{
+    --bg:#0d0d14;--card:#161622;--card2:#1e1e2e;
+    --gold:#f5c518;--text:#f0f0f5;--muted:#8888aa;
+    --green:#22c55e;--border:rgba(255,255,255,0.07);--radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;}
+  .logo{font-size:1.4rem;font-weight:800;letter-spacing:-1px;color:var(--gold);margin-bottom:40px;}
+  .logo span{color:var(--text);}
+
+  .ticket{background:var(--card);border-radius:20px;max-width:420px;width:100%;border:1px solid var(--border);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+  .ticket-header{background:linear-gradient(135deg,#1a1430,#0d0d20);padding:28px 28px 20px;text-align:center;border-bottom:2px dashed var(--border);}
+  .success-icon{font-size:3rem;margin-bottom:12px;display:block;}
+  .ticket-header h1{font-size:1.3rem;font-weight:800;margin-bottom:6px;}
+  .ticket-id{font-size:.8rem;color:var(--muted);font-family:monospace;background:var(--card2);padding:4px 12px;border-radius:6px;display:inline-block;margin-top:8px;}
+
+  .ticket-body{padding:24px 28px;}
+  .ticket-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+  .ticket-row:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+  .ticket-row label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;display:block;}
+  .ticket-row p{font-size:.95rem;font-weight:700;}
+  .seats-display{background:var(--card2);border-radius:8px;padding:10px 14px;font-size:.85rem;font-weight:600;color:var(--gold);letter-spacing:.5px;}
+  .total-amount{font-size:1.4rem;font-weight:900;color:var(--green);}
+
+  .ticket-footer{background:var(--card2);padding:20px 28px;display:flex;gap:10px;}
+  .action-btn{flex:1;padding:11px;border-radius:10px;border:none;font-weight:700;font-size:.85rem;cursor:pointer;transition:.2s;}
+  .action-btn.primary{background:var(--gold);color:#000;}
+  .action-btn.primary:hover{background:#e6b400;}
+  .action-btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .action-btn.ghost:hover{color:var(--text);}
+
+  .loading{text-align:center;color:var(--muted);margin-top:60px;}
+</style>
+</head>
+<body>
+<div class="logo">Cine<span>Book</span></div>
+
+<div id="loading" class="loading">Loading your ticket...</div>
+
+<div class="ticket" id="ticket" style="display:none">
+  <div class="ticket-header">
+    <span class="success-icon">🎟️</span>
+    <h1>Booking Confirmed!</h1>
+    <p style="color:var(--muted);font-size:.85rem">Show this ticket at the counter</p>
+    <div class="ticket-id" id="ticketId"></div>
+  </div>
+  <div class="ticket-body">
+    <div class="ticket-row">
+      <div><label>Movie</label><p id="tMovieName" style="font-size:1.05rem"></p></div>
+    </div>
+    <div class="ticket-row">
+      <div><label>Date & Time</label><p id="tDateTime"></p></div>
+      <div style="text-align:right"><label>Screen</label><p id="tScreen"></p></div>
+    </div>
+    <div class="ticket-row">
+      <div style="width:100%"><label>Seats</label><div class="seats-display" id="tSeats"></div></div>
+    </div>
+    <div class="ticket-row">
+      <div><label>Name</label><p id="tName"></p></div>
+      <div style="text-align:right"><label>Phone</label><p id="tPhone"></p></div>
+    </div>
+    <div class="ticket-row">
+      <div><label>Total Paid</label><p class="total-amount" id="tTotal"></p></div>
+      <div style="text-align:right"><label>Status</label><p style="color:var(--green)">✓ Confirmed</p></div>
+    </div>
+  </div>
+  <div class="ticket-footer">
+    <button class="action-btn ghost" onclick="window.print()">🖨 Print</button>
+    <button class="action-btn primary" onclick="window.location.href='/'">Book Another</button>
+  </div>
+</div>
+
+<script>
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (!id) { location.href='/'; return; }
+
+  try {
+    const res = await fetch(`/api/bookings/${id}`);
+    const booking = await res.json();
+    if (booking.error) throw new Error(booking.error);
+
+    const [showRes] = await Promise.all([fetch(`/api/showtimes/${booking.showtimeId}`)]);
+    const show = await showRes.json();
+    const movieRes = await fetch(`/api/movies/${show.movieId}`);
+    const movie = await movieRes.json();
+
+    document.getElementById('ticketId').textContent = booking.id;
+    document.getElementById('tMovieName').textContent = movie.title;
+    document.getElementById('tDateTime').textContent = `${show.date} • ${show.time}`;
+    document.getElementById('tScreen').textContent = show.screen;
+    document.getElementById('tSeats').textContent = booking.seats.sort().join('  ');
+    document.getElementById('tName').textContent = booking.name;
+    document.getElementById('tPhone').textContent = booking.phone;
+    document.getElementById('tTotal').textContent = '₹' + booking.total;
+
+    document.getElementById('loading').style.display='none';
+    document.getElementById('ticket').style.display='block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML = `<p>Could not load booking. <a href="/" style="color:var(--gold)">Go home</a></p>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
