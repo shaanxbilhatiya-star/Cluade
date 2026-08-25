@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Hu ane Tu backdrop">
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#2979c0"/>
+      <stop offset="0.55" stop-color="#0F5FA6"/>
+      <stop offset="1" stop-color="#03539a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFC93C" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#FFC93C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blazeGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ffff82" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#FFC93C" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#FFC93C" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.93"/>
+    </linearGradient>
+    <filter id="clouds">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="5" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+    <feColorMatrix in="n" type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+  </filter>
+  </defs>
+  <linearGradient id="sideScrim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#000000" stop-opacity="0.85"/>
+    <stop offset="0.62" stop-color="#000000" stop-opacity="0.15"/>
+    <stop offset="1" stop-color="#000000" stop-opacity="0.45"/>
+  </linearGradient>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <circle cx="947.2" cy="144" r="256" fill="#FFC93C" opacity="0.95"/>
+  <line x1="947.2" y1="144" x2="1382.4" y2="144.0" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="1339.3" y2="332.8" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="1218.5" y2="484.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="1044.0" y2="568.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="850.4" y2="568.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="675.9" y2="484.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="555.1" y2="332.8" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="512.0" y2="144.0" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="555.1" y2="-44.8" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="675.9" y2="-196.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="850.4" y2="-280.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="1044.0" y2="-280.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="1218.5" y2="-196.3" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="947.2" y1="144" x2="1339.3" y2="-44.8" stroke="#FFC93C" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <ellipse cx="808.8" cy="396.0" rx="327.3" ry="25.2" fill="#ffffff" opacity="0.11"/>
+  <ellipse cx="490.3" cy="460.8" rx="240.0" ry="25.2" fill="#ffffff" opacity="0.15"/>
+  <ellipse cx="781.9" cy="525.6" rx="303.7" ry="25.2" fill="#ffffff" opacity="0.10"/>
+  <ellipse cx="292.8" cy="590.4" rx="411.5" ry="25.2" fill="#ffffff" opacity="0.10"/>
+  <ellipse cx="970.6" cy="655.2" rx="438.3" ry="25.2" fill="#ffffff" opacity="0.10"/>
+  <rect width="1280" height="720" fill="url(#sideScrim)"/>
+  <rect width="1280" height="720" fill="url(#scrim)" opacity="0.75"/>
+  <rect width="1280" height="720" filter="url(#grain)" opacity="0.45"/>
+  <text font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="118" font-weight="800" fill="#ffffff" letter-spacing="2"><tspan x="72" y="540">HU ANE TU</tspan></text>
+  <text x="74" y="602" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="30" fill="#ffffa0" letter-spacing="1.6">Ek lagn, anek gadbad.</text>
+  <text x="74" y="648" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="24" fill="#ffffff" fill-opacity="0.78" letter-spacing="3">COMEDY   •   ROMANCE   •   FAMILY</text>
+</svg>

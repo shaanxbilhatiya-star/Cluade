@@ -1,0 +1,16 @@
+# Runtime database — regenerated (and re-seeded) automatically on first start.
+data/
+*.tmp-*
+*.corrupt-*
+
+# Node
+node_modules/
+npm-debug.log*
+.npm
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

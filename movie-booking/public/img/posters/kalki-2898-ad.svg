@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750" role="img" aria-label="Kalki 2898 AD poster">
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#20252e"/>
+      <stop offset="0.55" stop-color="#060B14"/>
+      <stop offset="1" stop-color="#000008"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#7FA7D9" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#7FA7D9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blazeGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#c5edff" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#7FA7D9" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#7FA7D9" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.93"/>
+    </linearGradient>
+    <filter id="clouds">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="5" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+    <feColorMatrix in="n" type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+  </filter>
+  </defs>
+  <rect width="500" height="750" fill="url(#bg)"/>
+  <rect width="500" height="750" fill="#7FA7D9" opacity="0.22" filter="url(#clouds)"/>
+  <polyline points="300,75 260,255.00000000000003 315,255.00000000000003 250,465" fill="none" stroke="#F8FAFC" stroke-width="5" opacity="0.85" stroke-linejoin="round"/>
+  <ellipse cx="300" cy="262.5" rx="150" ry="165" fill="url(#glow)" opacity="0.5"/>
+  <rect width="500" height="750" fill="url(#scrim)"/>
+  <rect width="500" height="750" filter="url(#grain)" opacity="0.5"/>
+  <text text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="1.5" style="paint-order:stroke" stroke="#000000" stroke-opacity="0.35" stroke-width="1.2"><tspan x="250" y="541">KALKI 2898</tspan><tspan x="250" y="604">AD</tspan></text>
+  <text x="250" y="646" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#d9ffff" letter-spacing="1.4">The hunt begins.</text>
+  <line x1="140" y1="666" x2="360" y2="666" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="250" y="696" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="18" fill="#ffffff" fill-opacity="0.82" letter-spacing="2.6">SCI-FI  •  ACTION  •  MYTHOLOGY</text>
+  <text x="250" y="726" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="15" fill="#ffffff" fill-opacity="0.55" letter-spacing="1.6">UA  |  Telugu  |  181m</text>
+</svg>
