@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Select Seats — CineBook</title>
+<style>
+  :root{
+    --bg:#0d0d14;--card:#161622;--card2:#1e1e2e;
+    --gold:#f5c518;--gold2:#e6b400;
+    --text:#f0f0f5;--muted:#8888aa;
+    --accent:#6c63ff;--red:#ff4560;--green:#22c55e;
+    --border:rgba(255,255,255,0.07);--radius:14px;
+    --shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
+  nav{display:flex;align-items:center;gap:14px;padding:18px 40px;background:rgba(13,13,20,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+  .logo{font-size:1.4rem;font-weight:800;letter-spacing:-1px;color:var(--gold);}
+  .logo span{color:var(--text);}
+  .back-btn{background:var(--card2);border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:7px 14px;border-radius:8px;font-size:.82rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+  .back-btn:hover{color:var(--text);}
+
+  .page{display:grid;grid-template-columns:1fr 340px;gap:30px;padding:30px 40px;max-width:1200px;margin:0 auto;}
+
+  /* SEAT MAP */
+  .seat-section h2{font-size:1.1rem;font-weight:700;margin-bottom:6px;}
+  .movie-info-bar{background:var(--card);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;border:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap;}
+  .mib-item label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+  .mib-item p{font-size:.95rem;font-weight:700;margin-top:2px;}
+
+  .screen-bar{background:linear-gradient(90deg,transparent,rgba(108,99,255,.3),transparent);border-top:3px solid var(--accent);height:14px;border-radius:2px 2px 0 0;margin-bottom:30px;position:relative;text-align:center;}
+  .screen-label{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;}
+
+  .seat-legend{display:flex;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--muted);}
+  .leg-box{width:18px;height:18px;border-radius:4px;}
+  .leg-available{background:var(--card2);border:1px solid var(--border);}
+  .leg-selected{background:var(--gold);}
+  .leg-booked{background:#333340;}
+  .leg-premium{background:#1a1a40;border:1px solid var(--accent);}
+
+  .seat-grid-wrapper{overflow-x:auto;}
+  .seat-grid{display:inline-block;}
+  .seat-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+  .row-label{width:22px;font-size:.72rem;color:var(--muted);font-weight:700;text-align:center;flex-shrink:0;}
+  .seat{width:28px;height:28px;border-radius:6px 6px 3px 3px;border:1px solid var(--border);background:var(--card2);cursor:pointer;font-size:.62rem;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:.15s;font-weight:700;flex-shrink:0;}
+  .seat:hover:not(.booked){background:rgba(245,197,24,.15);border-color:var(--gold);color:var(--gold);}
+  .seat.selected{background:var(--gold);color:#000;border-color:var(--gold);}
+  .seat.booked{background:#252532;border-color:#252532;cursor:not-allowed;color:#3a3a50;}
+  .seat.premium:not(.booked):not(.selected){background:#12122a;border-color:var(--accent);color:var(--accent);}
+  .aisle{width:18px;flex-shrink:0;}
+
+  /* ORDER SUMMARY */
+  .order-panel{position:sticky;top:80px;}
+  .order-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:22px;margin-bottom:16px;}
+  .order-card h3{font-size:1rem;font-weight:700;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .selected-seats-display{min-height:44px;background:var(--card2);border-radius:8px;padding:10px 12px;font-size:.82rem;color:var(--muted);margin-bottom:14px;}
+  .selected-seats-display.has-seats{color:var(--text);}
+
+  .price-breakdown{margin-bottom:16px;}
+  .price-row{display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:8px;color:var(--muted);}
+  .price-row.total{color:var(--text);font-weight:700;font-size:1rem;padding-top:10px;border-top:1px solid var(--border);}
+
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.7px;}
+  .form-group input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:.9rem;}
+  .form-group input:focus{outline:none;border-color:var(--gold);}
+
+  .confirm-btn{width:100%;padding:13px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:800;font-size:.95rem;cursor:pointer;transition:.2s;}
+  .confirm-btn:hover:not(:disabled){background:var(--gold2);}
+  .confirm-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .loading{text-align:center;padding:80px 20px;color:var(--muted);}
+  .spinner{font-size:2.5rem;animation:spin 1s linear infinite;display:block;margin-bottom:12px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media(max-width:900px){
+    .page{grid-template-columns:1fr;padding:20px 16px;}
+    .order-panel{position:static;}
+  }
+</style>
+</head>
+<body>
+<nav>
+  <a class="back-btn" href="/">← Back</a>
+  <div class="logo">Cine<span>Book</span></div>
+</nav>
+
+<div id="loadingState" class="loading">
+  <span class="spinner">🎬</span>Loading show details...
+</div>
+
+<div class="page" id="mainPage" style="display:none">
+  <div class="seat-section">
+    <div class="movie-info-bar" id="movieInfoBar"></div>
+    <div class="seat-grid-wrapper">
+      <div class="screen-bar"><span class="screen-label">Screen — All Eyes This Way</span></div>
+      <div class="seat-legend">
+        <div class="legend-item"><div class="leg-box leg-available"></div>Available</div>
+        <div class="legend-item"><div class="leg-box leg-selected"></div>Selected</div>
+        <div class="legend-item"><div class="leg-box leg-booked"></div>Taken</div>
+        <div class="legend-item"><div class="leg-box leg-premium"></div>Premium (A-B)</div>
+      </div>
+      <div class="seat-grid" id="seatGrid"></div>
+    </div>
+  </div>
+
+  <div class="order-panel">
+    <div class="order-card">
+      <h3>🎟 Your Order</h3>
+      <div class="selected-seats-display" id="seatDisplay">No seats selected yet</div>
+      <div class="price-breakdown" id="priceBreakdown"></div>
+      <div class="form-group"><label>Full Name *</label><input type="text" id="inputName" placeholder="John Doe"></div>
+      <div class="form-group"><label>Phone *</label><input type="tel" id="inputPhone" placeholder="98XXXXXXXX"></div>
+      <div class="form-group"><label>Email (optional)</label><input type="email" id="inputEmail" placeholder="john@example.com"></div>
+      <button class="confirm-btn" id="confirmBtn" onclick="confirmBooking()" disabled>Select seats to continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ROWS = ['A','B','C','D','E','F','G','H'];
+const COLS = 10;
+const PREMIUM_ROWS = ['A','B'];
+
+let show = null;
+let movie = null;
+let selectedSeats = new Set();
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const showId = params.get('show');
+  if (!showId) { location.href='/'; return; }
+
+  try {
+    const [showRes] = await Promise.all([fetch(`/api/showtimes/${showId}`)]);
+    show = await showRes.json();
+    if (show.error) throw new Error(show.error);
+
+    const movieRes = await fetch(`/api/movies/${show.movieId}`);
+    movie = await movieRes.json();
+
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('mainPage').style.display='grid';
+
+    renderInfoBar();
+    renderSeats();
+  } catch(e) {
+    document.getElementById('loadingState').innerHTML = `<div class="spinner">⚠️</div><p>Could not load show. <a href="/" style="color:var(--gold)">Go back</a></p>`;
+  }
+}
+
+function renderInfoBar() {
+  const d = new Date(show.date+'T'+show.time);
+  document.getElementById('movieInfoBar').innerHTML = `
+    <div class="mib-item"><label>Movie</label><p>${movie.title}</p></div>
+    <div class="mib-item"><label>Date</label><p>${show.date}</p></div>
+    <div class="mib-item"><label>Time</label><p>${show.time}</p></div>
+    <div class="mib-item"><label>Screen</label><p>${show.screen}</p></div>
+    <div class="mib-item"><label>Normal</label><p>₹${show.price.normal}</p></div>
+    <div class="mib-item"><label>Premium (A-B)</label><p>₹${show.price.premium}</p></div>
+  `;
+}
+
+function renderSeats() {
+  const grid = document.getElementById('seatGrid');
+  let html = '';
+  ROWS.forEach(row => {
+    html += `<div class="seat-row"><div class="row-label">${row}</div>`;
+    for (let c = 1; c <= COLS; c++) {
+      const seatId = `${row}${c}`;
+      const isBooked = show.bookedSeats.includes(seatId);
+      const isPremium = PREMIUM_ROWS.includes(row);
+      const cls = ['seat', isBooked?'booked':'', isPremium?'premium':'', selectedSeats.has(seatId)?'selected':''].filter(Boolean).join(' ');
+      html += `<div class="${cls}" data-seat="${seatId}" onclick="toggleSeat('${seatId}',${isBooked})">${c}</div>`;
+      if (c===5) html += `<div class="aisle"></div>`;
+    }
+    html += '</div>';
+    if (row==='B') html += `<div style="height:12px"></div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function toggleSeat(seatId, isBooked) {
+  if (isBooked) return;
+  if (selectedSeats.has(seatId)) selectedSeats.delete(seatId);
+  else { if (selectedSeats.size>=8){alert('Maximum 8 seats per booking');return;} selectedSeats.add(seatId); }
+  // Update UI
+  document.querySelectorAll('.seat').forEach(el => {
+    const id = el.dataset.seat;
+    if (!el.classList.contains('booked')) {
+      el.classList.toggle('selected', selectedSeats.has(id));
+    }
+  });
+  updateOrder();
+}
+
+function updateOrder() {
+  const seats = [...selectedSeats];
+  const display = document.getElementById('seatDisplay');
+  if (!seats.length) {
+    display.textContent='No seats selected yet'; display.classList.remove('has-seats');
+    document.getElementById('priceBreakdown').innerHTML='';
+    const btn=document.getElementById('confirmBtn'); btn.disabled=true; btn.textContent='Select seats to continue';
+    return;
+  }
+  display.textContent = seats.sort().join(', '); display.classList.add('has-seats');
+
+  let normalSeats=[], premiumSeats=[];
+  seats.forEach(s => (PREMIUM_ROWS.includes(s[0]) ? premiumSeats : normalSeats).push(s));
+  const total = normalSeats.length*show.price.normal + premiumSeats.length*show.price.premium;
+  
+  document.getElementById('priceBreakdown').innerHTML = `
+    ${normalSeats.length?`<div class="price-row"><span>${normalSeats.length} × Normal</span><span>₹${normalSeats.length*show.price.normal}</span></div>`:''}
+    ${premiumSeats.length?`<div class="price-row"><span>${premiumSeats.length} × Premium</span><span>₹${premiumSeats.length*show.price.premium}</span></div>`:''}
+    <div class="price-row total"><span>Total</span><span>₹${total}</span></div>
+  `;
+  const btn=document.getElementById('confirmBtn'); btn.disabled=false; btn.textContent=`Pay ₹${total} & Confirm`;
+}
+
+async function confirmBooking() {
+  const name=document.getElementById('inputName').value.trim();
+  const phone=document.getElementById('inputPhone').value.trim();
+  const email=document.getElementById('inputEmail').value.trim();
+  if (!name||!phone){alert('Please enter your name and phone number');return;}
+
+  const btn=document.getElementById('confirmBtn');
+  btn.disabled=true; btn.textContent='Confirming...';
+
+  try {
+    const res = await fetch('/api/bookings',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({showtimeId:show.id,seats:[...selectedSeats],name,phone,email})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error||'Booking failed');
+    window.location.href = `/user/confirm.html?id=${data.id}`;
+  } catch(e) {
+    alert('Error: '+e.message);
+    btn.disabled=false; updateOrder();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
