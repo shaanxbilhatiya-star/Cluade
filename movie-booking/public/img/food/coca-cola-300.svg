@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" role="img" aria-label="Coca Cola 300ml">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ea3250"/>
+      <stop offset="1" stop-color="#C8102E"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.44" r="0.5">
+      <stop offset="0" stop-color="#FF4D4D" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#FF4D4D" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="420" height="420" fill="url(#fg)"/>
+  <circle cx="198" cy="318" r="30" fill="#ffffff" opacity="0.05"/>
+  <circle cx="4" cy="299" r="66" fill="#ffffff" opacity="0.10"/>
+  <circle cx="370" cy="242" r="65" fill="#ffffff" opacity="0.07"/>
+  <circle cx="384" cy="142" r="40" fill="#ffffff" opacity="0.09"/>
+  <circle cx="242" cy="122" r="86" fill="#ffffff" opacity="0.08"/>
+  <circle cx="55" cy="185" r="37" fill="#ffffff" opacity="0.04"/>
+  <circle cx="194" cy="70" r="90" fill="#ffffff" opacity="0.12"/>
+  <circle cx="386" cy="148" r="42" fill="#ffffff" opacity="0.08"/>
+  <circle cx="335" cy="366" r="52" fill="#ffffff" opacity="0.06"/>
+  <circle cx="210" cy="184.8" r="126" fill="url(#halo)"/>
+  <g transform="translate(92.4 67.2) scale(2.3520)">
+    <g>
+      <rect x="52" y="8" width="5" height="26" rx="2.5" fill="#FFFFFF" opacity="0.9" transform="rotate(14 54 20)"/>
+      <rect x="27" y="26" width="46" height="9" rx="4.5" fill="#FFFFFF" opacity="0.95"/>
+      <path d="M30 36 h40 l-5 54 a5 5 0 0 1 -5 4.5 H40 a5 5 0 0 1 -5 -4.5 Z" fill="#F6F4F0"/>
+      <path d="M32 48 h36 l-3.6 40 a4 4 0 0 1 -4 3.5 H39.6 a4 4 0 0 1 -4 -3.5 Z" fill="#FF4D4D"/>
+      <ellipse cx="50" cy="60" rx="12" ry="4" fill="#FFFFFF" opacity="0.35"/>
+    </g></g>
+  <text x="210" y="382" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.95">BEVERAGES</text>
+  <text x="210" y="406" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffff" fill-opacity="0.6">300 ml</text>
+</svg>

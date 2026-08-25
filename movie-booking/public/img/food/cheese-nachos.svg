@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" role="img" aria-label="Loaded Cheese Nachos">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b46230"/>
+      <stop offset="1" stop-color="#92400E"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.44" r="0.5">
+      <stop offset="0" stop-color="#FCD34D" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#FCD34D" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="420" height="420" fill="url(#fg)"/>
+  <circle cx="34" cy="113" r="55" fill="#ffffff" opacity="0.11"/>
+  <circle cx="166" cy="89" r="72" fill="#ffffff" opacity="0.06"/>
+  <circle cx="336" cy="399" r="80" fill="#ffffff" opacity="0.03"/>
+  <circle cx="192" cy="41" r="68" fill="#ffffff" opacity="0.12"/>
+  <circle cx="127" cy="196" r="79" fill="#ffffff" opacity="0.12"/>
+  <circle cx="78" cy="93" r="59" fill="#ffffff" opacity="0.04"/>
+  <circle cx="143" cy="27" r="69" fill="#ffffff" opacity="0.11"/>
+  <circle cx="382" cy="138" r="22" fill="#ffffff" opacity="0.12"/>
+  <circle cx="87" cy="141" r="91" fill="#ffffff" opacity="0.05"/>
+  <circle cx="210" cy="184.8" r="126" fill="url(#halo)"/>
+  <g transform="translate(92.4 67.2) scale(2.3520)">
+    <g>
+      <path d="M24 40 L46 34 L36 62 Z" fill="#F6C868"/>
+      <path d="M44 30 L68 38 L54 60 Z" fill="#FBD98A"/>
+      <path d="M60 44 L80 52 L62 68 Z" fill="#F0BB55"/>
+      <path d="M18 62 h64 a32 32 0 0 1 -64 0 Z" fill="#FCD34D"/>
+      <path d="M18 62 h64 v5 H18 Z" fill="#FFFFFF" opacity="0.3"/>
+      <circle cx="40" cy="52" r="5" fill="#C0392B" opacity="0.85"/>
+      <circle cx="58" cy="48" r="4" fill="#2E7D32" opacity="0.8"/>
+    </g></g>
+  <text x="210" y="382" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.95">SNACKS</text>
+  <text x="210" y="406" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffff" fill-opacity="0.6">Regular</text>
+</svg>

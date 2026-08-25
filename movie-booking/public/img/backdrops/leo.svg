@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Leo backdrop">
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#212d34"/>
+      <stop offset="0.55" stop-color="#07131A"/>
+      <stop offset="1" stop-color="#00070e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#25E0C8" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#25E0C8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blazeGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#6bffff" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#25E0C8" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#25E0C8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.93"/>
+    </linearGradient>
+    <filter id="clouds">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="5" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+    <feColorMatrix in="n" type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+  </filter>
+  </defs>
+  <linearGradient id="sideScrim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#000000" stop-opacity="0.85"/>
+    <stop offset="0.62" stop-color="#000000" stop-opacity="0.15"/>
+    <stop offset="1" stop-color="#000000" stop-opacity="0.45"/>
+  </linearGradient>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <line x1="0" y1="80" x2="1280" y2="80" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="0" y1="160" x2="1280" y2="160" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="0" y1="240" x2="1280" y2="240" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="0" y1="320" x2="1280" y2="320" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="0" y1="400" x2="1280" y2="400" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="0" y1="480" x2="1280" y2="480" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="0" y1="560" x2="1280" y2="560" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="0" y1="640" x2="1280" y2="640" stroke="#25E0C8" stroke-width="1" opacity="0.16"/>
+  <line x1="182.85714285714286" y1="0" x2="182.85714285714286" y2="720" stroke="#25E0C8" stroke-width="1" opacity="0.1"/>
+  <line x1="365.7142857142857" y1="0" x2="365.7142857142857" y2="720" stroke="#25E0C8" stroke-width="1" opacity="0.1"/>
+  <line x1="548.5714285714286" y1="0" x2="548.5714285714286" y2="720" stroke="#25E0C8" stroke-width="1" opacity="0.1"/>
+  <line x1="731.4285714285714" y1="0" x2="731.4285714285714" y2="720" stroke="#25E0C8" stroke-width="1" opacity="0.1"/>
+  <line x1="914.2857142857143" y1="0" x2="914.2857142857143" y2="720" stroke="#25E0C8" stroke-width="1" opacity="0.1"/>
+  <line x1="1097.142857142857" y1="0" x2="1097.142857142857" y2="720" stroke="#25E0C8" stroke-width="1" opacity="0.1"/>
+  <rect x="153.6" y="115.2" width="972.8" height="316.8" fill="none" stroke="#25E0C8" stroke-width="3" opacity="0.75" rx="6"/>
+  <ellipse cx="640" cy="273.6" rx="537.6" ry="172.79999999999998" fill="url(#glow)" opacity="0.5"/>
+  <rect width="1280" height="720" fill="url(#sideScrim)"/>
+  <rect width="1280" height="720" fill="url(#scrim)" opacity="0.75"/>
+  <rect width="1280" height="720" filter="url(#grain)" opacity="0.45"/>
+  <text font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="118" font-weight="800" fill="#ffffff" letter-spacing="2"><tspan x="72" y="540">LEO</tspan></text>
+  <text x="74" y="602" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="30" fill="#89ffff" letter-spacing="1.6">Bloody sweet.</text>
+  <text x="74" y="648" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="24" fill="#ffffff" fill-opacity="0.78" letter-spacing="3">ACTION   •   CRIME</text>
+</svg>
