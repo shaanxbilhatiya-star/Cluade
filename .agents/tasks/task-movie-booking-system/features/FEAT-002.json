@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Build complete mobile-first frontend UI with purple/dark purple color scheme matching the user's design specs. Includes all 5 screens: Home (hero banner, Now Playing, Coming Soon), My Tickets (upcoming/passed/cancelled tabs), Food Order (menu with popular items), Account (profile, settings), and Cinemas. All vanilla HTML/CSS/JS with no external dependencies.",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Create movie-booking/public/index.html as the main SPA shell with: bottom navigation bar (Home, Cinemas, Food Order, My Tickets, Account icons), purple/dark purple accent colors (#6C3CE1 primary), white background, orange highlights for active states",
     "Implement Home screen section: user avatar with 'Your City' location dropdown at top, hero banner/carousel area with movie poster (The Nun style), 'Now Playing' horizontal scrollable movie cards (Jawan, The Nun II, Hu ane Tu) with 'Book Now' buttons, 'Coming Soon' section with movie poster cards",
