@@ -9,6 +9,9 @@ const PORT = process.env.PORT || 3000;
 // --- Data helpers ---
 const DATA_DIR = path.join(__dirname, 'data');
 
+// Write lock map to prevent concurrent write corruption
+const writeLocks = new Map();
+
 function readJSON(filename) {
   const filepath = path.join(DATA_DIR, filename);
   try {
@@ -22,7 +25,36 @@ function readJSON(filename) {
 
 function writeJSON(filename, data) {
   const filepath = path.join(DATA_DIR, filename);
-  fs.writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf-8');
+  // Atomic write: write to temp file then rename to prevent corruption
+  const tmpPath = filepath + '.tmp.' + crypto.randomBytes(4).toString('hex');
+  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tmpPath, filepath);
+}
+
+// Acquire a simple synchronous lock for a file (serialize writes per file)
+function acquireLock(filename) {
+  if (writeLocks.has(filename)) {
+    // Wait for existing lock to release by chaining
+    const prev = writeLocks.get(filename);
+    let release;
+    const next = new Promise(resolve => { release = resolve; });
+    writeLocks.set(filename, next);
+    return prev.then(() => release);
+  }
+  let release;
+  const lock = new Promise(resolve => { release = resolve; });
+  writeLocks.set(filename, lock);
+  return Promise.resolve(release);
+}
+
+function releaseLock(filename, releaseFn) {
+  if (releaseFn) releaseFn();
+  // Clean up if this was the last lock
+  const current = writeLocks.get(filename);
+  if (current) {
+    // Check if promise is resolved (simple heuristic: delete after release)
+    writeLocks.delete(filename);
+  }
 }
 
 function generateId(prefix) {
@@ -73,14 +105,23 @@ function addCORSHeaders(res) {
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', chunk => {
+    let rejected = false;
+
+    const onData = (chunk) => {
+      if (rejected) return;
       body += chunk.toString();
       // Limit body size to 1MB
       if (body.length > 1048576) {
+        rejected = true;
+        req.removeListener('data', onData);
+        req.destroy();
         reject(new Error('Request body too large'));
       }
-    });
+    };
+
+    req.on('data', onData);
     req.on('end', () => {
+      if (rejected) return;
       if (!body) {
         resolve({});
         return;
@@ -91,7 +132,9 @@ function parseBody(req) {
         reject(new Error('Invalid JSON body'));
       }
     });
-    req.on('error', reject);
+    req.on('error', (err) => {
+      if (!rejected) reject(err);
+    });
   });
 }
 

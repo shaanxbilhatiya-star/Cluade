@@ -117,8 +117,18 @@ movie-booking/
 
 - Zero external dependencies - uses only Node.js built-in modules
 - File-based JSON storage (reads/writes to data/ directory)
+- Atomic file writes (write to temp file, then rename) to prevent data corruption
+- XSS protection via escapeHTML utility on all server-returned strings
 - CORS enabled for all origins
 - UUID generation via crypto.randomBytes
 - Input validation on all endpoints
 - Seat availability checking with conflict detection
 - Automatic price calculation based on seat type
+- Phone number stored in localStorage for ticket lookup (no hardcoded values)
+- Body parser with 1MB limit and proper stream cleanup on oversize requests
+
+## Known Limitations
+
+- **No authentication/authorization**: This is a local demo/prototype. All API endpoints are publicly accessible. In a production system, you would add user sessions, JWT tokens, or similar authentication for write operations (booking, profile updates, movie management).
+- **File-based storage**: Suitable for single-instance deployments. Not appropriate for multi-instance or high-concurrency production use.
+- **No HTTPS**: Run behind a reverse proxy (nginx, Caddy) for TLS in production.

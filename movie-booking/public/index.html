@@ -1910,6 +1910,28 @@
         let selectedShowtime = null;
         let selectedSeats = [];
         let currentBookingStep = 'detail'; // detail, seats, form, success
+        let currentTicketTab = 'upcoming';
+        let currentTicketFilter = 'All';
+
+        // ===== XSS PROTECTION =====
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ===== PHONE NUMBER MANAGEMENT =====
+        function getStoredPhone() {
+            return localStorage.getItem('cinebook_phone') || '';
+        }
+
+        function setStoredPhone(phone) {
+            if (phone) localStorage.setItem('cinebook_phone', phone);
+        }
 
         // ===== NAVIGATION =====
         function switchScreen(name) {
@@ -2009,16 +2031,16 @@
             const comingSoon = movies.filter(m => m.status === 'coming_soon');
 
             document.getElementById('now-playing-list').innerHTML = nowPlaying.map(m => `
-                <div class="movie-card" onclick="openBooking('${m.id}')">
+                <div class="movie-card" onclick="openBooking('${escapeHTML(m.id)}')">
                     <div class="movie-poster">${generatePosterSVG(m.id, m.title, m.genre)}</div>
                     <div class="movie-info">
-                        <div class="movie-title">${m.title}</div>
-                        <div class="movie-meta">${m.language} &bull; ${m.genre}</div>
+                        <div class="movie-title">${escapeHTML(m.title)}</div>
+                        <div class="movie-meta">${escapeHTML(m.language)} &bull; ${escapeHTML(m.genre)}</div>
                         <div class="movie-rating">
                             <svg class="star-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                            <span class="rating-text">${m.rating}/10</span>
+                            <span class="rating-text">${escapeHTML(String(m.rating))}/10</span>
                         </div>
-                        <button class="book-btn" onclick="event.stopPropagation(); openBooking('${m.id}')">Book Now</button>
+                        <button class="book-btn" onclick="event.stopPropagation(); openBooking('${escapeHTML(m.id)}')">Book Now</button>
                     </div>
                 </div>
             `).join('');
@@ -2027,13 +2049,13 @@
                 <div class="movie-card">
                     <div class="movie-poster">${generatePosterSVG(m.id, m.title, m.genre)}</div>
                     <div class="movie-info">
-                        <div class="movie-title">${m.title}</div>
-                        <div class="movie-meta">${m.language} &bull; ${m.genre}</div>
+                        <div class="movie-title">${escapeHTML(m.title)}</div>
+                        <div class="movie-meta">${escapeHTML(m.language)} &bull; ${escapeHTML(m.genre)}</div>
                         <div class="movie-rating">
                             <svg class="star-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                            <span class="rating-text">${m.rating}/10</span>
+                            <span class="rating-text">${escapeHTML(String(m.rating))}/10</span>
                         </div>
-                        <button class="notify-btn" onclick="event.stopPropagation(); alert('You will be notified when ${m.title} is available!')">Notify</button>
+                        <button class="notify-btn" onclick="event.stopPropagation(); alert('You will be notified when ' + escapeHTML('${m.title.replace(/'/g, "\\'")}') + ' is available!')">Notify</button>
                     </div>
                 </div>
             `).join('');
@@ -2079,16 +2101,16 @@
                 </div>
                 <div class="movie-detail-poster">${generatePosterSVG(m.id, m.title, m.genre)}</div>
                 <div class="movie-detail-info">
-                    <div class="movie-detail-title">${m.title}</div>
+                    <div class="movie-detail-title">${escapeHTML(m.title)}</div>
                     <div class="movie-detail-meta">
-                        <span class="meta-tag">${m.language}</span>
-                        <span class="meta-tag">${m.genre}</span>
-                        <span class="meta-tag">${m.duration} min</span>
-                        <span class="meta-tag">Rating: ${m.rating}/10</span>
+                        <span class="meta-tag">${escapeHTML(m.language)}</span>
+                        <span class="meta-tag">${escapeHTML(m.genre)}</span>
+                        <span class="meta-tag">${escapeHTML(String(m.duration))} min</span>
+                        <span class="meta-tag">Rating: ${escapeHTML(String(m.rating))}/10</span>
                     </div>
-                    <p class="movie-detail-desc">${m.description}</p>
-                    <p class="movie-detail-cast"><strong>Cast:</strong> ${m.cast.join(', ')}</p>
-                    <p class="movie-detail-cast"><strong>Director:</strong> ${m.director}</p>
+                    <p class="movie-detail-desc">${escapeHTML(m.description)}</p>
+                    <p class="movie-detail-cast"><strong>Cast:</strong> ${escapeHTML(m.cast.join(', '))}</p>
+                    <p class="movie-detail-cast"><strong>Director:</strong> ${escapeHTML(m.director)}</p>
                 </div>
                 <div class="date-selector">
                     <div class="date-selector-title">Select Date</div>
@@ -2210,15 +2232,15 @@
                 <div class="price-summary" id="price-summary">
                     <div class="price-row">
                         <span>Movie</span>
-                        <span>${selectedMovie.title}</span>
+                        <span>${escapeHTML(selectedMovie.title)}</span>
                     </div>
                     <div class="price-row">
                         <span>Date & Time</span>
-                        <span>${selectedDate} ${s.time}</span>
+                        <span>${escapeHTML(selectedDate)} ${escapeHTML(s.time)}</span>
                     </div>
                     <div class="price-row">
                         <span>Seats (${selectedSeats.length})</span>
-                        <span>${selectedSeats.join(', ') || 'None'}</span>
+                        <span>${escapeHTML(selectedSeats.join(', ') || 'None')}</span>
                     </div>
                     <div class="price-row">
                         <span>Price per seat</span>
@@ -2269,19 +2291,19 @@
                 <div class="price-summary" style="margin-top:20px">
                     <div class="price-row">
                         <span>Movie</span>
-                        <span>${selectedMovie.title}</span>
+                        <span>${escapeHTML(selectedMovie.title)}</span>
                     </div>
                     <div class="price-row">
                         <span>Cinema</span>
-                        <span>${s.cinema}</span>
+                        <span>${escapeHTML(s.cinema)}</span>
                     </div>
                     <div class="price-row">
                         <span>Date & Time</span>
-                        <span>${selectedDate} at ${s.time}</span>
+                        <span>${escapeHTML(selectedDate)} at ${escapeHTML(s.time)}</span>
                     </div>
                     <div class="price-row">
                         <span>Seats</span>
-                        <span>${selectedSeats.join(', ')}</span>
+                        <span>${escapeHTML(selectedSeats.join(', '))}</span>
                     </div>
                     <div class="price-row total">
                         <span>Total</span>
@@ -2295,7 +2317,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Phone Number</label>
-                        <input class="form-input" type="tel" id="booking-phone" value="9876543210" placeholder="Enter phone number">
+                        <input class="form-input" type="tel" id="booking-phone" value="${escapeHTML(getStoredPhone())}" placeholder="Enter phone number">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Email</label>
@@ -2316,6 +2338,9 @@
                 alert('Please enter your name and phone number');
                 return;
             }
+
+            // Store phone number for future ticket lookups
+            setStoredPhone(phone);
 
             const body = {
                 showtimeId: selectedShowtime.id,
@@ -2367,11 +2392,11 @@
                     <div class="success-ticket">
                         <div class="success-ticket-row">
                             <span class="success-ticket-label">Movie</span>
-                            <span class="success-ticket-value">${selectedMovie.title}</span>
+                            <span class="success-ticket-value">${escapeHTML(selectedMovie.title)}</span>
                         </div>
                         <div class="success-ticket-row">
                             <span class="success-ticket-label">Cinema</span>
-                            <span class="success-ticket-value">${s.cinema}</span>
+                            <span class="success-ticket-value">${escapeHTML(s.cinema)}</span>
                         </div>
                         <div class="success-ticket-row">
                             <span class="success-ticket-label">Date</span>
@@ -2427,9 +2452,9 @@
 
                 listEl.innerHTML = Object.values(grouped).map(g => `
                     <div class="cinema-show-movie">
-                        <div class="cinema-show-title">${g.movie.title} (${g.movie.language})</div>
+                        <div class="cinema-show-title">${escapeHTML(g.movie.title)} (${escapeHTML(g.movie.language)})</div>
                         <div class="cinema-show-times">
-                            ${g.shows.map(s => `<div class="cinema-show-time" onclick="openBookingFromCinema('${g.movie.id}', '${s.id}')">${s.time} - ${s.date}</div>`).join('')}
+                            ${g.shows.map(s => `<div class="cinema-show-time" onclick="openBookingFromCinema('${escapeHTML(g.movie.id)}', '${escapeHTML(s.id)}')">${escapeHTML(s.time)} - ${escapeHTML(s.date)}</div>`).join('')}
                         </div>
                     </div>
                 `).join('');
@@ -2468,8 +2493,8 @@
             document.getElementById('food-popular-list').innerHTML = popular.map(f => `
                 <div class="food-card">
                     <div class="food-icon">${generateFoodIcon(f.category, f.name)}</div>
-                    <div class="food-name">${f.name}</div>
-                    <div class="food-price">$${f.price.toFixed(2)}</div>
+                    <div class="food-name">${escapeHTML(f.name)}</div>
+                    <div class="food-price">$${escapeHTML(f.price.toFixed(2))}</div>
                     ${renderFoodControl(f)}
                 </div>
             `).join('');
@@ -2477,8 +2502,8 @@
             document.getElementById('food-beverages-list').innerHTML = beverages.map(f => `
                 <div class="food-card">
                     <div class="food-icon">${generateFoodIcon(f.category, f.name)}</div>
-                    <div class="food-name">${f.name}</div>
-                    <div class="food-price">$${f.price.toFixed(2)}</div>
+                    <div class="food-name">${escapeHTML(f.name)}</div>
+                    <div class="food-price">$${escapeHTML(f.price.toFixed(2))}</div>
                     ${renderFoodControl(f)}
                 </div>
             `).join('');
@@ -2530,14 +2555,78 @@
 
         // ===== TICKETS =====
         async function loadTickets() {
+            const phone = getStoredPhone();
+            const listEl = document.getElementById('tickets-list');
+            
+            if (!phone) {
+                // Show phone input prompt
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <p>Enter your phone number to view tickets</p>
+                        <div style="margin-top:16px;display:flex;gap:8px;align-items:center;justify-content:center;">
+                            <input type="tel" id="phone-input" placeholder="Enter phone number" style="padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;width:180px;">
+                            <button onclick="savePhoneAndLoad()" style="padding:10px 18px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">Go</button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
             try {
-                const res = await fetch('/api/bookings?phone=9876543210');
+                const res = await fetch('/api/bookings?phone=' + encodeURIComponent(phone));
                 const bookings = await res.json();
-                renderTickets(bookings);
+                filterAndRenderTickets(bookings);
             } catch (err) {
                 console.error('Failed to load tickets:', err);
-                renderTickets([]);
+                filterAndRenderTickets([]);
             }
+        }
+
+        function savePhoneAndLoad() {
+            const input = document.getElementById('phone-input');
+            if (input && input.value.trim()) {
+                setStoredPhone(input.value.trim());
+                loadTickets();
+            }
+        }
+
+        function filterAndRenderTickets(bookings) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let filtered = bookings;
+
+            // Filter by tab
+            if (currentTicketTab === 'upcoming') {
+                filtered = bookings.filter(b => {
+                    if (b.status === 'cancelled') return false;
+                    const bookingDate = new Date(b.date);
+                    bookingDate.setHours(0, 0, 0, 0);
+                    return bookingDate >= today;
+                });
+            } else if (currentTicketTab === 'passed') {
+                filtered = bookings.filter(b => {
+                    if (b.status === 'cancelled') return false;
+                    const bookingDate = new Date(b.date);
+                    bookingDate.setHours(0, 0, 0, 0);
+                    return bookingDate < today;
+                });
+            } else if (currentTicketTab === 'cancelled') {
+                filtered = bookings.filter(b => b.status === 'cancelled');
+            }
+
+            // Filter by pill type
+            if (currentTicketFilter === 'Movie') {
+                filtered = filtered.filter(b => b.movieId && !b.foodOnly);
+            } else if (currentTicketFilter === 'Food') {
+                filtered = filtered.filter(b => b.foodOnly || (b.foodOrders && b.foodOrders.length > 0));
+            } else if (currentTicketFilter === 'Event') {
+                filtered = filtered.filter(b => b.type === 'event');
+            }
+            // 'All' shows everything
+
+            renderTickets(filtered);
         }
 
         function renderTickets(bookings) {
@@ -2547,7 +2636,7 @@
                 listEl.innerHTML = `
                     <div class="empty-state">
                         <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>
-                        <p>No tickets yet. Book a movie to see your tickets here!</p>
+                        <p>No ${escapeHTML(currentTicketTab)} tickets yet. Book a movie to see your tickets here!</p>
                     </div>
                 `;
                 return;
@@ -2567,9 +2656,9 @@
                         <div class="ticket-stripe"></div>
                         <div class="ticket-poster">${generatePosterSVG(movieId, movieTitle, movieGenre)}</div>
                         <div class="ticket-details">
-                            <div class="ticket-movie-title">${movieTitle}</div>
-                            <div class="ticket-datetime">${dateFormatted} &bull; ${time}</div>
-                            <div class="ticket-cinema">${cinema}</div>
+                            <div class="ticket-movie-title">${escapeHTML(movieTitle)}</div>
+                            <div class="ticket-datetime">${escapeHTML(dateFormatted)} &bull; ${escapeHTML(time)}</div>
+                            <div class="ticket-cinema">${escapeHTML(cinema)}</div>
                             <div class="ticket-actions">
                                 <div class="ticket-action-icon">
                                     <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -2593,16 +2682,8 @@
         function switchTicketTab(tab) {
             document.querySelectorAll('.tabs-bar .tab-item').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
-            // In a full implementation, filter by tab. For now just reload.
-            if (tab === 'upcoming') loadTickets();
-            else {
-                document.getElementById('tickets-list').innerHTML = `
-                    <div class="empty-state">
-                        <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>
-                        <p>No ${tab} tickets</p>
-                    </div>
-                `;
-            }
+            currentTicketTab = tab;
+            loadTickets();
         }
 
         // ===== FILTER PILLS =====
@@ -2611,6 +2692,11 @@
                 const parent = e.target.parentElement;
                 parent.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
                 e.target.classList.add('active');
+                // Apply filter for ticket pills
+                if (parent.closest('#screen-tickets')) {
+                    currentTicketFilter = e.target.textContent.trim();
+                    loadTickets();
+                }
             }
         });
 
