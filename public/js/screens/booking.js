@@ -82,7 +82,7 @@
             '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + movie.reviews.count + ')' : '') + '</h2>' +
             '<div class="list">' +
               (movie.reviewList.length
-                ? movie.reviewList.map(function (r) {
+                ? movie.reviewList.slice(0, 5).map(function (r) {
                     return '<div class="review">' +
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
@@ -94,7 +94,10 @@
                   }).join('')
                 : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first.</p>') +
             '</div>' +
-            '<div style="padding:14px 16px 0"><button class="btn-outline btn-outline--lg" data-action="review">Write a review</button></div>' +
+            (movie.reviewList.length > 5
+              ? '<div style="padding:8px 16px 0"><button class="btn-outline btn-outline--lg" data-action="view-all-reviews">View All ' + movie.reviewList.length + ' Reviews</button></div>'
+              : '') +
+            '<div style="padding:14px 16px 0"><button class="btn-outline btn-outline--lg" data-action="review">' + UI.icon('edit', 16) + ' Write a review</button></div>' +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
@@ -137,7 +140,49 @@
         watchlist: toggleWatchlist,
         'watchlist-cta': toggleWatchlist,
         book: function () { App.navigate('/movie/' + movie.id + '/showtimes'); },
-        trailer: function () { window.open(movie.trailerUrl, '_blank', 'noopener'); },
+        trailer: function () {
+          // Extract YouTube video ID from embed URL and show inline iframe
+          var url = movie.trailerUrl || '';
+          var videoId = '';
+          var m = url.match(/\/embed\/([^?/]+)/);
+          if (m) videoId = m[1];
+          else {
+            m = url.match(/[?&]v=([^&]+)/);
+            if (m) videoId = m[1];
+          }
+          if (!videoId) { UI.toast('Trailer not available', 'error'); return; }
+
+          var body = UI.h(
+            '<div style="padding:0 16px 16px">' +
+              '<div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:14px;overflow:hidden;background:#000">' +
+                '<iframe src="https://www.youtube.com/embed/' + UI.esc(videoId) + '?autoplay=1&rel=0&modestbranding=1&fs=0" ' +
+                  'style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" ' +
+                  'allow="autoplay; encrypted-media" allowfullscreen="false" ' +
+                  'sandbox="allow-scripts allow-same-origin" ' +
+                  'title="' + UI.esc(movie.title) + ' trailer"></iframe>' +
+              '</div>' +
+              '<p style="margin:14px 0 0;font-size:12.5px;color:var(--muted);text-align:center">' + UI.esc(movie.title) + ' — Official Trailer</p>' +
+            '</div>'
+          );
+          UI.sheet({ title: 'Trailer', body: body });
+        },
+        'view-all-reviews': function () {
+          var body = UI.h(
+            '<div style="padding:0 16px 16px">' +
+              movie.reviewList.map(function (r) {
+                return '<div class="review">' +
+                  '<div class="review__head">' +
+                    '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
+                    '<span class="review__name">' + UI.esc(r.author.name) + '</span>' +
+                    '<span class="review__score">' + r.rating + '/10</span>' +
+                  '</div>' +
+                  (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
+                  '</div>';
+              }).join('') +
+            '</div>'
+          );
+          UI.sheet({ title: 'All Reviews (' + movie.reviewList.length + ')', body: body });
+        },
         share: async function () {
           var text = movie.title + ' — ' + (movie.tagline || 'now on CineFlex');
           if (navigator.share) {

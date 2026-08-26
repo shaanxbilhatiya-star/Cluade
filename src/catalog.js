@@ -27,7 +27,7 @@ const MOVIES = [
     cast: ['Shah Rukh Khan', 'Nayanthara', 'Vijay Sethupathi', 'Deepika Padukone'],
     synopsis:
       'A high-octane thriller about a man on a mission to right the wrongs of society, driven by a personal vendetta and a promise made long ago.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=jawan+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/ZGY8aukhW-I',
     art: { style: 'slash', colors: ['#1B0406', '#E3231F'] },
   },
   {
@@ -47,7 +47,7 @@ const MOVIES = [
     cast: ['Taissa Farmiga', 'Jonas Bloquet', 'Storm Reid', 'Anna Popplewell'],
     synopsis:
       'Four years after the events at the Romanian abbey, Sister Irene once again comes face to face with the demonic force Valak.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=the+nun+2+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/QF2MBIkxMZs',
     art: { style: 'veil', colors: ['#050405', '#C8A96B'] },
   },
   {
@@ -67,7 +67,7 @@ const MOVIES = [
     cast: ['Yash Soni', 'Aarohi Patel', 'Deeksha Joshi'],
     synopsis:
       'A warm-hearted Gujarati comedy about a wedding that spirals into delightful chaos when two very different families collide.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=hu+ane+tu+gujarati+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/hu-ane-tu-trailer',
     art: { style: 'sunny', colors: ['#0F5FA6', '#FFC93C'] },
   },
   {
@@ -87,7 +87,7 @@ const MOVIES = [
     cast: ['Pulkit Samrat', 'Varun Sharma', 'Richa Chadha', 'Manjot Singh'],
     synopsis:
       'Choocha, Hunny and the gang stumble into an election campaign and a water scam, with predictably ridiculous consequences.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=fukrey+3+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/BBCBjQMBw-c',
     art: { style: 'retro', colors: ['#12213D', '#37D6A0'] },
   },
   {
@@ -107,7 +107,7 @@ const MOVIES = [
     cast: ['Cillian Murphy', 'Emily Blunt', 'Robert Downey Jr.', 'Matt Damon'],
     synopsis:
       'The story of J. Robert Oppenheimer and the Manhattan Project - a portrait of genius, ambition and the terrible weight of consequence.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=oppenheimer+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/uYPbbksJxIg',
     art: { style: 'blaze', colors: ['#0B0705', '#FF7A1A'] },
   },
   {
@@ -127,7 +127,7 @@ const MOVIES = [
     cast: ['Vijay', 'Trisha', 'Sanjay Dutt', 'Arjun Sarja'],
     synopsis:
       'A mild-mannered cafe owner in the hills is forced to confront a violent past he has spent years trying to bury.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=leo+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/dGmqRsXbMOc',
     art: { style: 'neon', colors: ['#07131A', '#25E0C8'] },
   },
 
@@ -149,7 +149,7 @@ const MOVIES = [
     cast: ['Ranbir Kapoor', 'Rashmika Mandanna', 'Anil Kapoor', 'Bobby Deol'],
     synopsis:
       'A sprawling, violent saga of a son whose devotion to his father curdles into obsession, and the war it unleashes.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=animal+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/si-UrMqcbz4',
     art: { style: 'blaze', colors: ['#1A0500', '#FF3D00'] },
   },
   {
@@ -169,7 +169,7 @@ const MOVIES = [
     cast: ['Prabhas', 'Deepika Padukone', 'Amitabh Bachchan', 'Kamal Haasan'],
     synopsis:
       'In a dystopian future built on the ruins of myth, a bounty hunter is drawn into a prophecy that could remake the world.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=kalki+2898+ad+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/5xFGjhBsRWg',
     art: { style: 'storm', colors: ['#060B14', '#7FA7D9'] },
   },
   {
@@ -189,7 +189,7 @@ const MOVIES = [
     cast: ['Teja Sajja', 'Amritha Aiyer', 'Varalaxmi Sarathkumar'],
     synopsis:
       'A small-town slacker gains extraordinary powers and must become the protector his village has been praying for.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=hanuman+movie+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/hanu-man-trailer',
     art: { style: 'cosmic', colors: ['#100A2E', '#FFB300'] },
   },
   {
@@ -209,7 +209,7 @@ const MOVIES = [
     cast: ['Shah Rukh Khan', 'Taapsee Pannu', 'Vicky Kaushal', 'Boman Irani'],
     synopsis:
       'Four friends from a Punjab village chase the dream of a better life abroad, taking the perilous "donkey flight" route.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=dunki+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/VW4XO-52ubE',
     art: { style: 'sunny', colors: ['#0B4F6C', '#F2A65A'] },
   },
   {
@@ -229,7 +229,7 @@ const MOVIES = [
     cast: ['Prabhas', 'Prithviraj Sukumaran', 'Shruti Haasan'],
     synopsis:
       'Two friends bound by a childhood promise find themselves on opposite sides of a brutal war for a lawless city.',
-    trailerUrl: 'https://www.youtube.com/results?search_query=salaar+trailer',
+    trailerUrl: 'https://www.youtube.com/embed/salaar-trailer',
     art: { style: 'slash', colors: ['#0D0D0F', '#B08544'] },
   },
 ];
