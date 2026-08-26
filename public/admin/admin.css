@@ -211,3 +211,21 @@ textarea.input { resize: vertical; min-height: 84px; }
 .modal__title { margin: 0; font-size: 17px; flex: 1; }
 .modal__body { padding: 20px; overflow-y: auto; }
 .modal__foot { padding: 16px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px; }
+
+.tmdb-results {
+  position: absolute; left: 20px; right: 20px; top: 100%; margin-top: 4px; z-index: 5;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.18); max-height: 280px; overflow-y: auto;
+}
+.tmdb-result {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 12px; background: none; border: none; border-bottom: 1px solid var(--line);
+  cursor: pointer; font: inherit; color: inherit;
+}
+.tmdb-result:last-child { border-bottom: none; }
+.tmdb-result:hover { background: var(--bg); }
+.tmdb-result img { width: 32px; height: 46px; object-fit: cover; border-radius: 4px; flex: none; }
+.tmdb-result__noposter { width: 32px; height: 46px; border-radius: 4px; background: var(--line); flex: none; }
+.tmdb-result__text { font-size: 13.5px; }
+.tmdb-result__year { color: var(--ink-soft); font-weight: 400; }
+.tmdb-results__empty { padding: 12px; font-size: 13px; color: var(--ink-soft); }

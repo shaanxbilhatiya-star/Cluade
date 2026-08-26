@@ -276,6 +276,12 @@
     function form(movie) {
       var m = movie || {};
       return h('<div class="form-grid">' +
+        (movie ? '' :
+          '<div class="form-row col-span" style="position:relative">' +
+            '<label class="label" for="tmdb-search">Find on TMDB (optional — autofills the fields below)</label>' +
+            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name…">' +
+            '<div class="tmdb-results" id="tmdb-results" hidden></div>' +
+          '</div>') +
         field('Title', 'title', m.title, { span: true }) +
         field('Tagline', 'tagline', m.tagline, { span: true }) +
         field('Status', 'status', m.status || 'now_playing', { options: [
@@ -349,7 +355,75 @@
           navigate('movies');
         });
       });
+      wireTmdbSearch(m.body);
     });
+
+    function wireTmdbSearch(body) {
+      var input = body.querySelector('#tmdb-search');
+      var results = body.querySelector('#tmdb-results');
+      if (!input) return;
+      var timer = null;
+
+      function hide() { results.hidden = true; results.innerHTML = ''; }
+
+      input.addEventListener('input', function () {
+        var q = input.value.trim();
+        clearTimeout(timer);
+        if (!q) { hide(); return; }
+        timer = setTimeout(async function () {
+          try {
+            var data = await API.get('/admin/tmdb/search?q=' + encodeURIComponent(q));
+            if (!data.results.length) { results.hidden = false; results.innerHTML = '<div class="tmdb-results__empty">No matches on TMDB</div>'; return; }
+            results.innerHTML = data.results.map(function (r) {
+              return '<button type="button" class="tmdb-result" data-tmdb-id="' + r.id + '">' +
+                (r.posterUrl ? '<img src="' + esc(r.posterUrl) + '" alt="">' : '<span class="tmdb-result__noposter"></span>') +
+                '<span class="tmdb-result__text"><strong>' + esc(r.title) + '</strong>' + (r.year ? ' <span class="tmdb-result__year">(' + esc(r.year) + ')</span>' : '') + '</span>' +
+                '</button>';
+            }).join('');
+            results.hidden = false;
+          } catch (err) { results.hidden = false; results.innerHTML = '<div class="tmdb-results__empty">' + esc(err.message) + '</div>'; }
+        }, 400);
+      });
+
+      results.addEventListener('click', async function (e) {
+        var btn = e.target.closest('[data-tmdb-id]');
+        if (!btn) return;
+        var id = btn.getAttribute('data-tmdb-id');
+        btn.disabled = true;
+        try {
+          var data = await API.get('/admin/tmdb/movie/' + id);
+          var mv = data.movie;
+          function set(name, value) { var el = body.querySelector('[name="' + name + '"]'); if (el) el.value = value; }
+          set('title', mv.title);
+          set('tagline', mv.tagline);
+          set('certificate', mv.certificate);
+          set('runtime', mv.runtime);
+          set('releaseDate', mv.releaseDate);
+          set('rating', mv.rating);
+          set('director', mv.director);
+          set('genres', mv.genres.join(', '));
+          set('languages', mv.languages.join(', '));
+          set('cast', mv.cast.join(', '));
+          set('posterUrl', mv.posterUrl);
+          set('backdropUrl', mv.backdropUrl);
+          set('trailerUrl', mv.trailerUrl);
+          set('synopsis', mv.synopsis);
+          input.value = mv.title;
+          hide();
+          toast('Filled from TMDB — review before saving', 'success');
+        } catch (err) { toast(err.message, 'error'); }
+      });
+
+      var closeOnOutsideClick = function (e) {
+        if (!results.contains(e.target) && e.target !== input) hide();
+      };
+      document.addEventListener('click', closeOnOutsideClick);
+      var host = document.getElementById('modal-host');
+      var stop = new MutationObserver(function () {
+        if (host.hidden) { document.removeEventListener('click', closeOnOutsideClick); stop.disconnect(); }
+      });
+      stop.observe(host, { attributes: true, attributeFilter: ['hidden'] });
+    }
 
     paint('');
   }

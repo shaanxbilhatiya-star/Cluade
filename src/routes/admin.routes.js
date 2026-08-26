@@ -108,6 +108,66 @@ router.get('/admin/stats', auth.requireAdmin, () => {
   };
 });
 
+// ── TMDB lookup (movie autofill) ────────────────────────────────────────────
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_IMG = 'https://image.tmdb.org/t/p';
+
+function tmdbHeaders() {
+  const token = process.env.TMDB_API_TOKEN;
+  if (!token) throw new HttpError(503, 'TMDB is not configured on the server (missing TMDB_API_TOKEN)');
+  return { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+}
+
+router.get('/admin/tmdb/search', auth.requireAdmin, async (ctx) => {
+  const q = (ctx.query.q || '').trim();
+  if (!q) return { results: [] };
+  const url = `${TMDB_BASE}/search/movie?query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`;
+  const res = await fetch(url, { headers: tmdbHeaders() });
+  if (!res.ok) throw new HttpError(res.status === 401 ? 503 : 502, 'TMDB search failed');
+  const data = await res.json();
+  return {
+    results: (data.results || []).slice(0, 8).map((m) => ({
+      id: m.id,
+      title: m.title,
+      year: (m.release_date || '').slice(0, 4),
+      posterUrl: m.poster_path ? `${TMDB_IMG}/w185${m.poster_path}` : null,
+      overview: m.overview,
+    })),
+  };
+});
+
+router.get('/admin/tmdb/movie/:id', auth.requireAdmin, async (ctx) => {
+  const detailUrl = `${TMDB_BASE}/movie/${encodeURIComponent(ctx.params.id)}?append_to_response=credits,videos&language=en-US`;
+  const res = await fetch(detailUrl, { headers: tmdbHeaders() });
+  if (!res.ok) throw new HttpError(res.status === 401 ? 503 : 502, 'TMDB lookup failed');
+  const m = await res.json();
+
+  const director = (m.credits?.crew || []).find((c) => c.job === 'Director');
+  const cast = (m.credits?.cast || []).slice(0, 8).map((c) => c.name);
+  const trailer = (m.videos?.results || []).find((v) => v.site === 'YouTube' && v.type === 'Trailer');
+  const certLookup = { G: 'U', PG: 'UA', 'PG-13': 'UA', R: 'A', 'NC-17': 'A' };
+
+  return {
+    movie: {
+      title: m.title || '',
+      tagline: m.tagline || '',
+      genres: (m.genres || []).map((g) => g.name),
+      languages: [m.original_language ? m.original_language.toUpperCase() : ''].filter(Boolean),
+      runtime: m.runtime || 120,
+      rating: m.vote_average ? Math.round(m.vote_average * 10) / 10 : 0,
+      votes: m.vote_count || 0,
+      releaseDate: m.release_date || '',
+      director: director ? director.name : '',
+      cast,
+      synopsis: m.overview || '',
+      trailerUrl: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : '',
+      posterUrl: m.poster_path ? `${TMDB_IMG}/w500${m.poster_path}` : '',
+      backdropUrl: m.backdrop_path ? `${TMDB_IMG}/w1280${m.backdrop_path}` : '',
+      certificate: certLookup[m.certification] || 'UA',
+    },
+  };
+});
+
 // ── Movies ───────────────────────────────────────────────────────────────────
 router.post('/admin/movies', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['title', 'status']);
