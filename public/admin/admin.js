@@ -279,12 +279,14 @@
         '<input type="hidden" name="tmdbId" value="' + esc(m.tmdbId || '') + '">' +
         '<input type="hidden" name="votes" value="' + esc(m.votes || 0) + '">' +
         '<input type="hidden" name="castPhotos" value=\'' + esc(JSON.stringify(m.castPhotos || {})) + '\'>' +
-        (movie ? '' :
-          '<div class="form-row col-span" style="position:relative">' +
-            '<label class="label" for="tmdb-search">Find on TMDB (optional — autofills the fields below)</label>' +
-            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name…">' +
-            '<div class="tmdb-results" id="tmdb-results" hidden></div>' +
-          '</div>') +
+        '<div class="form-row col-span" style="position:relative">' +
+          '<label class="label" for="tmdb-search">' + (movie ? 'Re-fetch from TMDB (updates all fields below)' : 'Find on TMDB (optional — autofills the fields below)') + '</label>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name…" style="flex:1">' +
+            (movie && m.tmdbId ? '<button type="button" class="btn btn--primary btn--sm" id="tmdb-refetch-btn" data-tmdb-id="' + esc(String(m.tmdbId)) + '">↻ Re-fetch from TMDB</button>' : '') +
+          '</div>' +
+          '<div class="tmdb-results" id="tmdb-results" hidden></div>' +
+        '</div>' +
         field('Title', 'title', m.title, { span: true }) +
         field('Tagline', 'tagline', m.tagline, { span: true }) +
         field('Status', 'status', m.status || 'now_playing', { options: [
@@ -338,6 +340,7 @@
             navigate('movies');
           });
         });
+        wireTmdbSearch(m.body);
       }
 
       if (del) {
@@ -423,6 +426,40 @@
         } catch (err) { toast(err.message, 'error'); }
       });
 
+
+      var refetchBtn = body.querySelector('#tmdb-refetch-btn');
+      if (refetchBtn) {
+        refetchBtn.addEventListener('click', async function () {
+          var tmdbId = refetchBtn.getAttribute('data-tmdb-id');
+          refetchBtn.disabled = true;
+          refetchBtn.textContent = 'Fetching…';
+          try {
+            var data = await API.get('/admin/tmdb/movie/' + tmdbId);
+            var mv = data.movie;
+            function setR(name, value) { var el = body.querySelector('[name="' + name + '"]'); if (el) el.value = value; }
+            setR('title', mv.title);
+            setR('tagline', mv.tagline);
+            setR('certificate', mv.certificate);
+            setR('runtime', mv.runtime);
+            setR('releaseDate', mv.releaseDate);
+            setR('rating', mv.rating);
+            setR('director', mv.director);
+            setR('genres', mv.genres.join(', '));
+            setR('languages', mv.languages.join(', '));
+            setR('cast', mv.cast.join(', '));
+            setR('posterUrl', mv.posterUrl);
+            setR('backdropUrl', mv.backdropUrl);
+            setR('trailerUrl', mv.trailerUrl);
+            setR('synopsis', mv.synopsis);
+            setR('tmdbId', mv.tmdbId);
+            setR('votes', mv.votes);
+            setR('castPhotos', JSON.stringify(mv.castPhotos || {}));
+            toast('✅ Re-fetched from TMDB — review & save', 'success');
+          } catch (err) { toast(err.message, 'error'); }
+          refetchBtn.disabled = false;
+          refetchBtn.textContent = '↻ Re-fetch from TMDB';
+        });
+      }
       var closeOnOutsideClick = function (e) {
         if (!results.contains(e.target) && e.target !== input) hide();
       };
