@@ -128,7 +128,6 @@
     changePassword: function (currentPassword, newPassword) {
       return request('POST', '/auth/change-password', { currentPassword: currentPassword, newPassword: newPassword });
     },
-    review: function (movieId, payload) { return request('POST', '/movies/' + movieId + '/reviews', payload); },
   };
 
   /* ── App store: signed-in user, chosen city, food cart, transient flow state ── */

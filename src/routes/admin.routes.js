@@ -9,8 +9,8 @@ const router = new Router();
 
 const MOVIE_FIELDS = [
   'title', 'tagline', 'status', 'genres', 'languages', 'formats', 'certificate',
-  'runtime', 'rating', 'votes', 'releaseDate', 'director', 'cast', 'synopsis',
-  'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active',
+  'runtime', 'rating', 'votes', 'releaseDate', 'director', 'cast', 'castPhotos', 'synopsis',
+  'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active', 'tmdbId',
 ];
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
@@ -143,12 +143,16 @@ router.get('/admin/tmdb/movie/:id', auth.requireAdmin, async (ctx) => {
   const m = await res.json();
 
   const director = (m.credits?.crew || []).find((c) => c.job === 'Director');
-  const cast = (m.credits?.cast || []).slice(0, 8).map((c) => c.name);
+  const castPeople = (m.credits?.cast || []).slice(0, 8);
+  const cast = castPeople.map((c) => c.name);
+  const castPhotos = {};
+  castPeople.forEach((c) => { if (c.profile_path) castPhotos[c.name] = `${TMDB_IMG}/w185${c.profile_path}`; });
   const trailer = (m.videos?.results || []).find((v) => v.site === 'YouTube' && v.type === 'Trailer');
   const certLookup = { G: 'U', PG: 'UA', 'PG-13': 'UA', R: 'A', 'NC-17': 'A' };
 
   return {
     movie: {
+      tmdbId: m.id,
       title: m.title || '',
       tagline: m.tagline || '',
       genres: (m.genres || []).map((g) => g.name),
@@ -159,6 +163,7 @@ router.get('/admin/tmdb/movie/:id', auth.requireAdmin, async (ctx) => {
       releaseDate: m.release_date || '',
       director: director ? director.name : '',
       cast,
+      castPhotos,
       synopsis: m.overview || '',
       trailerUrl: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : '',
       posterUrl: m.poster_path ? `${TMDB_IMG}/w500${m.poster_path}` : '',
@@ -186,6 +191,8 @@ router.post('/admin/movies', auth.requireAdmin, (ctx) => {
       rating: 0,
       votes: 0,
       cast: [],
+      castPhotos: {},
+      tmdbId: null,
       synopsis: '',
       posterUrl: '/img/posters/_placeholder.svg',
       backdropUrl: '/img/posters/_placeholder.svg',

@@ -69,7 +69,11 @@
             (movie.cast && movie.cast.length
               ? '<h2 class="subhead">Cast</h2><div class="cast-rail">' +
                 movie.cast.map(function (name) {
-                  return '<div class="cast"><div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>' +
+                  var photo = movie.castPhotos && movie.castPhotos[name];
+                  return '<div class="cast">' +
+                    (photo
+                      ? '<img class="cast__avatar-img" src="' + UI.esc(photo) + '" alt="" data-fallback="/img/avatars/guest.svg">'
+                      : '<div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>') +
                     '<div class="cast__name">' + UI.esc(name) + '</div></div>';
                 }).join('') + '</div>'
               : '') +
@@ -79,7 +83,7 @@
                 movie.playingAt.map(function (c) { return '<span class="tag">' + UI.esc(c.name) + '</span>'; }).join('') + '</div>'
               : '') +
 
-            '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + movie.reviews.count + ')' : '') + '</h2>' +
+            '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + (movie.reviews.count >= 1000 ? (movie.reviews.count / 1000).toFixed(1) + 'K' : movie.reviews.count) + ')' : '') + '</h2>' +
             '<div class="list">' +
               (movie.reviewList.length
                 ? movie.reviewList.map(function (r) {
@@ -87,14 +91,13 @@
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
                         '<span class="review__name">' + UI.esc(r.author.name) + '</span>' +
-                        '<span class="review__score">' + r.rating + '/10</span>' +
+                        (r.rating ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
                       '</div>' +
                       (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
                       '</div>';
                   }).join('')
-                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first.</p>') +
+                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet for this movie.</p>') +
             '</div>' +
-            '<div style="padding:14px 16px 0"><button class="btn-outline btn-outline--lg" data-action="review">Write a review</button></div>' +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
@@ -146,49 +149,6 @@
           if (navigator.clipboard) {
             try { await navigator.clipboard.writeText(window.location.href); UI.toast('Link copied', 'success'); return; } catch (_e) {}
           }
-        },
-        review: function () {
-          if (!API.isSignedIn()) {
-            sessionStorage.setItem('cineflex.returnTo', '/movie/' + movie.id);
-            App.navigate('/login');
-            return;
-          }
-          var chosen = 8;
-          var form = UI.h(
-            '<form style="padding:0 0 10px">' +
-              '<div style="display:flex;justify-content:center;gap:6px;padding:4px 16px 18px" data-stars></div>' +
-              '<div class="field"><label class="field__label" for="rtext">Your review (optional)</label>' +
-                '<div class="field__control"><textarea id="rtext" name="text" placeholder="What did you think?" maxlength="600"></textarea></div></div>' +
-              '<div style="padding:0 16px"><button class="btn" type="submit">Post review</button></div>' +
-            '</form>'
-          );
-          var stars = form.querySelector('[data-stars]');
-
-          function paintStars() {
-            stars.innerHTML = Array.from({ length: 10 }, function (_x, i) {
-              var n = i + 1;
-              return '<button type="button" data-star="' + n + '" aria-label="' + n + ' out of 10" ' +
-                'style="color:' + (n <= chosen ? 'var(--primary-600)' : 'var(--line-strong)') + '">' + UI.icon('star', 20, { solid: n <= chosen }) + '</button>';
-            }).join('');
-          }
-          stars.addEventListener('click', function (e) {
-            var b = e.target.closest('[data-star]');
-            if (!b) return;
-            chosen = Number(b.getAttribute('data-star'));
-            paintStars();
-          });
-          paintStars();
-
-          var sheet = UI.sheet({ title: 'Rate ' + movie.title, body: form });
-          form.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            try {
-              await API.review(movie.id, { rating: chosen, text: form.text.value.trim() });
-              sheet.close();
-              UI.toast('Thanks for your review!', 'success');
-              App.render();
-            } catch (err) { UI.toast(err.message, 'error'); }
-          });
         },
       });
 

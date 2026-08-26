@@ -276,6 +276,9 @@
     function form(movie) {
       var m = movie || {};
       return h('<div class="form-grid">' +
+        '<input type="hidden" name="tmdbId" value="' + esc(m.tmdbId || '') + '">' +
+        '<input type="hidden" name="votes" value="' + esc(m.votes || 0) + '">' +
+        '<input type="hidden" name="castPhotos" value=\'' + esc(JSON.stringify(m.castPhotos || {})) + '\'>' +
         (movie ? '' :
           '<div class="form-row col-span" style="position:relative">' +
             '<label class="label" for="tmdb-search">Find on TMDB (optional — autofills the fields below)</label>' +
@@ -307,12 +310,15 @@
 
     function payloadFrom(body) {
       var raw = readForm(body);
+      var castPhotos = {};
+      try { castPhotos = JSON.parse(raw.castPhotos || '{}'); } catch (_e) { castPhotos = {}; }
       return {
         title: raw.title, tagline: raw.tagline, status: raw.status, certificate: raw.certificate,
         runtime: Number(raw.runtime), releaseDate: raw.releaseDate, rating: Number(raw.rating),
         director: raw.director, genres: csvList(raw.genres), languages: csvList(raw.languages),
-        formats: csvList(raw.formats), cast: csvList(raw.cast),
+        formats: csvList(raw.formats), cast: csvList(raw.cast), castPhotos: castPhotos,
         posterUrl: raw.posterUrl, backdropUrl: raw.backdropUrl, trailerUrl: raw.trailerUrl, synopsis: raw.synopsis,
+        tmdbId: raw.tmdbId || null, votes: Number(raw.votes) || 0,
       };
     }
 
@@ -408,6 +414,9 @@
           set('backdropUrl', mv.backdropUrl);
           set('trailerUrl', mv.trailerUrl);
           set('synopsis', mv.synopsis);
+          set('tmdbId', mv.tmdbId);
+          set('votes', mv.votes);
+          set('castPhotos', JSON.stringify(mv.castPhotos || {}));
           input.value = mv.title;
           hide();
           toast('Filled from TMDB — review before saving', 'success');
