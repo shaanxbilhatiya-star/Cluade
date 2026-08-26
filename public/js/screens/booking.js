@@ -52,18 +52,7 @@
                 : '') +
               '<div class="metric"><div class="metric__value">' + UI.esc(UI.runtime(movie.runtime)) + '</div><div class="metric__label">Runtime</div></div>' +
               '<div class="metric"><div class="metric__value">' + UI.esc(movie.certificate) + '</div><div class="metric__label">Rated</div></div>' +
-              '<div class="metric"><div class="metric__value">' +
-                (function() {
-                  var langs = movie.languages || [];
-                  var primaryLang = langs[0] || '—';
-                  var isHindi = primaryLang.toLowerCase() === 'hindi' || primaryLang.toLowerCase() === 'hi';
-                  if (!isHindi && primaryLang !== '—') {
-                    return '<span style="font-size:11px;line-height:1.2">' + UI.esc(primaryLang) + '<br>' +
-                      '<span style="color:#22c55e;font-weight:700;font-size:10px">+HI DUB</span></span>';
-                  }
-                  return UI.esc(primaryLang);
-                })() +
-              '</div><div class="metric__label">Language</div></div>' +
+              '<div class="metric"><div class="metric__value">' + UI.esc((movie.languages || [])[0] || '—') + '</div><div class="metric__label">Language</div></div>' +
             '</div>' +
 
             '<h2 class="subhead">Synopsis</h2>' +
@@ -71,43 +60,18 @@
 
             '<h2 class="subhead">Details</h2>' +
             '<div style="padding:0 16px">' +
+              '<div class="kv"><span class="kv__key">Director</span><span class="kv__val">' + UI.esc(movie.director || '—') + '</span></div>' +
               '<div class="kv"><span class="kv__key">Release date</span><span class="kv__val">' + UI.esc(UI.shortDate(movie.releaseDate)) + '</span></div>' +
-              '<div class="kv"><span class="kv__key">Languages</span>' +
-                '<span class="kv__val" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center">' +
-                  (movie.languages || []).map(function(lang) {
-                    var isHindi = lang.toLowerCase() === 'hindi' || lang.toLowerCase() === 'hi' || lang.toUpperCase() === 'HI';
-                    return isHindi
-                      ? '<span style="background:var(--primary-600);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">' + UI.esc(lang) + '</span>'
-                      : '<span style="background:#22c55e;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">Playing in Hindi</span>' + '<span style="color:var(--muted);font-size:12px">' + UI.esc(lang) + '</span>';
-                  }).join('') +
-                  ((movie.languages || []).every(function(l){ return l.toLowerCase()!=='hindi'&&l.toLowerCase()!=='hi'&&l.toUpperCase()!=='HI'; }) && (movie.languages||[]).length===0
-                    ? '<span style="background:#22c55e;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">Playing in Hindi</span>'
-                    : '') +
-                '</span>' +
-              '</div>' +
+              '<div class="kv"><span class="kv__key">Languages</span><span class="kv__val">' + UI.esc((movie.languages || []).join(', ')) + '</span></div>' +
               '<div class="kv"><span class="kv__key">Formats</span><span class="kv__val">' + UI.esc((movie.formats || []).join(', ')) + '</span></div>' +
             '</div>' +
 
             (movie.cast && movie.cast.length
               ? '<h2 class="subhead">Cast</h2><div class="cast-rail">' +
                 movie.cast.map(function (name) {
-                  var photo = movie.castPhotos && movie.castPhotos[name];
-                  return '<div class="cast">' +
-                    (photo
-                      ? '<img class="cast__avatar-img" src="' + UI.esc(photo) + '" alt="" data-fallback="/img/avatars/guest.svg">'
-                      : '<div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>') +
+                  return '<div class="cast"><div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>' +
                     '<div class="cast__name">' + UI.esc(name) + '</div></div>';
                 }).join('') + '</div>'
-              : '') +
-
-            (movie.director
-              ? '<h2 class="subhead">Crew</h2><div class="cast-rail">' +
-                  '<div class="cast">' +
-                    '<div class="cast__avatar" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">' + UI.esc(UI.initials(movie.director)) + '</div>' +
-                    '<div class="cast__name">' + UI.esc(movie.director) + '</div>' +
-                    '<div class="cast__role" style="font-size:10px;color:var(--muted);text-align:center;margin-top:2px">Director</div>' +
-                  '</div>' +
-                '</div>'
               : '') +
 
             (movie.playingAt && movie.playingAt.length
@@ -115,31 +79,22 @@
                 movie.playingAt.map(function (c) { return '<span class="tag">' + UI.esc(c.name) + '</span>'; }).join('') + '</div>'
               : '') +
 
-            '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + (movie.reviews.count >= 1000 ? (movie.reviews.count / 1000).toFixed(1) + 'K' : movie.reviews.count) + ')' : '') + '</h2>' +
+            '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + movie.reviews.count + ')' : '') + '</h2>' +
             '<div class="list">' +
-              (movie.reviewList && movie.reviewList.length
+              (movie.reviewList.length
                 ? movie.reviewList.map(function (r) {
                     return '<div class="review">' +
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
                         '<span class="review__name">' + UI.esc(r.author.name) + '</span>' +
-                        (r.rating ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
+                        '<span class="review__score">' + r.rating + '/10</span>' +
                       '</div>' +
                       (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
                       '</div>';
                   }).join('')
-                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first!</p>') +
+                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first.</p>') +
             '</div>' +
-            (movie.tmdbId
-              ? '<div style="padding:8px 16px 4px">' +
-                  '<a href="https://www.themoviedb.org/movie/' + UI.esc(String(movie.tmdbId)) + '/reviews" target="_blank" rel="noopener" ' +
-                    'style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;' +
-                    'border:1.5px solid var(--primary-600);color:var(--primary-600);font-weight:600;font-size:14px;text-decoration:none;' +
-                    'background:transparent;box-sizing:border-box">' +
-                    UI.icon('external-link', 15) + ' View all reviews on TMDB' +
-                  '</a>' +
-                '</div>'
-              : '') +
+            '<div style="padding:14px 16px 0"><button class="btn-outline btn-outline--lg" data-action="review">Write a review</button></div>' +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
@@ -181,46 +136,7 @@
       UI.actions(view, {
         watchlist: toggleWatchlist,
         'watchlist-cta': toggleWatchlist,
-        book: function () {
-          var cert = (movie.certificate || 'UA').toUpperCase();
-          var certInfo = {
-            'U': { label: 'Universal (U)', color: '#22c55e', desc: 'Suitable for all ages. Unrestricted public exhibition.' },
-            'UA': { label: 'U/A', color: '#f59e0b', desc: 'Parental guidance for children below 12 years. May contain mild violence, language or themes.' },
-            'A': { label: 'Adults Only (A)', color: '#ef4444', desc: 'Restricted to adult audiences (18+). Contains mature content not suitable for minors.' },
-            'S': { label: 'Special (S)', color: '#7c3aed', desc: 'Restricted to specialised audiences such as medical or scientific professionals.' }
-          };
-          var info = certInfo[cert] || certInfo['UA'];
-          // Show Indian censor board advisory before navigating
-          var overlay = document.createElement('div');
-          overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
-          overlay.innerHTML =
-            '<div style="background:var(--surface,#1c1c2e);border-radius:24px 24px 0 0;padding:28px 20px 32px;width:100%;max-width:480px;box-sizing:border-box">' +
-              '<div style="width:40px;height:4px;background:#444;border-radius:4px;margin:0 auto 20px"></div>' +
-              '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
-                '<div style="width:48px;height:48px;border-radius:12px;background:' + info.color + '22;border:2px solid ' + info.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
-                  '<span style="font-weight:900;font-size:16px;color:' + info.color + '">' + cert + '</span>' +
-                '</div>' +
-                '<div>' +
-                  '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:3px">CBFC CERTIFICATE</div>' +
-                  '<div style="font-size:17px;font-weight:700">' + info.label + '</div>' +
-                '</div>' +
-              '</div>' +
-              '<p style="font-size:14px;color:var(--muted);line-height:1.55;margin:0 0 20px;padding:14px;background:var(--surface2,#2a2a3e);border-radius:12px">' + info.desc + '</p>' +
-              '<div style="background:#f59e0b22;border:1px solid #f59e0b55;border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:12.5px;color:#f59e0b;display:flex;gap:8px;align-items:flex-start">' +
-                '<span style="font-size:16px;flex-shrink:0">&#9888;&#65039;</span>' +
-                '<span>This film has been certified by the <strong>Central Board of Film Certification (CBFC), India</strong>. Please ensure you meet the age requirements before booking.</span>' +
-              '</div>' +
-              '<button id="cert-confirm" style="width:100%;padding:15px;border-radius:14px;background:var(--primary-600,#7c3aed);color:#fff;font-size:16px;font-weight:700;border:none;cursor:pointer;margin-bottom:10px">Continue to Book Tickets</button>' +
-              '<button id="cert-cancel" style="width:100%;padding:14px;border-radius:14px;background:transparent;color:var(--muted);font-size:14px;font-weight:600;border:1.5px solid #444;cursor:pointer">Cancel</button>' +
-            '</div>';
-          document.body.appendChild(overlay);
-          overlay.querySelector('#cert-confirm').onclick = function() {
-            document.body.removeChild(overlay);
-            App.navigate('/movie/' + movie.id + '/showtimes');
-          };
-          overlay.querySelector('#cert-cancel').onclick = function() { document.body.removeChild(overlay); };
-          overlay.onclick = function(e) { if (e.target === overlay) document.body.removeChild(overlay); };
-        },
+        book: function () { App.navigate('/movie/' + movie.id + '/showtimes'); },
         trailer: function () { window.open(movie.trailerUrl, '_blank', 'noopener'); },
         share: async function () {
           var text = movie.title + ' — ' + (movie.tagline || 'now on CineFlex');
@@ -230,6 +146,49 @@
           if (navigator.clipboard) {
             try { await navigator.clipboard.writeText(window.location.href); UI.toast('Link copied', 'success'); return; } catch (_e) {}
           }
+        },
+        review: function () {
+          if (!API.isSignedIn()) {
+            sessionStorage.setItem('cineflex.returnTo', '/movie/' + movie.id);
+            App.navigate('/login');
+            return;
+          }
+          var chosen = 8;
+          var form = UI.h(
+            '<form style="padding:0 0 10px">' +
+              '<div style="display:flex;justify-content:center;gap:6px;padding:4px 16px 18px" data-stars></div>' +
+              '<div class="field"><label class="field__label" for="rtext">Your review (optional)</label>' +
+                '<div class="field__control"><textarea id="rtext" name="text" placeholder="What did you think?" maxlength="600"></textarea></div></div>' +
+              '<div style="padding:0 16px"><button class="btn" type="submit">Post review</button></div>' +
+            '</form>'
+          );
+          var stars = form.querySelector('[data-stars]');
+
+          function paintStars() {
+            stars.innerHTML = Array.from({ length: 10 }, function (_x, i) {
+              var n = i + 1;
+              return '<button type="button" data-star="' + n + '" aria-label="' + n + ' out of 10" ' +
+                'style="color:' + (n <= chosen ? 'var(--primary-600)' : 'var(--line-strong)') + '">' + UI.icon('star', 20, { solid: n <= chosen }) + '</button>';
+            }).join('');
+          }
+          stars.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-star]');
+            if (!b) return;
+            chosen = Number(b.getAttribute('data-star'));
+            paintStars();
+          });
+          paintStars();
+
+          var sheet = UI.sheet({ title: 'Rate ' + movie.title, body: form });
+          form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            try {
+              await API.review(movie.id, { rating: chosen, text: form.text.value.trim() });
+              sheet.close();
+              UI.toast('Thanks for your review!', 'success');
+              App.render();
+            } catch (err) { UI.toast(err.message, 'error'); }
+          });
         },
       });
 

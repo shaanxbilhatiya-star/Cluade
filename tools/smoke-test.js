@@ -331,10 +331,12 @@ async function run() {
     const readAll = await api('POST', '/api/me/notifications/read', { token });
     check('notifications can be marked read', readAll.body.markedRead >= 0);
 
-    const reviewRouteGone = await api('POST', `/api/movies/${jawan.id}/reviews`, { token: riderToken, body: { rating: 9, text: 'Loved it.' } });
-    check('customer review submission route was removed', reviewRouteGone.status === 404);
+    const review = await api('POST', `/api/movies/${jawan.id}/reviews`, { token: riderToken, body: { rating: 9, text: 'Loved it.' } });
+    check('review can be posted', review.status === 201 && review.body.summary.count > 0);
+    const badReview = await api('POST', `/api/movies/${jawan.id}/reviews`, { token: riderToken, body: { rating: 99 } });
+    check('review rating is validated', badReview.status === 400);
     const jawanDetail = await api('GET', `/api/movies/${jawan.id}`);
-    check('movie detail returns a reviewList array', Array.isArray(jawanDetail.body.reviewList));
+    check('movie detail returns a reviewList array', Array.isArray(jawanDetail.body.reviewList) && jawanDetail.body.reviewList.length > 0);
 
     const pwd = await api('POST', '/api/auth/change-password', { token: riderToken, body: { currentPassword: 'pass1234', newPassword: 'newpass99' } });
     check('password can be changed', pwd.status === 200);

@@ -1,48 +1,21 @@
 'use strict';
 const db = require('../db');
+const auth = require('../auth');
 const { Router, HttpError } = require('../router');
 const { GENRES, LANGUAGES, CITIES } = require('../catalog');
 
 const router = new Router();
 
-// Reviews are sourced live from TMDB (the same source used for the admin's
-// autofill) rather than collected from customers. Cached briefly per movie
-// so we don't hit TMDB on every single page view.
-const TMDB_BASE = 'https://api.themoviedb.org/3';
-const reviewCache = new Map(); // tmdbId -> { at, reviews }
-const REVIEW_CACHE_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-async function fetchExternalReviews(tmdbId) {
-  if (!tmdbId) return [];
-  const cached = reviewCache.get(tmdbId);
-  if (cached && Date.now() - cached.at < REVIEW_CACHE_MS) return cached.reviews;
-
-  const token = process.env.TMDB_API_TOKEN;
-  if (!token) return [];
-
-  try {
-    const res = await fetch(`${TMDB_BASE}/movie/${encodeURIComponent(tmdbId)}/reviews?language=en-US&page=1`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    if (!res.ok) return cached ? cached.reviews : [];
-    const data = await res.json();
-    const reviews = (data.results || []).slice(0, 6).map((r) => ({
-      id: r.id,
-      author: { name: r.author || 'Anonymous', avatarUrl: '/img/avatars/guest.svg' },
-      rating: r.author_details?.rating ? Math.round(r.author_details.rating) : null,
-      text: (r.content || '').replace(/\s+/g, ' ').trim().slice(0, 400),
-      createdAt: r.created_at,
-    }));
-    reviewCache.set(tmdbId, { at: Date.now(), reviews });
-    return reviews;
-  } catch (_e) {
-    return cached ? cached.reviews : [];
-  }
+function reviewSummary(movieId) {
+  const reviews = db.find('reviews', (r) => r.movieId === movieId);
+  if (!reviews.length) return { count: 0, average: 0 };
+  const total = reviews.reduce((s, r) => s + r.rating, 0);
+  return { count: reviews.length, average: Math.round((total / reviews.length) * 10) / 10 };
 }
 
 function decorate(movie) {
   const showtimeCount = db.get('showtimes').filter((s) => s.movieId === movie.id && s.status !== 'cancelled').length;
-  return Object.assign({}, movie, { reviews: { count: movie.votes || 0, average: movie.rating || 0 }, showtimeCount });
+  return Object.assign({}, movie, { reviews: reviewSummary(movie.id), showtimeCount });
 }
 
 router.get('/movies', (ctx) => {
@@ -82,12 +55,25 @@ router.get('/movies', (ctx) => {
   return { count: capped.length, movies: capped.map(decorate) };
 });
 
-router.get('/movies/:id', async (ctx) => {
+router.get('/movies/:id', (ctx) => {
   const movie =
     db.byId('movies', ctx.params.id) || db.findOne('movies', (m) => m.slug === ctx.params.id);
   if (!movie) throw new HttpError(404, 'Movie not found');
 
-  const reviews = await fetchExternalReviews(movie.tmdbId);
+  const reviews = db
+    .find('reviews', (r) => r.movieId === movie.id)
+    .map((r) => {
+      const u = db.byId('users', r.userId);
+      return {
+        id: r.id,
+        rating: r.rating,
+        text: r.text,
+        createdAt: r.createdAt,
+        author: u ? { name: u.name, avatarUrl: u.avatarUrl } : { name: 'CineFlex user', avatarUrl: '/img/avatars/guest.svg' },
+      };
+    })
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
   const cinemaIds = [...new Set(db.get('showtimes').filter((s) => s.movieId === movie.id).map((s) => s.cinemaId))];
 
   return Object.assign(decorate(movie), {
@@ -151,6 +137,23 @@ router.get('/movies/:id/showtimes', (ctx) => {
   const dates = [...new Set(db.get('showtimes').filter((s) => s.movieId === movie.id).map((s) => s.date))].sort();
 
   return { movie: { id: movie.id, title: movie.title, certificate: movie.certificate, runtime: movie.runtime, posterUrl: movie.posterUrl }, dates, cinemas };
+});
+
+router.post('/movies/:id/reviews', auth.requireAuth, (ctx) => {
+  const movie = db.byId('movies', ctx.params.id);
+  if (!movie) throw new HttpError(404, 'Movie not found');
+  const rating = Number(ctx.body.rating);
+  if (!Number.isFinite(rating) || rating < 1 || rating > 10) throw new HttpError(400, 'Rating must be between 1 and 10');
+
+  const existing = db.findOne('reviews', (r) => r.movieId === movie.id && r.userId === ctx.user.id);
+  const payload = { rating: Math.round(rating), text: String(ctx.body.text || '').slice(0, 600) };
+
+  const review = existing
+    ? db.update('reviews', existing.id, payload)
+    : db.insert('reviews', Object.assign({ id: db.id('rev'), movieId: movie.id, userId: ctx.user.id }, payload));
+
+  ctx.state.status = existing ? 200 : 201;
+  return { review, summary: reviewSummary(movie.id) };
 });
 
 router.get('/genres', () => ({ genres: GENRES }));
