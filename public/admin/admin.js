@@ -279,11 +279,13 @@
         '<input type="hidden" name="tmdbId" value="' + esc(m.tmdbId || '') + '">' +
         '<input type="hidden" name="votes" value="' + esc(m.votes || 0) + '">' +
         '<input type="hidden" name="castPhotos" value=\'' + esc(JSON.stringify(m.castPhotos || {})) + '\'>' +
-        '<div class="form-row col-span" style="position:relative">' +
-          '<label class="label" for="tmdb-search">' + (movie ? 'Re-fetch from TMDB (updates all fields below)' : 'Find on TMDB (optional — autofills the fields below)') + '</label>' +
+        '<div class="form-row col-span" style="position:relative;background:#f5f0ff;border:1.5px solid #7c3aed44;border-radius:10px;padding:14px 14px 10px;margin-bottom:4px">' +
+          '<label class="label" for="tmdb-search" style="font-weight:600;color:#6d28d9;margin-bottom:6px;display:block">' + (movie ? 'Re-fetch from TMDB - updates cast photos, reviews & all fields' : 'Find on TMDB - autofills all fields below') + '</label>' +
           '<div style="display:flex;gap:8px;align-items:center">' +
-            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name…" style="flex:1">' +
-            (movie && m.tmdbId ? '<button type="button" class="btn btn--primary btn--sm" id="tmdb-refetch-btn" data-tmdb-id="' + esc(String(m.tmdbId)) + '">↻ Re-fetch from TMDB</button>' : '') +
+            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name..." style="flex:1" value="' + esc(movie ? (m.title || '') : '') + '">' +
+            (movie && m.tmdbId
+              ? '<button type="button" class="btn btn--primary btn--sm" id="tmdb-refetch-btn" data-tmdb-id="' + esc(String(m.tmdbId)) + '" style="white-space:nowrap;flex-shrink:0">Refetch TMDB</button>'
+              : '<button type="button" class="btn btn--primary btn--sm" id="tmdb-search-btn" style="white-space:nowrap;flex-shrink:0">Search TMDB</button>') +
           '</div>' +
           '<div class="tmdb-results" id="tmdb-results" hidden></div>' +
         '</div>' +
@@ -374,6 +376,40 @@
       var timer = null;
 
       function hide() { results.hidden = true; results.innerHTML = ''; }
+
+      // "Search TMDB" button (movies with no tmdbId yet) - triggers search with current input value
+      var searchBtn = body.querySelector('#tmdb-search-btn');
+      if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+          var q = input.value.trim();
+          if (!q) { input.focus(); return; }
+          clearTimeout(timer);
+          searchBtn.disabled = true;
+          searchBtn.textContent = 'Searching...';
+          (async function () {
+            try {
+              var data = await API.get('/admin/tmdb/search?q=' + encodeURIComponent(q));
+              if (!data.results.length) {
+                results.hidden = false;
+                results.innerHTML = '<div class="tmdb-results__empty">No matches on TMDB</div>';
+              } else {
+                results.innerHTML = data.results.map(function (r) {
+                  return '<button type="button" class="tmdb-result" data-tmdb-id="' + r.id + '">' +
+                    (r.posterUrl ? '<img src="' + esc(r.posterUrl) + '" alt="">' : '<span class="tmdb-result__noposter"></span>') +
+                    '<span class="tmdb-result__text"><strong>' + esc(r.title) + '</strong>' + (r.year ? ' <span class="tmdb-result__year">(' + esc(r.year) + ')</span>' : '') + '</span>' +
+                    '</button>';
+                }).join('');
+                results.hidden = false;
+              }
+            } catch (err) {
+              results.hidden = false;
+              results.innerHTML = '<div class="tmdb-results__empty">' + esc(err.message) + '</div>';
+            }
+            searchBtn.disabled = false;
+            searchBtn.textContent = 'Search TMDB';
+          })();
+        });
+      }
 
       input.addEventListener('input', function () {
         var q = input.value.trim();
