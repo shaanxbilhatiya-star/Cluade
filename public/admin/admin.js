@@ -303,7 +303,20 @@
         field('Director', 'director', m.director) +
         field('Genres', 'genres', (m.genres || []).join(', '), { span: true, hint: 'Comma separated, e.g. Action, Thriller' }) +
         field('Languages', 'languages', (m.languages || []).join(', '), { span: true, hint: 'Comma separated' }) +
-        field('Formats', 'formats', (m.formats || ['2D']).join(', '), { span: true, hint: 'e.g. 2D, IMAX 2D, 3D' }) +
+        '<div class="form-row col-span">' +
+          '<label class="label">Formats available in Mandla <span style="color:#f59e0b;font-size:11px;font-weight:600;margin-left:6px">Ask the theatre / confirm locally</span></label>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="format-pills">' +
+            ['2D','3D','IMAX 2D','4DX'].map(function(fmt) {
+              var selected = (m.formats || ['2D']).indexOf(fmt) !== -1;
+              return '<button type="button" class="pill-toggle' + (selected ? ' pill-toggle--on' : '') + '" data-fmt="' + fmt + '" ' +
+                'style="padding:7px 14px;border-radius:20px;border:1.5px solid ' + (selected ? '#7c3aed' : '#555') + ';' +
+                'background:' + (selected ? '#7c3aed22' : 'transparent') + ';color:' + (selected ? '#7c3aed' : 'var(--muted)') + ';' +
+                'font-size:13px;font-weight:600;cursor:pointer">' + fmt + '</button>';
+            }).join('') +
+          '</div>' +
+          '<input type="hidden" name="formats" value="' + esc((m.formats || ['2D']).join(', ')) + '">' +
+          '<p style="font-size:11.5px;color:var(--muted);margin:0">Most shows in Mandla run in <strong>2D</strong>. Confirm with the theatre before selecting IMAX or 3D.</p>' +
+        '</div>' +
         field('Cast', 'cast', (m.cast || []).join(', '), { span: true, hint: 'Comma separated' }) +
         field('Poster URL', 'posterUrl', m.posterUrl || '/img/posters/_placeholder.svg', { span: true }) +
         field('Backdrop URL', 'backdropUrl', m.backdropUrl || '/img/posters/_placeholder.svg', { span: true }) +
@@ -343,6 +356,7 @@
           });
         });
         wireTmdbSearch(m.body);
+        wireFormatPills(m.body);
       }
 
       if (del) {
@@ -367,7 +381,37 @@
         });
       });
       wireTmdbSearch(m.body);
+      wireFormatPills(m.body);
     });
+
+    function wireFormatPills(body) {
+      var container = body.querySelector('#format-pills');
+      if (!container) return;
+      var hiddenInput = body.querySelector('[name="formats"]');
+      container.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-fmt]');
+        if (!btn) return;
+        var isOn = btn.classList.contains('pill-toggle--on');
+        if (isOn) {
+          btn.classList.remove('pill-toggle--on');
+          btn.style.borderColor = '#555';
+          btn.style.background = 'transparent';
+          btn.style.color = 'var(--muted)';
+        } else {
+          btn.classList.add('pill-toggle--on');
+          btn.style.borderColor = '#7c3aed';
+          btn.style.background = '#7c3aed22';
+          btn.style.color = '#7c3aed';
+        }
+        var selected = Array.from(container.querySelectorAll('.pill-toggle--on')).map(function(b){ return b.getAttribute('data-fmt'); });
+        if (!selected.length) {
+          // Always keep at least 2D
+          var twoDBtn = container.querySelector('[data-fmt="2D"]');
+          if (twoDBtn) { twoDBtn.classList.add('pill-toggle--on'); twoDBtn.style.borderColor='#7c3aed'; twoDBtn.style.background='#7c3aed22'; twoDBtn.style.color='#7c3aed'; selected = ['2D']; }
+        }
+        hiddenInput.value = selected.join(', ');
+      });
+    }
 
     function wireTmdbSearch(body) {
       var input = body.querySelector('#tmdb-search');
