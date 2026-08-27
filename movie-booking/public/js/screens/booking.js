@@ -60,18 +60,44 @@
 
             '<h2 class="subhead">Details</h2>' +
             '<div style="padding:0 16px">' +
-              '<div class="kv"><span class="kv__key">Director</span><span class="kv__val">' + UI.esc(movie.director || '—') + '</span></div>' +
               '<div class="kv"><span class="kv__key">Release date</span><span class="kv__val">' + UI.esc(UI.shortDate(movie.releaseDate)) + '</span></div>' +
-              '<div class="kv"><span class="kv__key">Languages</span><span class="kv__val">' + UI.esc((movie.languages || []).join(', ')) + '</span></div>' +
+              '<div class="kv"><span class="kv__key">Languages</span>' +
+                '<span class="kv__val" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center">' +
+                  (function() {
+                    var langs = movie.languages || [];
+                    var hasHindi = langs.some(function(l){ return l.toLowerCase()==='hindi'||l.toLowerCase()==='hi'; });
+                    var pills = langs.map(function(lang) {
+                      var isH = lang.toLowerCase()==='hindi'||lang.toLowerCase()==='hi';
+                      return '<span style="background:' + (isH?'var(--primary-600,#7c3aed)':'#1d4ed8') + ';color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">' + UI.esc(lang) + '</span>';
+                    }).join('');
+                    if (!hasHindi) pills += '<span style="background:#16a34a;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">Playing in Hindi</span>';
+                    return pills || '<span style="background:#16a34a;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">Playing in Hindi</span>';
+                  })() +
+                '</span>' +
+              '</div>' +
               '<div class="kv"><span class="kv__key">Formats</span><span class="kv__val">' + UI.esc((movie.formats || []).join(', ')) + '</span></div>' +
             '</div>' +
 
             (movie.cast && movie.cast.length
               ? '<h2 class="subhead">Cast</h2><div class="cast-rail">' +
                 movie.cast.map(function (name) {
-                  return '<div class="cast"><div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>' +
+                  var photo = (movie.castPhotos || {})[name];
+                  return '<div class="cast">' +
+                    (photo
+                      ? '<img class="cast__avatar-img" src="' + UI.esc(photo) + '" alt="" data-fallback="/img/avatars/guest.svg">'
+                      : '<div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>') +
                     '<div class="cast__name">' + UI.esc(name) + '</div></div>';
                 }).join('') + '</div>'
+              : '') +
+
+            (movie.director
+              ? '<h2 class="subhead">Crew</h2><div class="cast-rail">' +
+                  '<div class="cast">' +
+                    '<div class="cast__avatar" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">' + UI.esc(UI.initials(movie.director)) + '</div>' +
+                    '<div class="cast__name">' + UI.esc(movie.director) + '</div>' +
+                    '<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:2px">Director</div>' +
+                  '</div>' +
+                '</div>'
               : '') +
 
             (movie.playingAt && movie.playingAt.length
@@ -79,21 +105,31 @@
                 movie.playingAt.map(function (c) { return '<span class="tag">' + UI.esc(c.name) + '</span>'; }).join('') + '</div>'
               : '') +
 
-            '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + movie.reviews.count + ')' : '') + '</h2>' +
+            '<h2 class="subhead">Reviews' + (movie.reviews && movie.reviews.count ? ' (' + (movie.reviews.count >= 1000 ? (movie.reviews.count/1000).toFixed(1)+'K' : movie.reviews.count) + ')' : '') + '</h2>' +
             '<div class="list">' +
-              (movie.reviewList.length
+              (movie.reviewList && movie.reviewList.length
                 ? movie.reviewList.map(function (r) {
                     return '<div class="review">' +
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
                         '<span class="review__name">' + UI.esc(r.author.name) + '</span>' +
-                        '<span class="review__score">' + r.rating + '/10</span>' +
+                        (r.rating ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
                       '</div>' +
                       (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
                       '</div>';
                   }).join('')
-                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first.</p>') +
+                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first!</p>') +
             '</div>' +
+            (movie.tmdbId
+              ? '<div style="padding:8px 16px 4px">' +
+                  '<a href="https://www.themoviedb.org/movie/' + UI.esc(String(movie.tmdbId)) + '/reviews" target="_blank" rel="noopener" ' +
+                    'style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;' +
+                    'border:1.5px solid var(--primary-600,#7c3aed);color:var(--primary-600,#7c3aed);font-weight:600;font-size:14px;text-decoration:none;' +
+                    'background:transparent;box-sizing:border-box">' +
+                    'View all reviews on TMDB' +
+                  '</a>' +
+                '</div>'
+              : '') +
             '<div style="padding:14px 16px 0"><button class="btn-outline btn-outline--lg" data-action="review">Write a review</button></div>' +
 
             '<div class="spacer-24"></div>' +
@@ -136,7 +172,40 @@
       UI.actions(view, {
         watchlist: toggleWatchlist,
         'watchlist-cta': toggleWatchlist,
-        book: function () { App.navigate('/movie/' + movie.id + '/showtimes'); },
+        book: function () {
+          var cert = ((movie.certificate) || 'UA').toUpperCase();
+          var certMap = {
+            'U':  { label: 'Universal (U)',  color: '#16a34a', desc: 'Suitable for all ages. Unrestricted public exhibition.' },
+            'UA': { label: 'U/A',            color: '#d97706', desc: 'Parental guidance for children below 12. May contain mild violence or mature themes.' },
+            'A':  { label: 'Adults Only (A)',color: '#dc2626', desc: 'Restricted to adults (18+). Contains mature content not suitable for minors.' },
+            'S':  { label: 'Special (S)',    color: '#7c3aed', desc: 'Restricted to specialised audiences such as medical professionals.' },
+          };
+          var info = certMap[cert] || certMap['UA'];
+          var overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px)';
+          overlay.innerHTML =
+            '<div style="background:var(--surface,#1c1c2e);border-radius:24px 24px 0 0;padding:28px 20px 36px;width:100%;max-width:480px;box-sizing:border-box">' +
+              '<div style="width:40px;height:4px;background:#444;border-radius:4px;margin:0 auto 22px"></div>' +
+              '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+                '<div style="width:52px;height:52px;border-radius:14px;background:' + info.color + '22;border:2px solid ' + info.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+                  '<span style="font-weight:900;font-size:18px;color:' + info.color + '">' + UI.esc(cert) + '</span>' +
+                '</div>' +
+                '<div><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:3px">CBFC CERTIFICATE</div>' +
+                '<div style="font-size:18px;font-weight:700">' + UI.esc(info.label) + '</div></div>' +
+              '</div>' +
+              '<p style="font-size:14px;color:var(--muted);line-height:1.6;margin:0 0 16px;padding:14px;background:var(--surface2,#2a2a3e);border-radius:12px">' + UI.esc(info.desc) + '</p>' +
+              '<div style="background:#d9770622;border:1px solid #d9770655;border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:12.5px;color:#d97706;display:flex;gap:8px;align-items:flex-start">' +
+                '<span style="flex-shrink:0">&#9888;</span>' +
+                '<span>Certified by the <strong>Central Board of Film Certification (CBFC), India</strong>. Please ensure you meet the age requirements before booking.</span>' +
+              '</div>' +
+              '<button id="cert-confirm" style="width:100%;padding:15px;border-radius:14px;background:var(--primary-600,#7c3aed);color:#fff;font-size:16px;font-weight:700;border:none;cursor:pointer;margin-bottom:10px">Continue to Book Tickets</button>' +
+              '<button id="cert-cancel" style="width:100%;padding:14px;border-radius:14px;background:transparent;color:var(--muted);font-size:14px;font-weight:600;border:1.5px solid #444;cursor:pointer">Cancel</button>' +
+            '</div>';
+          document.body.appendChild(overlay);
+          overlay.querySelector('#cert-confirm').onclick = function() { document.body.removeChild(overlay); App.navigate('/movie/' + movie.id + '/showtimes'); };
+          overlay.querySelector('#cert-cancel').onclick = function() { document.body.removeChild(overlay); };
+          overlay.onclick = function(e) { if (e.target === overlay) document.body.removeChild(overlay); };
+        },
         trailer: function () { window.open(movie.trailerUrl, '_blank', 'noopener'); },
         share: async function () {
           var text = movie.title + ' — ' + (movie.tagline || 'now on CineFlex');
