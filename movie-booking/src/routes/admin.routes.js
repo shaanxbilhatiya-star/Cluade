@@ -480,4 +480,81 @@ router.post('/admin/bookings/:id/checkin', auth.requireAdmin, (ctx) => {
   return { booking: db.update('bookings', booking.id, { checkedInAt: new Date().toISOString(), status: 'completed' }) };
 });
 
+
+// ── TMDB Integration ─────────────────────────────────────────────────────────
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_IMG  = 'https://image.tmdb.org/t/p';
+
+async function tmdbGet(path) {
+  const token = process.env.TMDB_API_TOKEN;
+  if (!token) throw new HttpError(503, 'TMDB_API_TOKEN env var is not set. Add it to your environment and restart.');
+  const res = await fetch(`${TMDB_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  if (!res.ok) throw new HttpError(502, `TMDB error ${res.status}`);
+  return res.json();
+}
+
+function tmdbMovieShape(d, credits, reviews) {
+  const cast = (credits.cast || []).slice(0, 12);
+  const castPhotos = {};
+  for (const c of cast) {
+    if (c.profile_path) castPhotos[c.name] = `${TMDB_IMG}/w185${c.profile_path}`;
+  }
+  const director = ((credits.crew || []).find((c) => c.job === 'Director') || {}).name || '';
+  const genres   = (d.genres || []).map((g) => g.name);
+  const langs    = (d.spoken_languages || []).map((l) => l.english_name || l.name);
+
+  const reviewList = ((reviews && reviews.results) || []).slice(0, 6).map((r) => ({
+    id: r.id,
+    author: { name: r.author || 'Anonymous', avatarUrl: '/img/avatars/guest.svg' },
+    rating: r.author_details && r.author_details.rating ? Math.round(r.author_details.rating) : null,
+    text: (r.content || '').replace(/\s+/g, ' ').trim().slice(0, 400),
+    createdAt: r.created_at,
+  }));
+
+  return {
+    tmdbId: d.id,
+    title: d.title || d.original_title,
+    tagline: d.tagline || '',
+    synopsis: d.overview || '',
+    runtime: d.runtime || 0,
+    releaseDate: (d.release_date || '').slice(0, 10),
+    rating: d.vote_average ? Math.round(d.vote_average * 10) / 10 : 0,
+    votes: d.vote_count || 0,
+    certificate: 'UA',
+    genres,
+    languages: langs,
+    director,
+    cast: cast.map((c) => c.name),
+    castPhotos,
+    posterUrl: d.poster_path ? `${TMDB_IMG}/w500${d.poster_path}` : '/img/posters/_placeholder.svg',
+    backdropUrl: d.backdrop_path ? `${TMDB_IMG}/w1280${d.backdrop_path}` : '/img/posters/_placeholder.svg',
+    trailerUrl: '',
+    reviewList,
+  };
+}
+
+router.get('/admin/tmdb/search', auth.requireAdmin, async (ctx) => {
+  const q = (ctx.query.q || '').trim();
+  if (!q) return { results: [] };
+  const data = await tmdbGet(`/search/movie?query=${encodeURIComponent(q)}&language=en-US&page=1`);
+  const results = (data.results || []).slice(0, 8).map((r) => ({
+    id: r.id,
+    title: r.title,
+    year: r.release_date ? r.release_date.slice(0, 4) : '',
+    posterUrl: r.poster_path ? `${TMDB_IMG}/w185${r.poster_path}` : null,
+  }));
+  return { results };
+});
+
+router.get('/admin/tmdb/movie/:id', auth.requireAdmin, async (ctx) => {
+  const [detail, creditsData, reviewsData] = await Promise.all([
+    tmdbGet(`/movie/${ctx.params.id}?language=en-US`),
+    tmdbGet(`/movie/${ctx.params.id}/credits?language=en-US`),
+    tmdbGet(`/movie/${ctx.params.id}/reviews?language=en-US&page=1`),
+  ]);
+  return { movie: tmdbMovieShape(detail, creditsData, reviewsData) };
+});
+
 module.exports = router;
