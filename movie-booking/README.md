@@ -21,6 +21,23 @@ No `npm install`. No database to set up. No build step.
 | Customer | `andrew@example.com` | `1234` |
 | Admin | `admin@cineflex.com` | `admin123` |
 
+
+## TMDB Integration (cast photos & reviews)
+
+Cast photos and live reviews are pulled from [The Movie Database](https://www.themoviedb.org/).
+
+1. Create a free account at tmdb.org → Settings → API → copy your **API Read Access Token**
+2. Start the server with the token:
+
+**Windows:**
+
+
+**Mac / Linux:**
+
+
+Without this token the server still works — cast photos and TMDB reviews simply won't load.
+
+---
 ---
 
 ## Getting started
