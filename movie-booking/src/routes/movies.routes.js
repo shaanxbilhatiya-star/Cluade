@@ -55,12 +55,44 @@ router.get('/movies', (ctx) => {
   return { count: capped.length, movies: capped.map(decorate) };
 });
 
-router.get('/movies/:id', (ctx) => {
+// TMDB review cache: tmdbId -> { at, reviews }
+const tmdbReviewCache = new Map();
+const TMDB_CACHE_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+async function fetchTmdbReviews(tmdbId) {
+  if (!tmdbId) return [];
+  const cached = tmdbReviewCache.get(tmdbId);
+  if (cached && Date.now() - cached.at < TMDB_CACHE_MS) return cached.reviews;
+  const token = process.env.TMDB_API_TOKEN;
+  if (!token) return [];
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/movie/${encodeURIComponent(tmdbId)}/reviews?language=en-US&page=1`,
+      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }
+    );
+    if (!res.ok) return cached ? cached.reviews : [];
+    const data = await res.json();
+    const reviews = (data.results || []).slice(0, 6).map((r) => ({
+      id: r.id,
+      author: { name: r.author || 'Anonymous', avatarUrl: '/img/avatars/guest.svg' },
+      rating: r.author_details && r.author_details.rating ? Math.round(r.author_details.rating) : null,
+      text: (r.content || '').replace(/\s+/g, ' ').trim().slice(0, 400),
+      createdAt: r.created_at,
+    }));
+    tmdbReviewCache.set(tmdbId, { at: Date.now(), reviews });
+    return reviews;
+  } catch (_e) {
+    return cached ? cached.reviews : [];
+  }
+}
+
+router.get('/movies/:id', async (ctx) => {
   const movie =
     db.byId('movies', ctx.params.id) || db.findOne('movies', (m) => m.slug === ctx.params.id);
   if (!movie) throw new HttpError(404, 'Movie not found');
 
-  const reviews = db
+  // Local user reviews
+  const localReviews = db
     .find('reviews', (r) => r.movieId === movie.id)
     .map((r) => {
       const u = db.byId('users', r.userId);
@@ -74,10 +106,18 @@ router.get('/movies/:id', (ctx) => {
     })
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 
+  // TMDB reviews (if movie was linked to TMDB)
+  const tmdbReviews = await fetchTmdbReviews(movie.tmdbId);
+
+  // Merge: local first, then TMDB (no duplicates)
+  const reviewList = localReviews.length ? localReviews : tmdbReviews;
+
   const cinemaIds = [...new Set(db.get('showtimes').filter((s) => s.movieId === movie.id).map((s) => s.cinemaId))];
 
   return Object.assign(decorate(movie), {
-    reviewList: reviews,
+    reviewList,
+    castPhotos: movie.castPhotos || {},
+    tmdbId: movie.tmdbId || null,
     playingAt: cinemaIds.map((id) => db.byId('cinemas', id)).filter(Boolean).map((c) => ({ id: c.id, name: c.name, city: c.city, area: c.area })),
   });
 });
