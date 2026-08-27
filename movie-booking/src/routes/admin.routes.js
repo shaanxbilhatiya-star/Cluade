@@ -11,6 +11,7 @@ const MOVIE_FIELDS = [
   'title', 'tagline', 'status', 'genres', 'languages', 'formats', 'certificate',
   'runtime', 'rating', 'votes', 'releaseDate', 'director', 'cast', 'synopsis',
   'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active',
+  'castPhotos', 'tmdbId',
 ];
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
