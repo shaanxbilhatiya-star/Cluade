@@ -290,23 +290,51 @@
         field('Director', 'director', m.director) +
         field('Genres', 'genres', (m.genres || []).join(', '), { span: true, hint: 'Comma separated, e.g. Action, Thriller' }) +
         field('Languages', 'languages', (m.languages || []).join(', '), { span: true, hint: 'Comma separated' }) +
-        field('Formats', 'formats', (m.formats || ['2D']).join(', '), { span: true, hint: 'e.g. 2D, IMAX 2D, 3D' }) +
+        '<div class="form-row col-span">' +
+          '<label class="label">Formats <span style="color:#f59e0b;font-size:11px;font-weight:600;margin-left:6px">Confirm with theatre for Mandla</span></label>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px" id="format-pills">' +
+            ['2D','3D','IMAX 2D','4DX'].map(function(fmt) {
+              var sel = (m.formats || ['2D']).indexOf(fmt) !== -1;
+              return '<button type="button" class="' + (sel ? 'pill-on' : '') + '" data-fmt="' + esc(fmt) + '" ' +
+                'style="padding:7px 14px;border-radius:20px;border:1.5px solid ' + (sel ? '#7c3aed' : '#555') + ';' +
+                'background:' + (sel ? '#7c3aed22' : 'transparent') + ';color:' + (sel ? '#7c3aed' : 'var(--muted)') + ';' +
+                'font-size:13px;font-weight:600;cursor:pointer">' + esc(fmt) + '</button>';
+            }).join('') +
+          '</div>' +
+          '<input type="hidden" name="formats" value="' + esc((m.formats || ['2D']).join(', ')) + '">' +
+          '<p style="font-size:11.5px;color:var(--muted);margin:0">Most shows in Mandla run in 2D. Confirm 3D/IMAX with the theatre.</p>' +
+        '</div>' +
         field('Cast', 'cast', (m.cast || []).join(', '), { span: true, hint: 'Comma separated' }) +
         field('Poster URL', 'posterUrl', m.posterUrl || '/img/posters/_placeholder.svg', { span: true }) +
         field('Backdrop URL', 'backdropUrl', m.backdropUrl || '/img/posters/_placeholder.svg', { span: true }) +
         field('Trailer URL', 'trailerUrl', m.trailerUrl, { span: true }) +
         field('Synopsis', 'synopsis', m.synopsis, { type: 'textarea', span: true }) +
+        '<input type="hidden" name="tmdbId" value="' + esc(String(m.tmdbId || '')) + '">' +
+        '<input type="hidden" name="castPhotos" value=\'' + esc(JSON.stringify(m.castPhotos || {})) + '\'>' +
+        '<div class="form-row col-span" style="position:relative;background:#f5f0ff;border:1.5px solid #7c3aed44;border-radius:10px;padding:14px 14px 10px;margin-bottom:4px">' +
+          '<label class="label" for="tmdb-search" style="font-weight:600;color:#6d28d9;margin-bottom:6px;display:block">' + (movie ? 'Re-fetch from TMDB - updates cast photos, reviews & all fields' : 'Find on TMDB - autofills all fields below') + '</label>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name..." style="flex:1" value="' + esc(movie ? (m.title || '') : '') + '">' +
+            (movie && m.tmdbId
+              ? '<button type="button" class="btn btn--primary btn--sm" id="tmdb-refetch-btn" data-tmdb-id="' + esc(String(m.tmdbId)) + '" style="white-space:nowrap;flex-shrink:0">Refetch TMDB</button>'
+              : '<button type="button" class="btn btn--primary btn--sm" id="tmdb-search-btn" style="white-space:nowrap;flex-shrink:0">Search TMDB</button>') +
+          '</div>' +
+          '<div class="tmdb-results" id="tmdb-results" hidden></div>' +
+        '</div>' +
         '</div>');
     }
 
     function payloadFrom(body) {
       var raw = readForm(body);
+      var castPhotos = {};
+      try { castPhotos = JSON.parse(raw.castPhotos || '{}'); } catch(_e) { castPhotos = {}; }
       return {
         title: raw.title, tagline: raw.tagline, status: raw.status, certificate: raw.certificate,
         runtime: Number(raw.runtime), releaseDate: raw.releaseDate, rating: Number(raw.rating),
         director: raw.director, genres: csvList(raw.genres), languages: csvList(raw.languages),
         formats: csvList(raw.formats), cast: csvList(raw.cast),
         posterUrl: raw.posterUrl, backdropUrl: raw.backdropUrl, trailerUrl: raw.trailerUrl, synopsis: raw.synopsis,
+        castPhotos: castPhotos, tmdbId: raw.tmdbId || null, votes: Number(raw.votes) || 0,
       };
     }
 
@@ -326,6 +354,8 @@
             navigate('movies');
           });
         });
+        wireTmdbSearch(m.body);
+        wireFormatPills(m.body);
       }
 
       if (del) {
@@ -349,7 +379,124 @@
           navigate('movies');
         });
       });
+      wireTmdbSearch(m.body);
+      wireFormatPills(m.body);
     });
+
+    function wireFormatPills(body) {
+      var container = body.querySelector('#format-pills');
+      if (!container) return;
+      var hiddenInput = body.querySelector('[name="formats"]');
+      container.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-fmt]');
+        if (!btn) return;
+        var isOn = btn.classList.contains('pill-on');
+        btn.classList.toggle('pill-on', !isOn);
+        btn.style.borderColor = !isOn ? '#7c3aed' : '#555';
+        btn.style.background = !isOn ? '#7c3aed22' : 'transparent';
+        btn.style.color = !isOn ? '#7c3aed' : 'var(--muted)';
+        var selected = Array.from(container.querySelectorAll('.pill-on')).map(function(b){ return b.getAttribute('data-fmt'); });
+        if (!selected.length) {
+          var twod = container.querySelector('[data-fmt="2D"]');
+          if (twod) { twod.classList.add('pill-on'); twod.style.borderColor='#7c3aed'; twod.style.background='#7c3aed22'; twod.style.color='#7c3aed'; selected=['2D']; }
+        }
+        hiddenInput.value = selected.join(', ');
+      });
+    }
+
+    function wireTmdbSearch(body) {
+      var input = body.querySelector('#tmdb-search');
+      var results = body.querySelector('#tmdb-results');
+      if (!input || !results) return;
+      var timer = null;
+
+      function hide() { results.hidden = true; results.innerHTML = ''; }
+
+      function renderResults(list) {
+        if (!list.length) {
+          results.innerHTML = '<div style="padding:12px 14px;color:var(--muted);font-size:13px">No results found on TMDB</div>';
+        } else {
+          results.innerHTML = list.map(function(r) {
+            return '<button type="button" class="tmdb-result" data-tmdb-id="' + esc(String(r.id)) + '">' +
+              (r.posterUrl ? '<img src="' + esc(r.posterUrl) + '" alt="" style="width:36px;height:52px;object-fit:cover;border-radius:4px;flex-shrink:0">' : '<div style="width:36px;height:52px;background:#333;border-radius:4px;flex-shrink:0"></div>') +
+              '<span style="display:flex;flex-direction:column;gap:2px"><strong>' + esc(r.title) + '</strong>' + (r.year ? '<span style="font-size:11px;color:var(--muted)">' + esc(r.year) + '</span>' : '') + '</span>' +
+              '</button>';
+          }).join('');
+        }
+        results.hidden = false;
+      }
+
+      async function doSearch(q) {
+        if (!q) { hide(); return; }
+        try {
+          var data = await API.get('/admin/tmdb/search?q=' + encodeURIComponent(q));
+          renderResults(data.results || []);
+        } catch(e) { hide(); }
+      }
+
+      input.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(function() { doSearch(input.value.trim()); }, 300);
+      });
+
+      // "Search TMDB" button (no tmdbId yet)
+      var searchBtn = body.querySelector('#tmdb-search-btn');
+      if (searchBtn) {
+        searchBtn.addEventListener('click', function() {
+          var q = input.value.trim();
+          if (!q) { input.focus(); return; }
+          clearTimeout(timer);
+          searchBtn.disabled = true; searchBtn.textContent = 'Searching...';
+          doSearch(q).then(function() { searchBtn.disabled=false; searchBtn.textContent='Search TMDB'; });
+        });
+      }
+
+      // "Refetch TMDB" button (has tmdbId)
+      var refetchBtn = body.querySelector('#tmdb-refetch-btn');
+      if (refetchBtn) {
+        refetchBtn.addEventListener('click', async function() {
+          refetchBtn.disabled = true; refetchBtn.textContent = 'Fetching...';
+          try {
+            var data = await API.get('/admin/tmdb/movie/' + refetchBtn.getAttribute('data-tmdb-id'));
+            var mv = data.movie;
+            function setF(name, val) { var el = body.querySelector('[name="'+name+'"]'); if (el) el.value = val; }
+            setF('title', mv.title); setF('tagline', mv.tagline); setF('certificate', mv.certificate);
+            setF('runtime', mv.runtime); setF('releaseDate', mv.releaseDate); setF('rating', mv.rating);
+            setF('director', mv.director); setF('genres', mv.genres.join(', ')); setF('languages', mv.languages.join(', '));
+            setF('cast', mv.cast.join(', ')); setF('posterUrl', mv.posterUrl); setF('backdropUrl', mv.backdropUrl);
+            setF('trailerUrl', mv.trailerUrl); setF('synopsis', mv.synopsis);
+            setF('tmdbId', mv.tmdbId); setF('votes', mv.votes);
+            setF('castPhotos', JSON.stringify(mv.castPhotos || {}));
+            toast('Re-fetched from TMDB - review & save', 'success');
+          } catch(e) { toast(e.message, 'error'); }
+          refetchBtn.disabled = false; refetchBtn.textContent = 'Refetch TMDB';
+        });
+      }
+
+      results.addEventListener('click', async function(e) {
+        var btn = e.target.closest('[data-tmdb-id]');
+        if (!btn) return;
+        hide();
+        var tmdbId = btn.getAttribute('data-tmdb-id');
+        try {
+          var data = await API.get('/admin/tmdb/movie/' + tmdbId);
+          var mv = data.movie;
+          function set(name, val) { var el = body.querySelector('[name="'+name+'"]'); if (el) el.value = val; }
+          set('title', mv.title); set('tagline', mv.tagline); set('certificate', mv.certificate);
+          set('runtime', mv.runtime); set('releaseDate', mv.releaseDate); set('rating', mv.rating);
+          set('director', mv.director); set('genres', mv.genres.join(', ')); set('languages', mv.languages.join(', '));
+          set('cast', mv.cast.join(', ')); set('posterUrl', mv.posterUrl); set('backdropUrl', mv.backdropUrl);
+          set('trailerUrl', mv.trailerUrl); set('synopsis', mv.synopsis);
+          set('tmdbId', mv.tmdbId); set('votes', mv.votes);
+          set('castPhotos', JSON.stringify(mv.castPhotos || {}));
+          input.value = mv.title;
+        } catch(e) { toast(e.message, 'error'); }
+      });
+
+      document.addEventListener('click', function closeOut(e) {
+        if (!body.contains(e.target)) { hide(); document.removeEventListener('click', closeOut); }
+      });
+    }
 
     paint('');
   }
