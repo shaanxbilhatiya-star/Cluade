@@ -334,6 +334,20 @@
         field('Backdrop URL', 'backdropUrl', m.backdropUrl || '/img/posters/_placeholder.svg', { span: true }) +
         field('Trailer URL', 'trailerUrl', m.trailerUrl, { span: true }) +
         field('Synopsis', 'synopsis', m.synopsis, { type: 'textarea', span: true }) +
+        '<div class=\"form-row col-span\" style=\"background:#f0fdf4;border:1.5px solid #16a34a44;border-radius:10px;padding:14px 14px 10px;margin-top:4px\">' +
+          '<label class=\"label\" style=\"font-weight:600;color:#16a34a;margin-bottom:8px;display:block\">Ticket Prices — by Seat Tier</label>' +
+          '<p style=\"font-size:11.5px;color:var(--muted);margin:0 0 10px\">Set the price for each seat category for this movie. These apply to every showtime of this movie.</p>' +
+          '<div style=\"display:grid;grid-template-columns:repeat(5,1fr);gap:10px\">' +
+            ['sofa','recliner','platinum','gold','silver'].map(function(tier) {
+              var tp = m.tierPrices || {};
+              var defaults = { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
+              return '<div>' +
+                '<label class=\"label\" style=\"font-size:11px;text-transform:capitalize;margin-bottom:4px\">' + tier + '</label>' +
+                '<input class=\"input\" type=\"number\" name=\"tierPrice_' + tier + '\" value=\"' + esc(String(tp[tier] !== undefined ? tp[tier] : defaults[tier])) + '\" min=\"0\" style=\"width:100%\">' +
+              '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
         '</div>');
     }
 
@@ -348,6 +362,13 @@
         formats: csvList(raw.formats), cast: csvList(raw.cast), castPhotos: castPhotos,
         posterUrl: raw.posterUrl, backdropUrl: raw.backdropUrl, trailerUrl: raw.trailerUrl, synopsis: raw.synopsis,
         tmdbId: raw.tmdbId || null, votes: Number(raw.votes) || 0,
+        tierPrices: {
+          sofa:     Number(raw.tierPrice_sofa)     || 500,
+          recliner: Number(raw.tierPrice_recliner)  || 500,
+          platinum: Number(raw.tierPrice_platinum)  || 400,
+          gold:     Number(raw.tierPrice_gold)      || 300,
+          silver:   Number(raw.tierPrice_silver)    || 250,
+        },
       };
     }
 
@@ -799,7 +820,7 @@
               '<td>' + esc(s.cinema ? s.cinema.name : '—') + '</td>' +
               '<td>' + esc(s.screen ? s.screen.name : '—') + '</td>' +
               '<td>' + esc(s.format) + '</td><td>' + esc(s.language) + '</td>' +
-              '<td class="num">' + money(s.prices.regular) + '</td>' +
+              '<td class="num">' + (function(p){var v=p.silver||p.gold||p.platinum||p.recliner||p.sofa||p.regular||0;return money(v)+'+';})((s.prices||{})) + '</td>' +
               '<td class="num">' + s.seatsBooked + '/' + s.capacity + ' <span class="cell-sub">(' + pct + '%)</span></td>' +
               '<td style="white-space:nowrap">' +
                 (s.status === 'cancelled' ? '<span class="pill pill--red">cancelled</span> ' : '') +
@@ -838,7 +859,6 @@
         field('Screen', 'screenId', '', { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
         field('Date', 'date', dateInput.value, { type: 'date' }) +
         field('Time (HH:MM)', 'time', '19:00', { placeholder: '19:00' }) +
-        field('Base ticket price', 'basePrice', 240, { type: 'number', hint: 'Premium = 1.5×, VIP = 2.2×' }) +
         field('Language', 'language', '', { placeholder: 'Defaults to the movie’s first language' }) +
         '</div>');
       var m = modal({ title: 'Add showtime', body: body, confirmLabel: 'Create showtime' });
@@ -847,7 +867,7 @@
           var raw = readForm(m.body);
           await API.post('/admin/showtimes', {
             movieId: raw.movieId, screenId: raw.screenId, date: raw.date, time: raw.time,
-            basePrice: Number(raw.basePrice), language: raw.language || undefined,
+            language: raw.language || undefined,
           });
           toast('Showtime created', 'success');
           load();

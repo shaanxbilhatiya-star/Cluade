@@ -66,6 +66,7 @@ function seedMovies() {
         backdropUrl: `/img/backdrops/${m.slug}.svg`,
         accentColor: m.art.colors[1],
         active: true,
+        tierPrices: m.tierPrices || { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 },
       })
     );
   }
@@ -297,10 +298,11 @@ function ensureRollingShowtimes() {
           const pick = movies[(cinemaIdx + screenIdx * 2 + slotIdx + Math.abs(dayOffset)) % movies.length];
           const start = atTime(key, slot);
           const end = new Date(start.getTime() + (pick.runtime + 25) * 60_000);
-          const base = basePrice(cinema.brand, slot);
-
           const format = pick.formats.includes(screen.format) ? screen.format : pick.formats[0];
           const language = pick.languages[(screenIdx + slotIdx) % pick.languages.length];
+
+          // Prices come from the movie's tierPrices, not a computed base.
+          const moviePrices = pick.tierPrices || { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
 
           db.insert('showtimes', {
             id: db.id('sht'),
@@ -313,13 +315,7 @@ function ensureRollingShowtimes() {
             endsAt: end.toISOString(),
             format,
             language,
-            prices: screen.prices && Object.keys(screen.prices).length
-              ? screen.prices
-              : {
-                  regular: base,
-                  premium: Math.round(base * 1.5),
-                  vip: Math.round(base * 2.2),
-                },
+            prices: moviePrices,
             status: 'active',
           });
           existing.add(fingerprint);

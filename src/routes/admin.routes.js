@@ -11,6 +11,7 @@ const MOVIE_FIELDS = [
   'title', 'tagline', 'status', 'genres', 'languages', 'formats', 'certificate',
   'runtime', 'rating', 'votes', 'releaseDate', 'director', 'cast', 'castPhotos', 'synopsis',
   'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active', 'tmdbId',
+  'tierPrices', // per-movie tier pricing: { sofa, recliner, platinum, gold, silver }
 ];
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
@@ -198,6 +199,7 @@ router.post('/admin/movies', auth.requireAdmin, (ctx) => {
       backdropUrl: '/img/posters/_placeholder.svg',
       accentColor: '#6D28D9',
       active: true,
+      tierPrices: { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 },
     },
     pick(ctx.body, MOVIE_FIELDS)
   ));
@@ -340,20 +342,6 @@ router.post('/admin/purge-dummy-screens', auth.requireAdmin, () => {
 });
 
 // ── Showtimes ────────────────────────────────────────────────────────────────
-const FIXED_TIER_PRICES = { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
-
-function defaultPricesForScreen(screen, base) {
-  const tiers = [...new Set((screen.layout || []).map((r) => r.tier || 'regular'))];
-  const out = {};
-  for (const t of tiers) {
-    if (FIXED_TIER_PRICES[t] !== undefined) out[t] = FIXED_TIER_PRICES[t];
-    else if (t === 'premium') out[t] = Math.round(base * 1.5);
-    else if (t === 'vip') out[t] = Math.round(base * 2.2);
-    else out[t] = base; // 'regular' and any unrecognized tier
-  }
-  return out;
-}
-
 router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['movieId', 'screenId', 'date', 'time']);
   const movie = db.byId('movies', ctx.body.movieId);
@@ -370,7 +358,9 @@ router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
   const [y, m, d] = ctx.body.date.split('-').map(Number);
   const [hh, mm] = ctx.body.time.split(':').map(Number);
   const start = new Date(y, m - 1, d, hh, mm);
-  const base = Number(ctx.body.basePrice) || 220;
+
+  // Prices come from the movie's tierPrices — not a base multiplier.
+  const moviePrices = movie.tierPrices || { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
 
   const showtime = db.insert('showtimes', {
     id: db.id('sht'),
@@ -383,7 +373,7 @@ router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
     endsAt: new Date(start.getTime() + (movie.runtime + 25) * 60_000).toISOString(),
     format: ctx.body.format || screen.format,
     language: ctx.body.language || movie.languages[0] || 'Hindi',
-    prices: ctx.body.prices || defaultPricesForScreen(screen, base),
+    prices: moviePrices,
     status: 'active',
   });
   ctx.state.status = 201;
@@ -413,6 +403,18 @@ router.post('/admin/showtimes/generate', auth.requireAdmin, () => ({
   created: ensureRollingShowtimes(),
   total: db.get('showtimes').length,
 }));
+
+// Backfill: update all existing showtime prices from their movie's tierPrices.
+router.post('/admin/showtimes/sync-prices', auth.requireAdmin, () => {
+  let updated = 0;
+  for (const show of db.get('showtimes')) {
+    const movie = db.byId('movies', show.movieId);
+    if (!movie || !movie.tierPrices) continue;
+    db.update('showtimes', show.id, { prices: movie.tierPrices });
+    updated += 1;
+  }
+  return { updated };
+});
 
 // ── Food & offers ────────────────────────────────────────────────────────────
 router.post('/admin/food', auth.requireAdmin, (ctx) => {

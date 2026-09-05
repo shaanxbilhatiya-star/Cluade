@@ -29,6 +29,7 @@ const MOVIES = [
       'A high-octane thriller about a man on a mission to right the wrongs of society, driven by a personal vendetta and a promise made long ago.',
     trailerUrl: 'https://www.youtube.com/embed/ZGY8aukhW-I',
     art: { style: 'slash', colors: ['#1B0406', '#E3231F'] },
+    tierPrices: { sofa: 600, recliner: 600, platinum: 450, gold: 350, silver: 280 },
   },
   {
     slug: 'the-nun-ii',
@@ -49,6 +50,7 @@ const MOVIES = [
       'Four years after the events at the Romanian abbey, Sister Irene once again comes face to face with the demonic force Valak.',
     trailerUrl: 'https://www.youtube.com/embed/QF2MBIkxMZs',
     art: { style: 'veil', colors: ['#050405', '#C8A96B'] },
+    tierPrices: { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 },
   },
   {
     slug: 'hu-ane-tu',
@@ -69,6 +71,7 @@ const MOVIES = [
       'A warm-hearted Gujarati comedy about a wedding that spirals into delightful chaos when two very different families collide.',
     trailerUrl: 'https://www.youtube.com/embed/hu-ane-tu-trailer',
     art: { style: 'sunny', colors: ['#0F5FA6', '#FFC93C'] },
+    tierPrices: { sofa: 450, recliner: 450, platinum: 350, gold: 280, silver: 220 },
   },
   {
     slug: 'fukrey-3',
@@ -89,6 +92,7 @@ const MOVIES = [
       'Choocha, Hunny and the gang stumble into an election campaign and a water scam, with predictably ridiculous consequences.',
     trailerUrl: 'https://www.youtube.com/embed/BBCBjQMBw-c',
     art: { style: 'retro', colors: ['#12213D', '#37D6A0'] },
+    tierPrices: { sofa: 480, recliner: 480, platinum: 380, gold: 300, silver: 230 },
   },
   {
     slug: 'oppenheimer',
@@ -109,6 +113,7 @@ const MOVIES = [
       'The story of J. Robert Oppenheimer and the Manhattan Project - a portrait of genius, ambition and the terrible weight of consequence.',
     trailerUrl: 'https://www.youtube.com/embed/uYPbbksJxIg',
     art: { style: 'blaze', colors: ['#0B0705', '#FF7A1A'] },
+    tierPrices: { sofa: 650, recliner: 650, platinum: 500, gold: 380, silver: 300 },
   },
   {
     slug: 'leo',
@@ -129,6 +134,7 @@ const MOVIES = [
       'A mild-mannered cafe owner in the hills is forced to confront a violent past he has spent years trying to bury.',
     trailerUrl: 'https://www.youtube.com/embed/dGmqRsXbMOc',
     art: { style: 'neon', colors: ['#07131A', '#25E0C8'] },
+    tierPrices: { sofa: 580, recliner: 580, platinum: 440, gold: 340, silver: 270 },
   },
 
   // ── Coming soon ────────────────────────────────────────────────────────────
@@ -151,6 +157,7 @@ const MOVIES = [
       'A sprawling, violent saga of a son whose devotion to his father curdles into obsession, and the war it unleashes.',
     trailerUrl: 'https://www.youtube.com/embed/si-UrMqcbz4',
     art: { style: 'blaze', colors: ['#1A0500', '#FF3D00'] },
+    tierPrices: { sofa: 620, recliner: 620, platinum: 480, gold: 360, silver: 290 },
   },
   {
     slug: 'kalki-2898-ad',
@@ -171,6 +178,7 @@ const MOVIES = [
       'In a dystopian future built on the ruins of myth, a bounty hunter is drawn into a prophecy that could remake the world.',
     trailerUrl: 'https://www.youtube.com/embed/5xFGjhBsRWg',
     art: { style: 'storm', colors: ['#060B14', '#7FA7D9'] },
+    tierPrices: { sofa: 700, recliner: 700, platinum: 550, gold: 420, silver: 330 },
   },
   {
     slug: 'hanu-man',
@@ -191,6 +199,7 @@ const MOVIES = [
       'A small-town slacker gains extraordinary powers and must become the protector his village has been praying for.',
     trailerUrl: 'https://www.youtube.com/embed/hanu-man-trailer',
     art: { style: 'cosmic', colors: ['#100A2E', '#FFB300'] },
+    tierPrices: { sofa: 500, recliner: 500, platinum: 400, gold: 310, silver: 250 },
   },
   {
     slug: 'dunki',
@@ -211,6 +220,7 @@ const MOVIES = [
       'Four friends from a Punjab village chase the dream of a better life abroad, taking the perilous "donkey flight" route.',
     trailerUrl: 'https://www.youtube.com/embed/VW4XO-52ubE',
     art: { style: 'sunny', colors: ['#0B4F6C', '#F2A65A'] },
+    tierPrices: { sofa: 550, recliner: 550, platinum: 420, gold: 320, silver: 260 },
   },
   {
     slug: 'salaar',
@@ -231,6 +241,7 @@ const MOVIES = [
       'Two friends bound by a childhood promise find themselves on opposite sides of a brutal war for a lawless city.',
     trailerUrl: 'https://www.youtube.com/embed/salaar-trailer',
     art: { style: 'slash', colors: ['#0D0D0F', '#B08544'] },
+    tierPrices: { sofa: 560, recliner: 560, platinum: 430, gold: 330, silver: 265 },
   },
 ];
 
