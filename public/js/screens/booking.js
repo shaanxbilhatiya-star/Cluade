@@ -81,7 +81,7 @@
     avatars.forEach(function (el) {
       var name = el.getAttribute('data-cast-name');
       _loadCastPhoto(name).then(function (url) {
-        if (!url || !el.isConnected) return;
+        if (!url) return;
         var img = document.createElement('img');
         img.className = 'cast__avatar-img';
         img.src = url;
