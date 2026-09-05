@@ -133,17 +133,14 @@
               (movie.tagline ? '<p class="detail-head__tagline">' + UI.esc(movie.tagline) + '</p>' : '') +
               '<div class="tag-row" style="margin-top:12px">' +
                 (movie.genres || []).map(function (g) { return '<span class="tag tag--accent">' + UI.esc(g) + '</span>'; }).join('') +
+                '<span class="tag tag--accent">Playing in Hindi on multiplex</span>' +
               '</div>' +
             '</div>' +
 
             '<div class="metrics">' +
-              (movie.rating
-                ? '<div class="metric"><div class="metric__value" style="color:var(--primary-600)">' + UI.icon('star', 16) + Number(movie.rating).toFixed(1) + '</div>' +
-                  '<div class="metric__label">' + (movie.votes ? (movie.votes / 1000).toFixed(0) + 'K votes' : 'Rating') + '</div></div>'
-                : '') +
               '<div class="metric"><div class="metric__value">' + UI.esc(UI.runtime(movie.runtime)) + '</div><div class="metric__label">Runtime</div></div>' +
               '<div class="metric"><div class="metric__value">' + UI.esc(movie.certificate) + '</div><div class="metric__label">Rated</div></div>' +
-              '<div class="metric"><div class="metric__value">' + UI.esc((movie.languages || [])[0] || '—') + '</div><div class="metric__label">Language</div></div>' +
+              '<div class="metric"><div class="metric__value">' + UI.esc((movie.languages || []).join(', ') || '—') + '</div><div class="metric__label">Language</div></div>' +
             '</div>' +
 
             '<h2 class="subhead">Synopsis</h2>' +
@@ -155,6 +152,7 @@
               '<div class="kv"><span class="kv__key">Release date</span><span class="kv__val">' + UI.esc(UI.shortDate(movie.releaseDate)) + '</span></div>' +
               '<div class="kv"><span class="kv__key">Languages</span><span class="kv__val">' + UI.esc((movie.languages || []).join(', ')) + '</span></div>' +
               '<div class="kv"><span class="kv__key">Formats</span><span class="kv__val">' + UI.esc((movie.formats || []).join(', ')) + '</span></div>' +
+              '<div class="kv"><span class="kv__key">Note</span><span class="kv__val">Playing in Hindi on multiplex</span></div>' +
             '</div>' +
 
             (movie.cast && movie.cast.length

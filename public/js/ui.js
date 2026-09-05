@@ -224,8 +224,8 @@
   }
 
   function ratingBadge(movie) {
-    if (!movie.rating) return '';
-    return '<span class="poster__badge">' + icon('star', 11, { solid: false }) + Number(movie.rating).toFixed(1) + '</span>';
+    // Ratings are intentionally hidden across the app.
+    return '';
   }
 
   /** Poster + title + optional "Book Now" — the Now Playing / Coming Soon card. */
