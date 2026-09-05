@@ -175,9 +175,9 @@
               : '') +
 
             '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + movie.reviews.count + ')' : '') + '</h2>' +
-            '<div class="list">' +
+            '<div class="list" data-review-list>' +
               (movie.reviewList.length
-                ? movie.reviewList.slice(0, 5).map(function (r) {
+                ? movie.reviewList.slice(0, 25).map(function (r) {
                     return '<div class="review">' +
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
@@ -187,12 +187,11 @@
                       (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
                       '</div>';
                   }).join('')
-                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first.</p>') +
+                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet.</p>') +
             '</div>' +
-            (movie.reviewList.length > 5
-              ? '<div style="padding:8px 16px 0"><button class="btn-outline btn-outline--lg" data-action="view-all-reviews">View All ' + movie.reviewList.length + ' Reviews</button></div>'
-              : '') +
-            '<div style="padding:14px 16px 0"><button class="btn-outline btn-outline--lg" data-action="review">' + UI.icon('edit', 16) + ' Write a review</button></div>' +
+            (movie.reviewList.length > 25
+              ? '<div style="padding:8px 16px 16px"><button class="btn-outline btn-outline--lg" data-action="view-all-reviews">View All ' + movie.reviews.count + ' Reviews</button></div>'
+              : '<div style="height:16px"></div>') +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
@@ -262,13 +261,17 @@
           UI.sheet({ title: 'Trailer', body: body });
         },
         'view-all-reviews': function () {
+          var allReviews = movie.reviewList;
           var body = UI.h(
-            '<div style="padding:0 16px 16px">' +
-              movie.reviewList.map(function (r) {
-                return '<div class="review">' +
+            '<div class="reviews-sheet">' +
+              allReviews.map(function (r) {
+                return '<div class="review review--sheet">' +
                   '<div class="review__head">' +
                     '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
-                    '<span class="review__name">' + UI.esc(r.author.name) + '</span>' +
+                    '<div style="flex:1;min-width:0">' +
+                      '<div class="review__name">' + UI.esc(r.author.name) + '</div>' +
+                      (r.createdAt ? '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + UI.esc(UI.shortDate(r.createdAt)) + '</div>' : '') +
+                    '</div>' +
                     '<span class="review__score">' + r.rating + '/10</span>' +
                   '</div>' +
                   (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
@@ -276,7 +279,7 @@
               }).join('') +
             '</div>'
           );
-          UI.sheet({ title: 'All Reviews (' + movie.reviewList.length + ')', body: body });
+          UI.sheet({ title: 'All Reviews (' + allReviews.length + ')', body: body });
         },
         share: async function () {
           var text = movie.title + ' — ' + (movie.tagline || 'now on CineFlex');
@@ -287,48 +290,6 @@
             try { await navigator.clipboard.writeText(window.location.href); UI.toast('Link copied', 'success'); return; } catch (_e) {}
           }
         },
-        review: function () {
-          if (!API.isSignedIn()) {
-            sessionStorage.setItem('cineflex.returnTo', '/movie/' + movie.id);
-            App.navigate('/login');
-            return;
-          }
-          var chosen = 8;
-          var form = UI.h(
-            '<form style="padding:0 0 10px">' +
-              '<div style="display:flex;justify-content:center;gap:6px;padding:4px 16px 18px" data-stars></div>' +
-              '<div class="field"><label class="field__label" for="rtext">Your review (optional)</label>' +
-                '<div class="field__control"><textarea id="rtext" name="text" placeholder="What did you think?" maxlength="600"></textarea></div></div>' +
-              '<div style="padding:0 16px"><button class="btn" type="submit">Post review</button></div>' +
-            '</form>'
-          );
-          var stars = form.querySelector('[data-stars]');
-
-          function paintStars() {
-            stars.innerHTML = Array.from({ length: 10 }, function (_x, i) {
-              var n = i + 1;
-              return '<button type="button" data-star="' + n + '" aria-label="' + n + ' out of 10" ' +
-                'style="color:' + (n <= chosen ? 'var(--primary-600)' : 'var(--line-strong)') + '">' + UI.icon('star', 20, { solid: n <= chosen }) + '</button>';
-            }).join('');
-          }
-          stars.addEventListener('click', function (e) {
-            var b = e.target.closest('[data-star]');
-            if (!b) return;
-            chosen = Number(b.getAttribute('data-star'));
-            paintStars();
-          });
-          paintStars();
-
-          var sheet = UI.sheet({ title: 'Rate ' + movie.title, body: form });
-          form.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            try {
-              await API.review(movie.id, { rating: chosen, text: form.text.value.trim() });
-              sheet.close();
-              UI.toast('Thanks for your review!', 'success');
-              App.render();
-            } catch (err) { UI.toast(err.message, 'error'); }
-          });
         },
       });
 
