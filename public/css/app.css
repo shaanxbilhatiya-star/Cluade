@@ -276,7 +276,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .rail::-webkit-scrollbar { display: none; }
 .rail > * { scroll-snap-align: start; flex: none; }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 0 16px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 0 16px 0 20px; }
 .stack { display: grid; gap: 12px; padding: 0 16px; }
 
 /* ── Poster / movie card ────────────────────────────────────────────────── */
@@ -440,7 +440,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 .chips {
   display: flex; gap: 10px;
-  padding: 14px 16px 4px;
+  padding: 14px 16px 4px 20px;
   overflow-x: auto; scrollbar-width: none; flex: none;
 }
 .chips::-webkit-scrollbar { display: none; }
