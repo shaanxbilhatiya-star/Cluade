@@ -138,10 +138,6 @@
         'all-cinemas': function () { App.navigate('/cinemas'); },
       });
 
-      view.querySelector('.search-field').addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); App.navigate('/search'); }
-      });
-
       return view;
     },
   };
