@@ -691,14 +691,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 /* ── Seat map ───────────────────────────────────────────────────────────── */
 .seatmap { padding: 8px 0 4px; }
-.screen-curve { padding: 18px 24px 6px; text-align: center; }
-.screen-curve svg { width: 100%; height: auto; color: var(--primary-600); }
-.screen-curve span {
-  display: block; margin-top: 4px;
-  font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
-}
 
-.seat-scroll { overflow-x: auto; padding: 6px 16px 16px; scrollbar-width: none; }
+.seat-scroll { overflow-x: auto; padding: 10px 16px 4px; scrollbar-width: none; }
 .seat-scroll::-webkit-scrollbar { display: none; }
 .seat-sections { display: inline-flex; flex-direction: column; gap: 4px; margin: 0 auto; min-width: 100%; }
 
@@ -726,8 +720,14 @@ ul { margin: 0; padding: 0; list-style: none; }
 .seat-row__label {
   width: 16px; flex: none; font-size: 11px; font-weight: 700; color: var(--muted); text-align: center;
 }
+/* Each row is split into fixed-width blocks (one per side of the aisle).
+   Block widths are set inline per-map (see slots in booking.js) so the
+   aisle lands at the same x position on every row of the screen, even when
+   a tier like Sofa/Recliner has fewer seats than Platinum/Gold/Silver. */
+.seat-block { display: grid; gap: 9px; }
+.seat-aisle { width: 20px; flex: none; }
 .seat {
-  width: 26px; height: 26px; flex: none;
+  width: 26px; height: 26px;
   border-radius: 6px 6px 3px 3px;
   border: 1.5px solid var(--seat-border);
   background: var(--seat-available);
@@ -742,9 +742,31 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .seat[data-status="blocked"] { background: transparent; border-color: transparent; pointer-events: none; }
 .seat[aria-pressed="true"] { background: var(--seat-border); border-color: var(--seat-border); color: #fff; transform: scale(1.06); }
-.seat--gap { margin-right: 18px; }
 
-.legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; padding: 4px 16px 12px; }
+/* Straight cinema screen — a wide, gently-glowing bar (not a curved arc),
+   placed after the last row (Silver) since that's always the tier closest
+   to the physical screen. */
+.screen-indicator { padding: 4px 24px 18px; text-align: center; }
+.screen-bar {
+  height: 22px; max-width: 520px; margin: 0 auto 10px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-600) 55%, transparent), color-mix(in srgb, var(--primary-600) 10%, transparent));
+  clip-path: polygon(0% 0%, 100% 0%, 88% 100%, 12% 100%);
+  box-shadow: 0 14px 28px -10px color-mix(in srgb, var(--primary-600) 55%, transparent);
+}
+.screen-indicator span {
+  display: block; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted);
+}
+
+/* Sticky legend: pinned to the bottom of the scrollable seat area (just
+   above the fixed action bar) so Available/Selected/Sold stays visible no
+   matter how far the user scrolls through a long seat map. */
+.legend {
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+  padding: 10px 16px calc(14px + var(--safe-bottom)); margin-top: 6px;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
 .legend__item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
 .legend__swatch { width: 14px; height: 14px; border-radius: 4px; }
 .legend__swatch--available { background: var(--seat-available); border: 1.5px solid var(--seat-border); }
@@ -753,18 +775,19 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 /* Landscape mobile: the seat map is the tallest part of this screen, so on a
    rotated phone (short viewport height) trim vertical padding and shrink
-   seats slightly to keep everything — screen indicator, seats, legend and
-   the action bar — visible without needing to scroll the outer page. */
+   seats slightly to keep everything — seats, screen bar and the sticky
+   legend — visible without excess scrolling. */
 @media (orientation: landscape) and (max-height: 480px) {
-  .screen-curve { padding: 8px 24px 2px; }
-  .seat-scroll { padding: 2px 16px 8px; }
+  .seat-scroll { padding: 4px 16px 2px; }
   .seatmap-section { padding: 6px 4px 2px; }
   .seatmap-section__head { margin-bottom: 6px; }
   .seat-rows { gap: 6px; }
   .seat-row { gap: 6px; }
+  .seat-block { gap: 6px; }
   .seat { width: 21px; height: 21px; font-size: 8.5px; }
-  .seat--gap { margin-right: 12px; }
-  .legend { padding: 2px 16px 6px; gap: 12px; }
+  .screen-indicator { padding: 2px 24px 8px; }
+  .screen-bar { height: 16px; margin-bottom: 6px; }
+  .legend { padding: 6px 16px; gap: 12px; }
 }
 
 .hold-timer {

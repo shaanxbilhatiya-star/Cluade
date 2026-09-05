@@ -18,6 +18,40 @@
     return sections;
   }
 
+  // Splits a row's seats into left/right blocks at its aisle (gapAfter).
+  // Rows with no gap come back as a single block.
+  function splitSeatBlocks(seats) {
+    var blocks = [[]];
+    seats.forEach(function (seat) {
+      blocks[blocks.length - 1].push(seat);
+      if (seat.gapAfter) blocks.push([]);
+    });
+    return blocks.filter(function (b) { return b.length; });
+  }
+
+  // Real seat maps keep the aisle at the same on-screen position for every
+  // row, even when a tier (Sofa/Recliner) has fewer seats than the wide
+  // Platinum/Gold/Silver rows below it. We find the widest block at each
+  // position across the *whole* screen, then size every row's blocks to
+  // that fixed slot count, so shorter rows simply leave trailing space
+  // instead of shifting the aisle around.
+  function maxBlockSlots(rows) {
+    var max = [];
+    rows.forEach(function (row) {
+      splitSeatBlocks(row.seats).forEach(function (block, i) {
+        max[i] = Math.max(max[i] || 0, block.length);
+      });
+    });
+    return max;
+  }
+
+  function renderSeatButton(seat) {
+    return '<button class="seat" ' +
+      'data-seat="' + UI.esc(seat.id) + '" data-tier="' + UI.esc(seat.tier) + '" data-status="' + UI.esc(seat.status) + '" ' +
+      'aria-pressed="false" aria-label="Seat ' + UI.esc(seat.id) + ', ' + UI.esc(TIER_LABEL[seat.tier] || seat.tier) + ', ' + UI.money(seat.price) + '"' +
+      (seat.status !== 'available' ? ' disabled' : '') + '>' + seat.number + '</button>';
+  }
+
   // ── Cast photo helpers ─────────────────────────────────────────────────────
   // Cache persists for the session so each actor is only fetched once.
   var _castPhotoCache = {};
@@ -410,6 +444,7 @@
       data.rows.forEach(function (row) {
         row.seats.forEach(function (seat) { priceOf[seat.id] = seat.price; });
       });
+      var slots = maxBlockSlots(data.rows);
 
       var view = UI.h(
         '<div class="screen">' +
@@ -422,13 +457,6 @@
           '</div>' +
 
           '<div class="scroll">' +
-            '<div class="screen-curve">' +
-              '<svg viewBox="0 0 300 34" preserveAspectRatio="none" aria-hidden="true">' +
-                '<path d="M4 30 Q150 0 296 30" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>' +
-              '</svg>' +
-              '<span>Screen this way</span>' +
-            '</div>' +
-
             '<div class="seat-scroll"><div class="seat-sections" data-rows>' +
               groupRowsByTier(data.rows).map(function (section, i) {
                 var tierMeta = data.tiers.filter(function (t) { return t.tier === section.tier; })[0];
@@ -441,13 +469,14 @@
                     '</div>' +
                     '<div class="seat-rows">' +
                       section.rows.map(function (row) {
+                        var blocks = splitSeatBlocks(row.seats);
                         return '<div class="seat-row">' +
                           '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
-                          row.seats.map(function (seat) {
-                            return '<button class="seat' + (seat.gapAfter ? ' seat--gap' : '') + '" ' +
-                              'data-seat="' + UI.esc(seat.id) + '" data-tier="' + UI.esc(seat.tier) + '" data-status="' + UI.esc(seat.status) + '" ' +
-                              'aria-pressed="false" aria-label="Seat ' + UI.esc(seat.id) + ', ' + UI.esc(TIER_LABEL[seat.tier] || seat.tier) + ', ' + UI.money(seat.price) + '"' +
-                              (seat.status !== 'available' ? ' disabled' : '') + '>' + seat.number + '</button>';
+                          blocks.map(function (block, bi) {
+                            return (bi > 0 ? '<span class="seat-aisle"></span>' : '') +
+                              '<div class="seat-block" style="grid-template-columns:repeat(' + slots[bi] + ',26px)">' +
+                              block.map(renderSeatButton).join('') +
+                              '</div>';
                           }).join('') +
                           '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
                           '</div>';
@@ -457,15 +486,19 @@
               }).join('') +
             '</div></div>' +
 
+            '<div class="screen-indicator">' +
+              '<div class="screen-bar"></div>' +
+              '<span>All eyes this way please!</span>' +
+            '</div>' +
+
+            '<p class="text-center text-muted" style="font-size:12px;margin:4px 0 12px">' +
+              UI.esc(data.stats.available) + ' of ' + UI.esc(data.stats.total) + ' seats available · up to ' + MAX + ' per booking</p>' +
+
             '<div class="legend">' +
               '<span class="legend__item"><span class="legend__swatch legend__swatch--available"></span>Available</span>' +
               '<span class="legend__item"><span class="legend__swatch legend__swatch--selected"></span>Selected</span>' +
               '<span class="legend__item"><span class="legend__swatch legend__swatch--sold"></span>Sold</span>' +
             '</div>' +
-
-            '<p class="text-center text-muted" style="font-size:12px;margin:4px 0 0">' +
-              UI.esc(data.stats.available) + ' of ' + UI.esc(data.stats.total) + ' seats available · up to ' + MAX + ' per booking</p>' +
-            '<div class="spacer-24"></div>' +
           '</div>' +
 
           '<div class="actionbar">' +
