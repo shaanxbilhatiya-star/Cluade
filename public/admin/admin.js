@@ -781,6 +781,7 @@
   async function pageShowtimes(content, topActions) {
     topActions.innerHTML =
       '<button class="btn btn--ghost" data-action="generate">' + icon('refresh', 17) + ' Auto-schedule</button> ' +
+      '<button class="btn btn--ghost btn--danger" data-action="clear-showtimes" style="color:#dc2626;border-color:#dc2626">' + icon('trash', 17) + ' Clear all showtimes</button> ' +
       '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add showtime</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
 
@@ -849,6 +850,16 @@
       try {
         var res = await API.post('/admin/showtimes/generate');
         toast(res.created ? 'Scheduled ' + res.created + ' new showtimes' : 'Schedule already complete', 'success');
+        load();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    topActions.querySelector('[data-action="clear-showtimes"]').addEventListener('click', async function () {
+      var ok = await confirmDialog('Clear all showtimes?', 'This removes every showtime and seat hold. Existing bookings are kept. This cannot be undone.', 'Clear all showtimes');
+      if (!ok) return;
+      try {
+        var res = await API.post('/admin/clear-showtimes');
+        toast('Cleared ' + res.cleared.showtimes + ' showtimes and ' + res.cleared.seatHolds + ' seat holds', 'success');
         load();
       } catch (err) { toast(err.message, 'error'); }
     });

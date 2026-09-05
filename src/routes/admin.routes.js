@@ -327,6 +327,17 @@ router.delete('/admin/screens/:id', auth.requireAdmin, (ctx) => {
 // with confirmed bookings — so demo/dummy seating data can be cleared before adding real
 // screens. This is intentionally forceful (skips the "archive instead of delete" guard
 // used elsewhere) since it's meant for clearing out seed/demo data, not day-to-day use.
+// Clear all showtimes and seat holds without touching bookings or screens.
+router.post('/admin/clear-showtimes', auth.requireAdmin, () => {
+  const counts = {
+    showtimes: db.get('showtimes').length,
+    seatHolds: db.get('seatHolds').length,
+  };
+  db.replace('showtimes', []);
+  db.replace('seatHolds', []);
+  return { cleared: counts };
+});
+
 router.post('/admin/purge-dummy-screens', auth.requireAdmin, () => {
   const counts = {
     screens: db.get('screens').length,
