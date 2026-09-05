@@ -22,8 +22,11 @@
   --success: #16A34A;
   --danger: #DC2626;
   --warning: #D97706;
-  --seat-available: #EDEBF3;
-  --seat-available-ink: #6B6B80;
+  --seat-available: #FFFFFF;
+  --seat-available-ink: #45455C;
+  --seat-border: #16A34A;
+  --seat-sold: #E4E2EA;
+  --seat-sold-ink: #B5B2C2;
 
   --radius-sm: 10px;
   --radius: 14px;
@@ -54,8 +57,11 @@
   --line: #2B2739;
   --line-strong: #3A3550;
 
-  --seat-available: #2C2839;
-  --seat-available-ink: #A9A4BC;
+  --seat-available: #1B1826;
+  --seat-available-ink: #D6D2E4;
+  --seat-border: #34D399;
+  --seat-sold: #2B2739;
+  --seat-sold-ink: #5C5872;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
   --shadow-nav: 0 -2px 20px rgba(0, 0, 0, .5);
 }
@@ -692,34 +698,74 @@ ul { margin: 0; padding: 0; list-style: none; }
   font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
 }
 
-.seat-scroll { overflow-x: auto; padding: 10px 16px 16px; scrollbar-width: none; }
+.seat-scroll { overflow-x: auto; padding: 6px 16px 16px; scrollbar-width: none; }
 .seat-scroll::-webkit-scrollbar { display: none; }
-.seat-rows { display: inline-grid; gap: 7px; margin: 0 auto; }
-.seat-row { display: flex; align-items: center; gap: 7px; }
+.seat-sections { display: inline-flex; flex-direction: column; gap: 4px; margin: 0 auto; min-width: 100%; }
+
+/* Tier section: a small heading (tier name + price) above its block of rows,
+   mirroring how multiplex booking screens group seats by price/category
+   instead of repeating the label on every row. */
+.seatmap-section { padding: 10px 4px 6px; }
+.seatmap-section__head {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  margin-bottom: 10px;
+}
+.seatmap-section__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--seat-border); flex: none; }
+.seatmap-section__dot[data-tier="vip"], .seatmap-section__dot[data-tier="sofa"], .seatmap-section__dot[data-tier="recliner"] { background: #D97706; }
+.seatmap-section__dot[data-tier="platinum"] { background: #6D28D9; }
+.seatmap-section__dot[data-tier="gold"] { background: #D97706; }
+.seatmap-section__dot[data-tier="silver"] { background: #7C7C90; }
+.seatmap-section__label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-soft);
+}
+.seatmap-section__price { font-size: 11px; font-weight: 600; color: var(--muted); }
+.seatmap-divider { height: 1px; background: var(--line); margin: 2px 20px; }
+
+.seat-rows { display: inline-grid; gap: 9px; margin: 0 auto; }
+.seat-row { display: flex; align-items: center; gap: 9px; }
 .seat-row__label {
   width: 16px; flex: none; font-size: 11px; font-weight: 700; color: var(--muted); text-align: center;
 }
 .seat {
-  width: 25px; height: 25px; flex: none;
+  width: 26px; height: 26px; flex: none;
   border-radius: 6px 6px 3px 3px;
+  border: 1.5px solid var(--seat-border);
   background: var(--seat-available);
   color: var(--seat-available-ink);
   font-size: 9.5px; font-weight: 700;
   display: grid; place-items: center;
-  transition: transform .1s, background .15s;
+  transition: transform .1s, background .15s, border-color .15s;
 }
-.seat[data-tier="premium"] { background: color-mix(in srgb, var(--primary-600) 16%, var(--seat-available)); }
-.seat[data-tier="vip"] { background: color-mix(in srgb, #D97706 22%, var(--seat-available)); }
 .seat[data-status="booked"], .seat[data-status="held"] {
-  background: var(--line-strong); color: transparent; pointer-events: none; opacity: .55;
+  background: var(--seat-sold); color: var(--seat-sold-ink);
+  border-color: var(--seat-sold); pointer-events: none;
 }
-.seat[data-status="blocked"] { background: transparent; pointer-events: none; }
-.seat[aria-pressed="true"] { background: var(--primary-600); color: #fff; transform: scale(1.06); }
-.seat--gap { margin-right: 16px; }
+.seat[data-status="blocked"] { background: transparent; border-color: transparent; pointer-events: none; }
+.seat[aria-pressed="true"] { background: var(--seat-border); border-color: var(--seat-border); color: #fff; transform: scale(1.06); }
+.seat--gap { margin-right: 18px; }
 
-.legend { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; padding: 4px 16px 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; padding: 4px 16px 12px; }
 .legend__item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
-.legend__swatch { width: 14px; height: 14px; border-radius: 4px; background: var(--seat-available); }
+.legend__swatch { width: 14px; height: 14px; border-radius: 4px; }
+.legend__swatch--available { background: var(--seat-available); border: 1.5px solid var(--seat-border); }
+.legend__swatch--selected { background: var(--seat-border); }
+.legend__swatch--sold { background: var(--seat-sold); }
+
+/* Landscape mobile: the seat map is the tallest part of this screen, so on a
+   rotated phone (short viewport height) trim vertical padding and shrink
+   seats slightly to keep everything — screen indicator, seats, legend and
+   the action bar — visible without needing to scroll the outer page. */
+@media (orientation: landscape) and (max-height: 480px) {
+  .screen-curve { padding: 8px 24px 2px; }
+  .seat-scroll { padding: 2px 16px 8px; }
+  .seatmap-section { padding: 6px 4px 2px; }
+  .seatmap-section__head { margin-bottom: 6px; }
+  .seat-rows { gap: 6px; }
+  .seat-row { gap: 6px; }
+  .seat { width: 21px; height: 21px; font-size: 8.5px; }
+  .seat--gap { margin-right: 12px; }
+  .legend { padding: 2px 16px 6px; gap: 12px; }
+}
 
 .hold-timer {
   display: flex; align-items: center; justify-content: center; gap: 7px;

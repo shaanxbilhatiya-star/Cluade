@@ -4,6 +4,20 @@
 
   var TIER_LABEL = { regular: 'Regular', premium: 'Premium', vip: 'VIP Recliner', sofa: 'Sofa', recliner: 'Recliner', platinum: 'Platinum', gold: 'Gold', silver: 'Silver' };
 
+  // Groups consecutive rows that share a tier into sections, so the seat map
+  // can show one price/tier heading per block (Sofa, Recliner, Platinum, …)
+  // instead of repeating it per row — matches how multiplex seat maps are
+  // conventionally laid out (screen closest tiers first, cheapest last).
+  function groupRowsByTier(rows) {
+    var sections = [];
+    rows.forEach(function (row) {
+      var last = sections[sections.length - 1];
+      if (last && last.tier === row.tier) last.rows.push(row);
+      else sections.push({ tier: row.tier, rows: [row] });
+    });
+    return sections;
+  }
+
   // ── Cast photo helpers ─────────────────────────────────────────────────────
   // Cache persists for the session so each actor is only fetched once.
   var _castPhotoCache = {};
@@ -415,31 +429,38 @@
               '<span>Screen this way</span>' +
             '</div>' +
 
-            '<div class="seat-scroll"><div class="seat-rows" data-rows>' +
-              data.rows.map(function (row) {
-                return '<div class="seat-row">' +
-                  '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
-                  row.seats.map(function (seat) {
-                    return '<button class="seat' + (seat.gapAfter ? ' seat--gap' : '') + '" ' +
-                      'data-seat="' + UI.esc(seat.id) + '" data-tier="' + UI.esc(seat.tier) + '" data-status="' + UI.esc(seat.status) + '" ' +
-                      'aria-pressed="false" aria-label="Seat ' + UI.esc(seat.id) + ', ' + UI.esc(TIER_LABEL[seat.tier] || seat.tier) + ', ' + UI.money(seat.price) + '"' +
-                      (seat.status !== 'available' ? ' disabled' : '') + '>' + seat.number + '</button>';
-                  }).join('') +
-                  '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
+            '<div class="seat-scroll"><div class="seat-sections" data-rows>' +
+              groupRowsByTier(data.rows).map(function (section, i) {
+                var tierMeta = data.tiers.filter(function (t) { return t.tier === section.tier; })[0];
+                return (i > 0 ? '<div class="seatmap-divider"></div>' : '') +
+                  '<div class="seatmap-section" data-tier-section="' + UI.esc(section.tier) + '">' +
+                    '<div class="seatmap-section__head">' +
+                      '<span class="seatmap-section__dot" data-tier="' + UI.esc(section.tier) + '"></span>' +
+                      '<span class="seatmap-section__label">' + UI.esc(TIER_LABEL[section.tier] || section.tier) + '</span>' +
+                      (tierMeta ? '<span class="seatmap-section__price">' + UI.money(tierMeta.price) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="seat-rows">' +
+                      section.rows.map(function (row) {
+                        return '<div class="seat-row">' +
+                          '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
+                          row.seats.map(function (seat) {
+                            return '<button class="seat' + (seat.gapAfter ? ' seat--gap' : '') + '" ' +
+                              'data-seat="' + UI.esc(seat.id) + '" data-tier="' + UI.esc(seat.tier) + '" data-status="' + UI.esc(seat.status) + '" ' +
+                              'aria-pressed="false" aria-label="Seat ' + UI.esc(seat.id) + ', ' + UI.esc(TIER_LABEL[seat.tier] || seat.tier) + ', ' + UI.money(seat.price) + '"' +
+                              (seat.status !== 'available' ? ' disabled' : '') + '>' + seat.number + '</button>';
+                          }).join('') +
+                          '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
+                          '</div>';
+                      }).join('') +
+                    '</div>' +
                   '</div>';
               }).join('') +
             '</div></div>' +
 
             '<div class="legend">' +
-              data.tiers.map(function (t) {
-                return '<span class="legend__item"><span class="legend__swatch" style="background:' +
-                  (t.tier === 'premium' ? 'color-mix(in srgb, var(--primary-600) 16%, var(--seat-available))'
-                    : t.tier === 'vip' ? 'color-mix(in srgb, #D97706 22%, var(--seat-available))'
-                    : 'var(--seat-available)') + '"></span>' +
-                  UI.esc(TIER_LABEL[t.tier] || t.tier) + ' ' + UI.money(t.price) + '</span>';
-              }).join('') +
-              '<span class="legend__item"><span class="legend__swatch" style="background:var(--primary-600)"></span>Selected</span>' +
-              '<span class="legend__item"><span class="legend__swatch" style="background:var(--line-strong);opacity:.55"></span>Sold</span>' +
+              '<span class="legend__item"><span class="legend__swatch legend__swatch--available"></span>Available</span>' +
+              '<span class="legend__item"><span class="legend__swatch legend__swatch--selected"></span>Selected</span>' +
+              '<span class="legend__item"><span class="legend__swatch legend__swatch--sold"></span>Sold</span>' +
             '</div>' +
 
             '<p class="text-center text-muted" style="font-size:12px;margin:4px 0 0">' +
