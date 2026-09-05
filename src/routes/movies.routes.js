@@ -18,6 +18,127 @@ function decorate(movie) {
   return Object.assign({}, movie, { reviews: reviewSummary(movie.id), showtimeCount });
 }
 
+// ── External reviews (TMDB) ─────────────────────────────────────────────────
+// Read-only: we never write reviews back to TMDB, only fetch + cache them.
+// Works automatically for existing movies (auto-resolves a tmdbId by title
+// search if one isn't saved yet) and for any future movie added via admin.
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_CACHE_MS = 6 * 60 * 60 * 1000; // 6 hours
+const tmdbIdCache = new Map(); // movie.id -> tmdbId (or null = "looked up, not found")
+const tmdbReviewCache = new Map(); // tmdbId -> { at, reviews }
+
+function tmdbHeaders() {
+  const token = process.env.TMDB_API_TOKEN;
+  return token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : null;
+}
+
+async function resolveTmdbId(movie) {
+  if (movie.tmdbId) return movie.tmdbId;
+  if (tmdbIdCache.has(movie.id)) return tmdbIdCache.get(movie.id);
+
+  const headers = tmdbHeaders();
+  if (!headers) return null;
+
+  try {
+    const year = movie.releaseDate ? String(movie.releaseDate).slice(0, 4) : '';
+    const url = `${TMDB_BASE}/search/movie?query=${encodeURIComponent(movie.title)}${year ? `&year=${year}` : ''}&include_adult=false&language=en-US&page=1`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`TMDB search failed (${res.status})`);
+    const data = await res.json();
+    const match = (data.results || [])[0];
+    const tmdbId = match ? match.id : null;
+
+    tmdbIdCache.set(movie.id, tmdbId);
+    if (tmdbId) db.update('movies', movie.id, { tmdbId }); // persist so future requests skip the search
+    return tmdbId;
+  } catch (_e) {
+    tmdbIdCache.set(movie.id, null);
+    return null;
+  }
+}
+
+async function fetchTmdbReviews(tmdbId) {
+  if (!tmdbId) return [];
+  const cached = tmdbReviewCache.get(tmdbId);
+  if (cached && Date.now() - cached.at < TMDB_CACHE_MS) return cached.reviews;
+
+  const headers = tmdbHeaders();
+  if (!headers) return cached ? cached.reviews : [];
+
+  try {
+    const res = await fetch(`${TMDB_BASE}/movie/${encodeURIComponent(tmdbId)}/reviews?language=en-US&page=1`, { headers });
+    if (!res.ok) throw new Error(`TMDB reviews failed (${res.status})`);
+    const data = await res.json();
+    const reviews = (data.results || []).slice(0, 25).map((r) => ({
+      id: `tmdb_${r.id}`,
+      rating: r.author_details && r.author_details.rating ? Math.round(r.author_details.rating) : null,
+      text: (r.content || '').replace(/\s+/g, ' ').trim().slice(0, 600),
+      createdAt: r.created_at,
+      author: {
+        name: r.author || (r.author_details && r.author_details.username) || 'TMDB user',
+        avatarUrl:
+          r.author_details && r.author_details.avatar_path
+            ? (String(r.author_details.avatar_path).startsWith('/https')
+                ? String(r.author_details.avatar_path).slice(1)
+                : `https://image.tmdb.org/t/p/w185${r.author_details.avatar_path}`)
+            : '/img/avatars/guest.svg',
+      },
+      source: 'tmdb',
+    }));
+    tmdbReviewCache.set(tmdbId, { at: Date.now(), reviews });
+    return reviews;
+  } catch (_e) {
+    return cached ? cached.reviews : [];
+  }
+}
+
+// Falls back to a rating-based summary card when neither local users nor TMDB
+// have any written reviews for the movie, so the section is never empty.
+function fallbackSummaryReview(movie, tmdbId) {
+  const rating = Number(movie.rating) || 0;
+  if (!rating) return [];
+  return [
+    {
+      id: `fallback_${movie.id}`,
+      rating: Math.round(rating > 10 ? rating / 10 : rating),
+      text: `Audience rating aggregated from ${tmdbId ? 'TMDB' : 'CineFlex'} — ${rating}/10 based on public voting.`,
+      createdAt: movie.releaseDate || new Date().toISOString(),
+      author: { name: tmdbId ? 'TMDB Audience Score' : 'CineFlex Audience Score', avatarUrl: '/img/avatars/guest.svg' },
+      source: 'aggregate',
+    },
+  ];
+}
+
+async function getReviewsFor(movie) {
+  const localReviews = db
+    .find('reviews', (r) => r.movieId === movie.id)
+    .map((r) => {
+      const u = db.byId('users', r.userId);
+      return {
+        id: r.id,
+        rating: r.rating,
+        text: r.text,
+        createdAt: r.createdAt,
+        author: u ? { name: u.name, avatarUrl: u.avatarUrl } : { name: 'CineFlex user', avatarUrl: '/img/avatars/guest.svg' },
+        source: 'local',
+      };
+    })
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+  const tmdbId = await resolveTmdbId(movie);
+  const tmdbReviews = await fetchTmdbReviews(tmdbId);
+
+  let reviewList = [...localReviews, ...tmdbReviews];
+  if (!reviewList.length) reviewList = fallbackSummaryReview(movie, tmdbId);
+
+  const rated = reviewList.filter((r) => Number.isFinite(r.rating));
+  const summary = rated.length
+    ? { count: reviewList.length, average: Math.round((rated.reduce((s, r) => s + r.rating, 0) / rated.length) * 10) / 10 }
+    : { count: reviewList.length, average: 0 };
+
+  return { reviewList, summary };
+}
+
 router.get('/movies', (ctx) => {
   const { status, genre, language, q, city, limit, sort } = ctx.query;
   let list = db.get('movies').filter((m) => m.active !== false);
@@ -55,29 +176,17 @@ router.get('/movies', (ctx) => {
   return { count: capped.length, movies: capped.map(decorate) };
 });
 
-router.get('/movies/:id', (ctx) => {
+router.get('/movies/:id', async (ctx) => {
   const movie =
     db.byId('movies', ctx.params.id) || db.findOne('movies', (m) => m.slug === ctx.params.id);
   if (!movie) throw new HttpError(404, 'Movie not found');
 
-  const reviews = db
-    .find('reviews', (r) => r.movieId === movie.id)
-    .map((r) => {
-      const u = db.byId('users', r.userId);
-      return {
-        id: r.id,
-        rating: r.rating,
-        text: r.text,
-        createdAt: r.createdAt,
-        author: u ? { name: u.name, avatarUrl: u.avatarUrl } : { name: 'CineFlex user', avatarUrl: '/img/avatars/guest.svg' },
-      };
-    })
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-
+  const { reviewList, summary } = await getReviewsFor(movie);
   const cinemaIds = [...new Set(db.get('showtimes').filter((s) => s.movieId === movie.id).map((s) => s.cinemaId))];
 
   return Object.assign(decorate(movie), {
-    reviewList: reviews,
+    reviews: summary,
+    reviewList,
     playingAt: cinemaIds.map((id) => db.byId('cinemas', id)).filter(Boolean).map((c) => ({ id: c.id, name: c.name, city: c.city, area: c.area })),
   });
 });
