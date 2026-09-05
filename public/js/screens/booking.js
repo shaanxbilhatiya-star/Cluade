@@ -8,23 +8,70 @@
   // Cache persists for the session so each actor is only fetched once.
   var _castPhotoCache = {};
 
+  // Try the Wikipedia REST summary API for a given page title.
+  // Returns the thumbnail URL string, or null on failure.
+  function _wikiSummaryPhoto(title) {
+    return fetch(
+      'https://en.wikipedia.org/api/rest_v1/page/summary/' +
+      encodeURIComponent(title.replace(/\s+/g, '_')),
+      { headers: { Accept: 'application/json' } }
+    )
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { return (d && d.thumbnail) ? d.thumbnail.source : null; })
+      .catch(function () { return null; });
+  }
+
+  // Try the Wikipedia action API as a secondary strategy (includes piprop=thumbnail).
+  function _wikiActionPhoto(title) {
+    return fetch(
+      'https://en.wikipedia.org/w/api.php?action=query' +
+      '&titles=' + encodeURIComponent(title) +
+      '&prop=pageimages&piprop=thumbnail&pithumbsize=300' +
+      '&format=json&origin=*'
+    )
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var pages = data.query && data.query.pages;
+        var page = pages && Object.values(pages)[0];
+        return (page && page.thumbnail) ? page.thumbnail.source : null;
+      })
+      .catch(function () { return null; });
+  }
+
+  // Try a sequence of candidate page titles, returning first non-null photo URL.
+  function _tryTitles(titles) {
+    var idx = 0;
+    function next() {
+      if (idx >= titles.length) return Promise.resolve(null);
+      var title = titles[idx++];
+      // First try REST API, then action API for the same title
+      return _wikiSummaryPhoto(title).then(function (url) {
+        if (url) return url;
+        return _wikiActionPhoto(title);
+      }).then(function (url) {
+        if (url) return url;
+        return next();
+      });
+    }
+    return next();
+  }
+
   function _loadCastPhoto(name) {
     if (Object.prototype.hasOwnProperty.call(_castPhotoCache, name)) {
       return Promise.resolve(_castPhotoCache[name]);
     }
-    return fetch(
-      'https://en.wikipedia.org/w/api.php?action=query&titles=' +
-      encodeURIComponent(name) +
-      '&prop=pageimages&format=json&pithumbsize=300&origin=*'
-    ).then(function (res) { return res.json(); }).then(function (data) {
-      var pages = data.query && data.query.pages;
-      var page = pages && Object.values(pages)[0];
-      var url = (page && page.thumbnail) ? page.thumbnail.source : null;
+    // Build candidate title list: plain name first, then common disambiguation suffixes
+    var candidates = [
+      name,
+      name + ' (actor)',
+      name + ' (actress)',
+      name + ' (Indian actor)',
+      name + ' (film actor)',
+      name + ' (actress, born 1990)',
+    ];
+    return _tryTitles(candidates).then(function (url) {
       _castPhotoCache[name] = url;
       return url;
-    }).catch(function () {
-      _castPhotoCache[name] = null;
-      return null;
     });
   }
 
@@ -33,12 +80,17 @@
     var avatars = container.querySelectorAll('[data-cast-name]');
     avatars.forEach(function (el) {
       var name = el.getAttribute('data-cast-name');
-      var initials = el.getAttribute('data-initials') || '';
       _loadCastPhoto(name).then(function (url) {
         if (!url || !el.isConnected) return;
-        el.innerHTML = '<img class="cast__avatar-img" src="' + url + '" alt="' +
-          name.replace(/"/g, '&quot;') + '" ' +
-          'onerror="this.parentNode.textContent=this.parentNode.getAttribute(\'data-initials\')">';
+        var img = document.createElement('img');
+        img.className = 'cast__avatar-img';
+        img.src = url;
+        img.alt = name;
+        img.onerror = function () {
+          el.textContent = el.getAttribute('data-initials') || '';
+        };
+        el.innerHTML = '';
+        el.appendChild(img);
       });
     });
   }
