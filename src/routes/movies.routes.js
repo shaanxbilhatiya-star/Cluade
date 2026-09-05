@@ -171,6 +171,15 @@ function generateReviews(movie, count) {
     [names[i], names[j]] = [names[j], names[i]];
   }
 
+  // Reviews can never be dated before the movie's own release date. If the
+  // movie hasn't released yet (coming_soon / future releaseDate), nobody has
+  // actually watched it yet, so generated reviews get no date at all instead
+  // of a fabricated one.
+  const releaseMs = movie.releaseDate ? new Date(movie.releaseDate).getTime() : NaN;
+  const daysSinceRelease = Number.isFinite(releaseMs) ? Math.floor((Date.now() - releaseMs) / 86400000) : -1;
+  const hasReleased = daysSinceRelease >= 1;
+  const maxDaysAgo = Math.max(1, Math.min(45, daysSinceRelease));
+
   const reviews = [];
   for (let i = 0; i < count; i++) {
     const pool = pickLanguagePool(rng);
@@ -180,13 +189,13 @@ function generateReviews(movie, count) {
     const rating = roll < 0.65 ? 8 + Math.floor(rng() * 3) : roll < 0.9 ? 6 + Math.floor(rng() * 2) : 3 + Math.floor(rng() * 3);
     const text = fillTemplate(pick(rng, bucket), movie, rng);
     const name = names[i % names.length];
-    const daysAgo = Math.floor(rng() * 20) + 1;
+    const daysAgo = 1 + Math.floor(rng() * maxDaysAgo);
 
     reviews.push({
       id: `gen_${movie.id}_${i}`,
       rating,
       text,
-      createdAt: new Date(Date.now() - daysAgo * 86400000).toISOString(),
+      createdAt: hasReleased ? new Date(Date.now() - daysAgo * 86400000).toISOString() : null,
       author: { name, avatarUrl: '/img/avatars/guest.svg' },
       source: 'generated',
     });
@@ -212,7 +221,12 @@ async function getReviewsFor(movie) {
 
   const needed = Math.max(0, 30 - localReviews.length);
   const generated = needed ? generateReviews(movie, needed) : [];
-  const reviewList = [...localReviews, ...generated];
+  const reviewList = [...localReviews, ...generated].sort((a, b) => {
+    if (!a.createdAt && !b.createdAt) return 0;
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    return String(b.createdAt).localeCompare(String(a.createdAt));
+  });
 
   const rated = reviewList.filter((r) => Number.isFinite(r.rating));
   const summary = rated.length
