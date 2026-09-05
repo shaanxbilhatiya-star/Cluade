@@ -8,6 +8,17 @@
   // can show one price/tier heading per block (Sofa, Recliner, Platinum, …)
   // instead of repeating it per row — matches how multiplex seat maps are
   // conventionally laid out (screen closest tiers first, cheapest last).
+  // Converts a "HH:MM" 24-hour string to "h:MM AM/PM" for display. Storage
+  // and API payloads stay 24-hour throughout.
+  function time12(t) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+    if (!m) return t;
+    var h = parseInt(m[1], 10);
+    var suffix = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12 || 12;
+    return h12 + ':' + m[2] + ' ' + suffix;
+  }
+
   function groupRowsByTier(rows) {
     var sections = [];
     rows.forEach(function (row) {
@@ -440,6 +451,19 @@
       var chosen = [];
       var MAX = 10;
 
+      // Other showtimes for this same movie at this cinema, on the same
+      // date — rendered as a scrollable strip so the person can switch
+      // times without leaving the seat map (mirrors how multiplex booking
+      // apps let you retime a show right from the seat page).
+      var siblingShows = [];
+      try {
+        var cinemaDay = await API.cinemaShowtimes(show.cinema.id, show.date);
+        var movieGroup = (cinemaDay.movies || []).filter(function (m) { return m.movie.id === show.movie.id; })[0];
+        siblingShows = movieGroup ? movieGroup.shows : [{ id: show.id, time: show.time, isPast: false }];
+      } catch (err) {
+        siblingShows = [{ id: show.id, time: show.time, isPast: false }];
+      }
+
       var priceOf = {};
       data.rows.forEach(function (row) {
         row.seats.forEach(function (seat) { priceOf[seat.id] = seat.price; });
@@ -449,11 +473,18 @@
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({ title: show.movie.title, back: true, alignLeft: true, logo: false }) +
-          '<div style="padding:0 16px 12px;margin-top:-4px">' +
+          '<div style="padding:0 16px 12px;margin-top:-4px;text-align:center">' +
             '<p style="margin:0;font-size:13px;color:var(--muted)">' +
               UI.esc(show.cinema.name) + ' · ' + UI.esc(show.screen.name) + '<br>' +
-              UI.esc(UI.relativeDay(show.date)) + ', ' + UI.esc(show.time) + ' · ' + UI.esc(show.format) + ' · ' + UI.esc(show.language) +
+              UI.esc(UI.relativeDay(show.date)) + ', ' + UI.esc(time12(show.time)) + ' · ' + UI.esc(show.format) + ' · ' + UI.esc(show.language) +
             '</p>' +
+          '</div>' +
+
+          '<div class="time-strip" data-times>' +
+            siblingShows.map(function (s) {
+              return '<button class="time-pill' + (s.id === show.id ? ' time-pill--selected' : '') + '" data-time-id="' + UI.esc(s.id) + '"' +
+                (s.isPast ? ' disabled' : '') + '>' + UI.esc(time12(s.time)) + '</button>';
+            }).join('') +
           '</div>' +
 
           '<div class="scroll">' +
@@ -521,6 +552,16 @@
         totalEl.textContent = UI.money(total);
         proceedBtn.disabled = chosen.length === 0;
         proceedBtn.textContent = chosen.length ? 'Proceed (' + chosen.length + ')' : 'Proceed';
+      }
+
+      var timeStrip = view.querySelector('[data-times]');
+      if (timeStrip) {
+        timeStrip.addEventListener('click', function (event) {
+          var pill = event.target.closest('[data-time-id]');
+          if (!pill || pill.disabled) return;
+          var id = pill.getAttribute('data-time-id');
+          if (id !== show.id) App.navigate('/seats/' + id);
+        });
       }
 
       view.querySelector('[data-rows]').addEventListener('click', function (event) {

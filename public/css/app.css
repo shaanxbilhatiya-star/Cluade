@@ -624,6 +624,20 @@ ul { margin: 0; padding: 0; list-style: none; }
 .date-pill[aria-pressed="true"] .date-pill__day,
 .date-pill[aria-pressed="true"] .date-pill__mon { color: #fff; }
 
+/* Scrollable showtime strip on the seat-select screen: lets the person
+   switch to another time for the same movie/cinema without leaving the
+   seat map, same idea as the date strip above. */
+.time-strip { display: flex; gap: 10px; overflow-x: auto; padding: 2px 16px 12px; scrollbar-width: none; flex: none; }
+.time-strip::-webkit-scrollbar { display: none; }
+.time-pill {
+  flex: none; padding: 9px 16px;
+  border-radius: var(--radius-sm); border: 1.5px solid var(--seat-border);
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  background: transparent; transition: all .15s;
+}
+.time-pill[disabled] { opacity: .4; }
+.time-pill--selected { background: var(--seat-border); border-color: var(--seat-border); color: #fff; }
+
 /* ── Movie detail hero ──────────────────────────────────────────────────── */
 .detail-hero { position: relative; aspect-ratio: 16 / 10; background: #000; }
 .detail-hero img { width: 100%; height: 100%; object-fit: cover; }
