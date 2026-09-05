@@ -11,6 +11,18 @@
     return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // Converts a "HH:MM" 24-hour string to "h:MM AM/PM" for display. Storage/inputs stay 24-hour.
+  function time12(t) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+    if (!m) return esc(t);
+    var h24 = Number(m[1]);
+    var mins = m[2];
+    var period = h24 >= 12 ? 'PM' : 'AM';
+    var h12 = h24 % 12;
+    if (h12 === 0) h12 = 12;
+    return h12 + ':' + mins + ' ' + period;
+  }
+
   function h(html) {
     var t = document.createElement('template');
     t.innerHTML = String(html).trim();
@@ -638,7 +650,9 @@
 
   // ── Screens ──────────────────────────────────────────────────────────────
   async function pageScreens(content, topActions) {
-    topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add screen</button>';
+    topActions.innerHTML =
+      '<button class="btn btn--ghost" data-action="purge">' + icon('trash', 17) + ' Purge all screens</button> ' +
+      '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add screen</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
     var results = await Promise.all([API.get('/admin/screens'), API.cinemas('')]);
     var data = results[0];
@@ -674,6 +688,20 @@
         }) +
         '</div>');
     }
+
+    topActions.querySelector('[data-action="purge"]').addEventListener('click', async function () {
+      var ok = await confirmDialog(
+        'Purge ALL screens?',
+        'This permanently deletes every screen, showtime, booking and seat hold — including real ones, not just demo data. Use this only to clear out dummy/seed screens before adding real ones.',
+        'Purge everything'
+      );
+      if (!ok) return;
+      try {
+        var res = await API.post('/admin/purge-dummy-screens', {});
+        toast('Purged ' + res.purged.screens + ' screens, ' + res.purged.showtimes + ' showtimes, ' + res.purged.bookings + ' bookings', 'success');
+        navigate('screens');
+      } catch (err) { toast(err.message, 'error'); }
+    });
 
     topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
       var m = modal({ title: 'Add screen', body: form(null), confirmLabel: 'Create screen' });
@@ -755,7 +783,7 @@
         ? data.showtimes.map(function (s) {
             var pct = s.capacity ? Math.round((s.seatsBooked / s.capacity) * 100) : 0;
             return '<tr>' +
-              '<td class="cell-strong">' + esc(s.time) + '</td>' +
+              '<td class="cell-strong">' + time12(s.time) + '</td>' +
               '<td>' + esc(s.movie ? s.movie.title : '—') + '</td>' +
               '<td>' + esc(s.cinema ? s.cinema.name : '—') + '</td>' +
               '<td>' + esc(s.screen ? s.screen.name : '—') + '</td>' +

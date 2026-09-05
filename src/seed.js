@@ -90,19 +90,8 @@ function seedCinemas() {
       active: true,
     });
 
-    c.screens.forEach((s, i) => {
-      db.insert('screens', {
-        id: `scr_${c.slug}_${i + 1}`,
-        cinemaId: `cin_${c.slug}`,
-        name: s.name,
-        format: s.format,
-        soundSystem: s.soundSystem,
-        layoutPreset: s.layout,
-        layout: LAYOUTS[s.layout],
-        blockedSeats: [],
-        active: true,
-      });
-    });
+    // Screens are no longer auto-seeded — add real screens via the admin panel
+    // (Cinemas → a cinema → Add screen) so seat layouts reflect actual venues.
   }
 }
 
