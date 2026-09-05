@@ -4,6 +4,45 @@
 
   var TIER_LABEL = { regular: 'Regular', premium: 'Premium', vip: 'VIP Recliner' };
 
+  // ── Cast photo helpers ─────────────────────────────────────────────────────
+  // Cache persists for the session so each actor is only fetched once.
+  var _castPhotoCache = {};
+
+  function _loadCastPhoto(name) {
+    if (Object.prototype.hasOwnProperty.call(_castPhotoCache, name)) {
+      return Promise.resolve(_castPhotoCache[name]);
+    }
+    return fetch(
+      'https://en.wikipedia.org/w/api.php?action=query&titles=' +
+      encodeURIComponent(name) +
+      '&prop=pageimages&format=json&pithumbsize=300&origin=*'
+    ).then(function (res) { return res.json(); }).then(function (data) {
+      var pages = data.query && data.query.pages;
+      var page = pages && Object.values(pages)[0];
+      var url = (page && page.thumbnail) ? page.thumbnail.source : null;
+      _castPhotoCache[name] = url;
+      return url;
+    }).catch(function () {
+      _castPhotoCache[name] = null;
+      return null;
+    });
+  }
+
+  // Finds all cast avatar placeholders in `container` and swaps in real photos.
+  function _enrichCastPhotos(container) {
+    var avatars = container.querySelectorAll('[data-cast-name]');
+    avatars.forEach(function (el) {
+      var name = el.getAttribute('data-cast-name');
+      var initials = el.getAttribute('data-initials') || '';
+      _loadCastPhoto(name).then(function (url) {
+        if (!url || !el.isConnected) return;
+        el.innerHTML = '<img class="cast__avatar-img" src="' + url + '" alt="' +
+          name.replace(/"/g, '&quot;') + '" ' +
+          'onerror="this.parentNode.textContent=this.parentNode.getAttribute(\'data-initials\')">';
+      });
+    });
+  }
+
   function datePill(dateKey, selected) {
     var d = UI.toDate(dateKey);
     return '<button class="date-pill" data-date="' + UI.esc(dateKey) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
@@ -69,7 +108,11 @@
             (movie.cast && movie.cast.length
               ? '<h2 class="subhead">Cast</h2><div class="cast-rail">' +
                 movie.cast.map(function (name) {
-                  return '<div class="cast"><div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>' +
+                  var ini = UI.initials(name);
+                  return '<div class="cast">' +
+                    '<div class="cast__avatar" data-cast-name="' + UI.esc(name) + '" data-initials="' + UI.esc(ini) + '">' +
+                      UI.esc(ini) +
+                    '</div>' +
                     '<div class="cast__name">' + UI.esc(name) + '</div></div>';
                 }).join('') + '</div>'
               : '') +
@@ -238,6 +281,7 @@
       });
 
       paintHeart(inWatchlist);
+      _enrichCastPhotos(view);
       return view;
     },
   };
