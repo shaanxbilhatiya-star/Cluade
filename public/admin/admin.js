@@ -249,19 +249,58 @@
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
     var data = await API.movies('');
 
+    var nowPlaying  = data.movies.filter(function (m) { return m.status === 'now_playing'; });
+    var comingSoon  = data.movies.filter(function (m) { return m.status === 'coming_soon'; });
+    var archived    = data.movies.filter(function (m) { return m.status !== 'now_playing' && m.status !== 'coming_soon'; });
+
+    var activeTab = 'now_playing';
+
     content.innerHTML =
-      '<div class="panel" style="margin-top:0"><div class="panel__head">' +
-        '<h2 class="panel__title">' + data.movies.length + ' movies</h2>' +
-        '<input class="input" data-search placeholder="Filter by title…" style="width:auto;min-width:200px">' +
-      '</div><div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+      '<div class="panel" style="margin-top:0">' +
+        '<div class="panel__head" style="flex-direction:column;align-items:flex-start;gap:12px;padding-bottom:0">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;width:100%">' +
+            '<h2 class="panel__title" data-movie-count>' + data.movies.length + ' movies</h2>' +
+            '<input class="input" data-search placeholder="Filter by title…" style="width:auto;min-width:200px">' +
+          '</div>' +
+          '<div class="status-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);width:100%">' +
+            '<button class="status-tab status-tab--active" data-tab="now_playing" style="padding:8px 18px;background:none;border:none;border-bottom:2.5px solid #7c3aed;margin-bottom:-2px;font-weight:600;color:#7c3aed;cursor:pointer;font-size:13.5px">▶ Now Playing <span class="tab-count" style="background:#7c3aed22;color:#7c3aed;border-radius:10px;padding:1px 7px;font-size:12px;margin-left:4px">' + nowPlaying.length + '</span></button>' +
+            '<button class="status-tab" data-tab="coming_soon" style="padding:8px 18px;background:none;border:none;border-bottom:2.5px solid transparent;margin-bottom:-2px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:13.5px">⏳ Coming Soon <span class="tab-count" style="background:#7c3aed11;color:var(--muted);border-radius:10px;padding:1px 7px;font-size:12px;margin-left:4px">' + comingSoon.length + '</span></button>' +
+            '<button class="status-tab" data-tab="archived" style="padding:8px 18px;background:none;border:none;border-bottom:2.5px solid transparent;margin-bottom:-2px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:13.5px">📦 Archived <span class="tab-count" style="background:#7c3aed11;color:var(--muted);border-radius:10px;padding:1px 7px;font-size:12px;margin-left:4px">' + archived.length + '</span></button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
         '<thead><tr><th>Movie</th><th>Status</th><th>Genres</th><th>Languages</th><th class="num">Runtime</th><th class="num">Rating</th><th class="num">Shows</th><th></th></tr></thead>' +
         '<tbody data-rows></tbody></table></div></div></div>';
 
     var tbody = content.querySelector('[data-rows]');
 
+    function tabList() {
+      if (activeTab === 'now_playing') return nowPlaying;
+      if (activeTab === 'coming_soon') return comingSoon;
+      return archived;
+    }
+
+    content.querySelectorAll('.status-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeTab = btn.getAttribute('data-tab');
+        content.querySelectorAll('.status-tab').forEach(function (b) {
+          var isActive = b.getAttribute('data-tab') === activeTab;
+          b.style.borderBottomColor = isActive ? '#7c3aed' : 'transparent';
+          b.style.color = isActive ? '#7c3aed' : 'var(--ink-soft)';
+          b.style.fontWeight = isActive ? '600' : '500';
+          b.querySelector('.tab-count').style.background = isActive ? '#7c3aed22' : '#7c3aed11';
+          b.querySelector('.tab-count').style.color = isActive ? '#7c3aed' : 'var(--muted)';
+        });
+        var searchEl = content.querySelector('[data-search]');
+        paint(searchEl ? searchEl.value : '');
+      });
+    });
+
     function paint(filter) {
       var needle = String(filter || '').toLowerCase();
-      var list = needle ? data.movies.filter(function (m) { return m.title.toLowerCase().indexOf(needle) !== -1; }) : data.movies;
+      var source = tabList();
+      var list = needle ? source.filter(function (m) { return m.title.toLowerCase().indexOf(needle) !== -1; }) : source;
+      content.querySelector('[data-movie-count]').textContent = list.length + ' movies';
       tbody.innerHTML = list.length
         ? list.map(function (m) {
             var pill = m.status === 'now_playing' ? 'pill--green' : m.status === 'coming_soon' ? 'pill--purple' : 'pill--grey';
@@ -282,7 +321,7 @@
                 '<button class="btn btn--line btn--sm" data-del="' + esc(m.id) + '">Delete</button>' +
               '</td></tr>';
           }).join('')
-        : '<tr><td colspan="8" class="empty-state">No movies match that filter.</td></tr>';
+        : '<tr><td colspan="8" class="empty-state">No movies in this category.</td></tr>';
     }
 
     function form(movie) {
@@ -373,6 +412,7 @@
     }
 
     content.querySelector('[data-search]').addEventListener('input', function (e) { paint(e.target.value); });
+    paint('');
 
     content.addEventListener('click', async function (event) {
       var edit = event.target.closest('[data-edit]');
@@ -583,8 +623,6 @@
       });
       stop.observe(host, { attributes: true, attributeFilter: ['hidden'] });
     }
-
-    paint('');
   }
 
   // ── Cinemas ──────────────────────────────────────────────────────────────
@@ -787,9 +825,13 @@
 
     var today = new Date().toISOString().slice(0, 10);
     var results = await Promise.all([API.movies(''), API.cinemas(''), API.get('/admin/screens')]);
-    var movies = results[0].movies;
+    var movies = results[0].movies.filter(function (m) { return m.status === 'now_playing' || m.status === 'coming_soon'; });
+    var allMovies = results[0].movies;
     var cinemas = results[1].cinemas;
     var screens = results[2].screens;
+
+    // expanded movie id
+    var expandedMovieId = null;
 
     content.innerHTML =
       '<div class="panel" style="margin-top:0"><div class="panel__head">' +
@@ -799,54 +841,197 @@
           '<option value="">All cinemas</option>' +
           cinemas.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join('') +
         '</select>' +
-      '</div><div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Time</th><th>Movie</th><th>Cinema</th><th>Screen</th><th>Format</th><th>Language</th><th class="num">Price</th><th class="num">Seats</th><th></th></tr></thead>' +
-        '<tbody data-rows><tr><td colspan="9" class="empty-state">Loading…</td></tr></tbody>' +
+      '</div>' +
+      '<div style="padding:0 16px 6px;font-size:12px;color:var(--muted)">Click a movie row to view and manage its showtimes for the selected date.</div>' +
+      '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Movie</th><th>Status</th><th>Languages</th><th class="num">Showtimes</th><th></th></tr></thead>' +
+        '<tbody data-movie-rows><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>' +
       '</table></div></div></div>';
 
-    var tbody = content.querySelector('[data-rows]');
+    var movieTbody = content.querySelector('[data-movie-rows]');
     var dateInput = content.querySelector('[data-date]');
     var cinemaSelect = content.querySelector('[data-cinema]');
 
-    async function load() {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Loading…</td></tr>';
-      var qs = 'date=' + dateInput.value + (cinemaSelect.value ? '&cinemaId=' + cinemaSelect.value : '') + '&limit=400';
-      var data = await API.get('/showtimes?' + qs);
-      tbody.innerHTML = data.showtimes.length
-        ? data.showtimes.map(function (s) {
-            var pct = s.capacity ? Math.round((s.seatsBooked / s.capacity) * 100) : 0;
-            return '<tr>' +
-              '<td class="cell-strong">' + time12(s.time) + '</td>' +
-              '<td>' + esc(s.movie ? s.movie.title : '—') + '</td>' +
-              '<td>' + esc(s.cinema ? s.cinema.name : '—') + '</td>' +
-              '<td>' + esc(s.screen ? s.screen.name : '—') + '</td>' +
-              '<td>' + esc(s.format) + '</td><td>' + esc(s.language) + '</td>' +
-              '<td class="num">' + (function(p){var v=p.silver||p.gold||p.platinum||p.recliner||p.sofa||p.regular||0;return money(v)+'+';})((s.prices||{})) + '</td>' +
-              '<td class="num">' + s.seatsBooked + '/' + s.capacity + ' <span class="cell-sub">(' + pct + '%)</span></td>' +
-              '<td style="white-space:nowrap">' +
-                (s.status === 'cancelled' ? '<span class="pill pill--red">cancelled</span> ' : '') +
-                '<button class="btn btn--line btn--sm" data-del="' + esc(s.id) + '">Delete</button></td>' +
-              '</tr>';
-          }).join('')
-        : '<tr><td colspan="9" class="empty-state">No showtimes for this date.</td></tr>';
+    // All showtimes for the day (cached on load)
+    var dayShowtimes = [];
+
+    function countForMovie(movieId) {
+      return dayShowtimes.filter(function (s) { return s.movie && s.movie.id === movieId; }).length;
     }
 
-    dateInput.addEventListener('change', load);
-    cinemaSelect.addEventListener('change', load);
+    function renderMovieRows() {
+      if (!movies.length) {
+        movieTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No active movies found.</td></tr>';
+        return;
+      }
+      var html = '';
+      movies.forEach(function (m) {
+        var pill = m.status === 'now_playing' ? 'pill--green' : 'pill--purple';
+        var label = m.status === 'now_playing' ? 'Now Playing' : 'Coming Soon';
+        var count = countForMovie(m.id);
+        var isExpanded = expandedMovieId === m.id;
+        html +=
+          '<tr class="movie-row" data-movie-row="' + esc(m.id) + '" style="cursor:pointer;' + (isExpanded ? 'background:var(--surface-alt,#f5f0ff22);border-left:3px solid #7c3aed' : '') + '">' +
+            '<td><div style="display:flex;align-items:center;gap:10px">' +
+              '<span style="font-size:13px;color:#7c3aed;transition:transform .2s;display:inline-block;transform:rotate(' + (isExpanded ? '90' : '0') + 'deg)">▶</span>' +
+              '<img src="' + esc(m.posterUrl) + '" alt="" style="width:30px;height:42px;border-radius:4px;object-fit:cover">' +
+              '<div><div class="cell-strong">' + esc(m.title) + '</div>' +
+              '<div class="cell-sub">' + esc(m.certificate) + ' · ' + esc(m.runtime) + 'm</div></div>' +
+            '</div></td>' +
+            '<td><span class="pill ' + pill + '">' + esc(label) + '</span></td>' +
+            '<td>' + esc((m.languages || []).join(', ')) + '</td>' +
+            '<td class="num"><span style="background:#7c3aed22;color:#7c3aed;padding:2px 10px;border-radius:10px;font-weight:600;font-size:13px">' + count + '</span></td>' +
+            '<td><button class="btn btn--ghost btn--sm" data-add-for="' + esc(m.id) + '" style="white-space:nowrap">' + icon('plus', 14) + ' Add</button></td>' +
+          '</tr>';
+        if (isExpanded) {
+          html += '<tr data-showtimes-row="' + esc(m.id) + '"><td colspan="5" style="padding:0;background:#faf8ff">' +
+            '<div style="padding:12px 16px">' + renderShowtimesForMovie(m.id) + '</div>' +
+          '</td></tr>';
+        }
+      });
+      movieTbody.innerHTML = html;
+    }
 
-    tbody.addEventListener('click', async function (event) {
-      var del = event.target.closest('[data-del]');
-      if (!del) return;
-      var ok = await confirmDialog('Delete this showtime?', 'Showtimes with confirmed bookings are marked cancelled instead of deleted.', 'Delete');
-      if (!ok) return;
-      try {
-        var res = await API.del('/admin/showtimes/' + del.getAttribute('data-del'));
-        toast(res.cancelled ? res.reason : 'Showtime deleted', res.cancelled ? undefined : 'success');
-        load();
-      } catch (err) { toast(err.message, 'error'); }
+    function renderShowtimesForMovie(movieId) {
+      var list = dayShowtimes.filter(function (s) { return s.movie && s.movie.id === movieId; });
+      if (!list.length) {
+        return '<div style="color:var(--muted);font-size:13px;padding:8px 0">No showtimes on this date. <button class="btn btn--ghost btn--sm" data-add-for="' + esc(movieId) + '" style="margin-left:8px">' + icon('plus', 14) + ' Add showtime</button></div>';
+      }
+      var rows = list.map(function (s) {
+        var pct = s.capacity ? Math.round((s.seatsBooked / s.capacity) * 100) : 0;
+        return '<tr>' +
+          '<td class="cell-strong" style="font-size:14px;color:#7c3aed">' + time12(s.time) + '</td>' +
+          '<td>' + esc(s.cinema ? s.cinema.name : '—') + '</td>' +
+          '<td>' + esc(s.screen ? s.screen.name : '—') + '</td>' +
+          '<td><span style="background:#e0e7ff;color:#3730a3;padding:1px 8px;border-radius:8px;font-size:12px">' + esc(s.format) + '</span></td>' +
+          '<td>' + esc(s.language) + '</td>' +
+          '<td class="num">' + (function(p){var v=p.silver||p.gold||p.platinum||p.recliner||p.sofa||p.regular||0;return money(v)+'+';})((s.prices||{})) + '</td>' +
+          '<td class="num">' + s.seatsBooked + '/' + s.capacity + ' <span class="cell-sub">(' + pct + '%)</span></td>' +
+          '<td style="white-space:nowrap">' +
+            (s.status === 'cancelled' ? '<span class="pill pill--red">cancelled</span> ' : '') +
+            '<button class="btn btn--ghost btn--sm" data-edit-showtime="' + esc(s.id) + '" data-movie-id="' + esc(movieId) + '" style="margin-right:4px">Edit</button>' +
+            '<button class="btn btn--line btn--sm" data-del="' + esc(s.id) + '">Delete</button>' +
+          '</td></tr>';
+      }).join('');
+      return '<table style="width:100%;font-size:13px;border-collapse:collapse">' +
+        '<thead><tr style="color:var(--muted);font-size:11px;text-transform:uppercase">' +
+          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Time</th>' +
+          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Cinema</th>' +
+          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Screen</th>' +
+          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Format</th>' +
+          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Language</th>' +
+          '<th style="text-align:right;padding:4px 8px 6px 0;font-weight:600">Price</th>' +
+          '<th style="text-align:right;padding:4px 8px 6px 0;font-weight:600">Seats</th>' +
+          '<th></th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>';
+    }
+
+    async function load() {
+      var qs = 'date=' + dateInput.value + (cinemaSelect.value ? '&cinemaId=' + cinemaSelect.value : '') + '&limit=400';
+      var data = await API.get('/showtimes?' + qs);
+      dayShowtimes = data.showtimes || [];
+      renderMovieRows();
+    }
+
+    dateInput.addEventListener('change', function () { expandedMovieId = null; load(); });
+    cinemaSelect.addEventListener('change', function () { expandedMovieId = null; load(); });
+
+    function openAddShowtime(movieId) {
+      var body = h('<div class="form-grid">' +
+        field('Movie', 'movieId', movieId || '', { span: true, options: allMovies.map(function (m) { return { value: m.id, label: m.title }; }) }) +
+        field('Screen', 'screenId', '', { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
+        field('Date', 'date', dateInput.value, { type: 'date' }) +
+        field('Time', 'time', '19:00', { type: 'time' }) +
+        field('Language', 'language', '', {
+          options: [
+            { value: '', label: 'Default (movie\u2019s first language)' },
+            { value: 'Hindi', label: 'Hindi' }, { value: 'English', label: 'English' },
+            { value: 'Telugu', label: 'Telugu' }, { value: 'Tamil', label: 'Tamil' },
+            { value: 'Kannada', label: 'Kannada' }, { value: 'Gujarati', label: 'Gujarati' },
+          ],
+        }) +
+        '</div>');
+      var m = modal({ title: 'Add showtime', body: body, confirmLabel: 'Create showtime' });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var raw = readForm(m.body);
+          await API.post('/admin/showtimes', {
+            movieId: raw.movieId, screenId: raw.screenId, date: raw.date, time: raw.time,
+            language: raw.language || undefined,
+          });
+          toast('Showtime created', 'success');
+          if (movieId) expandedMovieId = movieId;
+          load();
+        });
+      });
+    }
+
+    function openEditShowtime(showtimeId, movieId) {
+      var s = dayShowtimes.find(function (x) { return x.id === showtimeId; });
+      if (!s) return;
+      var body = h('<div class="form-grid">' +
+        field('Screen', 'screenId', s.screen ? s.screen.id : '', { span: true, options: screens.map(function (sc) { return { value: sc.id, label: sc.cinemaName + ' — ' + sc.name + ' (' + sc.format + ')' }; }) }) +
+        field('Date', 'date', dateInput.value, { type: 'date' }) +
+        field('Time', 'time', s.time || '19:00', { type: 'time' }) +
+        field('Language', 'language', s.language || '', {
+          options: [
+            { value: '', label: 'Default' }, { value: 'Hindi', label: 'Hindi' }, { value: 'English', label: 'English' },
+            { value: 'Telugu', label: 'Telugu' }, { value: 'Tamil', label: 'Tamil' },
+            { value: 'Kannada', label: 'Kannada' }, { value: 'Gujarati', label: 'Gujarati' },
+          ],
+        }) +
+        '</div>');
+      var m = modal({ title: 'Edit showtime — ' + (s.movie ? s.movie.title : ''), body: body, confirmLabel: 'Save changes' });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var raw = readForm(m.body);
+          await API.put('/admin/showtimes/' + showtimeId, {
+            screenId: raw.screenId, date: raw.date, time: raw.time,
+            language: raw.language || undefined,
+          });
+          toast('Showtime updated', 'success');
+          if (movieId) expandedMovieId = movieId;
+          load();
+        });
+      });
+    }
+
+    movieTbody.addEventListener('click', async function (event) {
+      var addBtn = event.target.closest('[data-add-for]');
+      var editBtn = event.target.closest('[data-edit-showtime]');
+      var delBtn = event.target.closest('[data-del]');
+      var movieRow = event.target.closest('[data-movie-row]');
+
+      if (addBtn) { event.stopPropagation(); openAddShowtime(addBtn.getAttribute('data-add-for')); return; }
+
+      if (editBtn) {
+        event.stopPropagation();
+        openEditShowtime(editBtn.getAttribute('data-edit-showtime'), editBtn.getAttribute('data-movie-id'));
+        return;
+      }
+
+      if (delBtn) {
+        event.stopPropagation();
+        var ok = await confirmDialog('Delete this showtime?', 'Showtimes with confirmed bookings are marked cancelled instead of deleted.', 'Delete');
+        if (!ok) return;
+        try {
+          var res = await API.del('/admin/showtimes/' + delBtn.getAttribute('data-del'));
+          toast(res.cancelled ? res.reason : 'Showtime deleted', res.cancelled ? undefined : 'success');
+          load();
+        } catch (err) { toast(err.message, 'error'); }
+        return;
+      }
+
+      if (movieRow && !addBtn && !editBtn && !delBtn) {
+        var mid = movieRow.getAttribute('data-movie-row');
+        expandedMovieId = expandedMovieId === mid ? null : mid;
+        renderMovieRows();
+      }
     });
 
-    topActions.querySelector('[data-action="generate"]').addEventListener('click', async function (btn) {
+    topActions.querySelector('[data-action="generate"]').addEventListener('click', async function () {
       try {
         var res = await API.post('/admin/showtimes/generate');
         toast(res.created ? 'Scheduled ' + res.created + ' new showtimes' : 'Schedule already complete', 'success');
@@ -865,31 +1050,7 @@
     });
 
     topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
-      var body = h('<div class="form-grid">' +
-        field('Movie', 'movieId', '', { span: true, options: movies.map(function (m) { return { value: m.id, label: m.title }; }) }) +
-        field('Screen', 'screenId', '', { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
-        field('Date', 'date', dateInput.value, { type: 'date' }) +
-        field('Time', 'time', '19:00', { type: 'time' }) +
-        field('Language', 'language', '', {
-          options: [
-            { value: '', label: 'Default (movie\u2019s first language)' },
-            { value: 'Hindi', label: 'Hindi' },
-            { value: 'English', label: 'English' },
-          ],
-        }) +
-        '</div>');
-      var m = modal({ title: 'Add showtime', body: body, confirmLabel: 'Create showtime' });
-      m.confirmBtn.addEventListener('click', function () {
-        submitModal(m, async function () {
-          var raw = readForm(m.body);
-          await API.post('/admin/showtimes', {
-            movieId: raw.movieId, screenId: raw.screenId, date: raw.date, time: raw.time,
-            language: raw.language || undefined,
-          });
-          toast('Showtime created', 'success');
-          load();
-        });
-      });
+      openAddShowtime(null);
     });
 
     await load();

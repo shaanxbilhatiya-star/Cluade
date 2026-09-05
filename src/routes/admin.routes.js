@@ -396,6 +396,18 @@ router.put('/admin/showtimes/:id', auth.requireAdmin, (ctx) => {
   if (!show) throw new HttpError(404, 'Showtime not found');
   const patch = {};
   for (const f of ['format', 'language', 'prices', 'status']) if (ctx.body[f] !== undefined) patch[f] = ctx.body[f];
+  if (ctx.body.time) patch.time = ctx.body.time;
+  if (ctx.body.date) patch.date = ctx.body.date;
+  if (ctx.body.screenId) {
+    const screen = db.byId('screens', ctx.body.screenId);
+    if (!screen) throw new HttpError(404, 'Screen not found');
+    // check for conflict
+    const conflict = db.findOne('showtimes', (s) => s.id !== show.id && s.screenId === screen.id && s.date === (patch.date || show.date) && s.time === (patch.time || show.time));
+    if (conflict) throw new HttpError(409, 'A showtime already exists for that screen/date/time');
+    patch.screenId = screen.id;
+    patch.cinemaId = screen.cinemaId;
+    patch.format = screen.format;
+  }
   return { showtime: db.update('showtimes', show.id, patch) };
 });
 
