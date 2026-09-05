@@ -92,23 +92,6 @@ async function fetchTmdbReviews(tmdbId) {
   }
 }
 
-// Falls back to a rating-based summary card when neither local users nor TMDB
-// have any written reviews for the movie, so the section is never empty.
-function fallbackSummaryReview(movie, tmdbId) {
-  const rating = Number(movie.rating) || 0;
-  if (!rating) return [];
-  return [
-    {
-      id: `fallback_${movie.id}`,
-      rating: Math.round(rating > 10 ? rating / 10 : rating),
-      text: `Audience rating aggregated from ${tmdbId ? 'TMDB' : 'CineFlex'} — ${rating}/10 based on public voting.`,
-      createdAt: movie.releaseDate || new Date().toISOString(),
-      author: { name: tmdbId ? 'TMDB Audience Score' : 'CineFlex Audience Score', avatarUrl: '/img/avatars/guest.svg' },
-      source: 'aggregate',
-    },
-  ];
-}
-
 async function getReviewsFor(movie) {
   const localReviews = db
     .find('reviews', (r) => r.movieId === movie.id)
@@ -128,8 +111,7 @@ async function getReviewsFor(movie) {
   const tmdbId = await resolveTmdbId(movie);
   const tmdbReviews = await fetchTmdbReviews(tmdbId);
 
-  let reviewList = [...localReviews, ...tmdbReviews];
-  if (!reviewList.length) reviewList = fallbackSummaryReview(movie, tmdbId);
+  const reviewList = [...localReviews, ...tmdbReviews];
 
   const rated = reviewList.filter((r) => Number.isFinite(r.rating));
   const summary = rated.length

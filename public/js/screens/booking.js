@@ -182,7 +182,7 @@
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
                         '<span class="review__name">' + UI.esc(r.author.name) + '</span>' +
-                        '<span class="review__score">' + r.rating + '/10</span>' +
+                        (r.rating != null ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
                       '</div>' +
                       (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
                       '</div>';
@@ -272,7 +272,7 @@
                       '<div class="review__name">' + UI.esc(r.author.name) + '</div>' +
                       (r.createdAt ? '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + UI.esc(UI.shortDate(r.createdAt)) + '</div>' : '') +
                     '</div>' +
-                    '<span class="review__score">' + r.rating + '/10</span>' +
+                    (r.rating != null ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
                   '</div>' +
                   (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
                   '</div>';
