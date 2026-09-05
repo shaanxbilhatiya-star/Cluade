@@ -257,7 +257,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .section { margin-top: 22px; }
 .section__head {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 12px; padding: 0 16px 12px;
+  gap: 12px; padding: 0 16px 12px 20px;
 }
 .section__title { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.2px; }
 .section__more {
@@ -269,7 +269,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   display: flex;
   gap: 14px;
   overflow-x: auto;
-  padding: 2px 16px 6px;
+  padding: 2px 16px 6px 20px;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
