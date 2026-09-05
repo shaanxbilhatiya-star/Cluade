@@ -174,7 +174,7 @@
                 movie.playingAt.map(function (c) { return '<span class="tag">' + UI.esc(c.name) + '</span>'; }).join('') + '</div>'
               : '') +
 
-            '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + movie.reviews.count + ')' : '') + '</h2>' +
+            '<h2 class="subhead">Reviews</h2>' +
             '<div class="list" data-review-list>' +
               (movie.reviewList.length
                 ? movie.reviewList.slice(0, 10).map(function (r) {
@@ -279,7 +279,7 @@
               }).join('') +
             '</div>'
           );
-          UI.sheet({ title: 'All Reviews (' + allReviews.length + ')', body: body });
+          UI.sheet({ title: 'All Reviews', body: body });
         },
         share: async function () {
           var text = movie.title + ' — ' + (movie.tagline || 'now on CineFlex');

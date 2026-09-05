@@ -33,36 +33,102 @@ const REVIEWER_NAMES = [
 ];
 
 const POSITIVE_TEMPLATES = [
-  'Kya zabardast film hai yaar! {cast} ne apna best diya hai, {genreLower} lovers ke liye must watch.',
-  'Paisa vasool entertainment. Direction top-notch hai aur second half me pura theatre whistle maar raha tha.',
-  'Story thodi predictable hai but presentation itni mast hai ki pata hi nahi chalta time kaise nikal gaya.',
-  '{cast} ka performance is career-best. BGM aur cinematography ne poore experience ko next level bana diya.',
-  'First day first show dekha, bilkul disappoint nahi hui. {genreLower} genre me itna fresh feel bahut dino baad aaya.',
-  'Full paisa vasool! Family ke saath enjoy kiya, sabko pasand aayi. Highly recommended for the weekend.',
-  'Direction aur screenplay dono solid hain. {director} ne kamaal ka kaam kiya hai is film me.',
-  'Interval tak thoda slow tha but second half ekdum blockbuster mode me chala gaya. Worth the ticket price.',
-  'Ekdum mass entertainer! Dialogue-baazi aur action sequences dono top class the, hall me talent milega.',
-  'Genuinely surprised, expectations se zyada acchi nikli. {cast} carried the film beautifully.',
-  'Watched it in a packed theatre and the energy was unmatched — genuinely one of the better {genreLower} films this year.',
-  'Music aur background score bahut hi effective hai, mood set karne me full support karta hai poori film ka.',
+  'Kya zabardast film hai yaar! {cast} ne apna best diya hai, {genreLower} lovers ke liye must watch. 🔥',
+  'Paisa vasool entertainment 🎬. Direction top-notch hai aur second half me pura theatre whistle maar raha tha.',
+  'Story thodi predictable hai but presentation itni mast hai ki pata hi nahi chalta time kaise nikal gaya. 👌',
+  '{cast} ka performance is career-best 👏. BGM aur cinematography ne poore experience ko next level bana diya.',
+  'First day first show dekha, bilkul disappoint nahi hui. {genreLower} genre me itna fresh feel bahut dino baad aaya. 😍',
+  'Full paisa vasool! Family ke saath enjoy kiya, sabko pasand aayi. Highly recommended for the weekend. 🍿',
+  'Direction aur screenplay dono solid hain. {director} ne kamaal ka kaam kiya hai is film me. 💯',
+  'Interval tak thoda slow tha but second half ekdum blockbuster mode me chala gaya. Worth the ticket price. 🎟️',
+  'Ekdum mass entertainer! Dialogue-baazi aur action sequences dono top class the, hall me talent milega. 🙌',
+  'Genuinely surprised, expectations se zyada acchi nikli. {cast} carried the film beautifully. ⭐',
+  'Watched it in a packed theatre and the energy was unmatched — genuinely one of the better {genreLower} films this year. 🔥',
+  'Music aur background score bahut hi effective hai, mood set karne me full support karta hai poori film ka. 🎶',
 ];
 
 const MIXED_TEMPLATES = [
-  'Decent hai, ek baar dekh sakte ho. Story me kuch naya nahi tha but acting carry kar leti hai.',
-  'First half thoda dragged laga lekin climax ne sab compensate kar diya. Overall theek-thaak experience.',
+  'Decent hai, ek baar dekh sakte ho. Story me kuch naya nahi tha but acting carry kar leti hai. 🤔',
+  'First half thoda dragged laga lekin climax ne sab compensate kar diya. Overall theek-thaak experience. 😐',
   'Visuals aur action sequences achhe hain, but writing thodi weak feel hui beech beech me.',
-  '{cast} ne apna role nibhaya hai theek se, but overall film thodi lambi lagi mujhe.',
-  'Ek baar dekh sakte hain, but bahut zyada hype mat rakhna. Average entertainer hai.',
+  '{cast} ne apna role nibhaya hai theek se, but overall film thodi lambi lagi mujhe. ⏳',
+  'Ek baar dekh sakte hain, but bahut zyada hype mat rakhna. Average entertainer hai. 🙂',
   'Kuch scenes bahut acche bane hain, kuch unnecessary lage. Mixed bag overall, still watchable.',
   'Not bad for a one-time watch. {genreLower} fans ko shayad thoda zyada pasand aaye compared to others.',
 ];
 
 const NEGATIVE_TEMPLATES = [
-  'Expected zyada tha, but screenplay kaafi loose lagi. Editing thodi tight ho sakti thi.',
-  'Story bikhri hui lagi, character development bhi kam tha. Could have been much better honestly.',
+  'Expected zyada tha, but screenplay kaafi loose lagi. Editing thodi tight ho sakti thi. 😑',
+  'Story bikhri hui lagi, character development bhi kam tha. Could have been much better honestly. 👎',
   'Thoda underwhelming raha experience, especially second half me pacing bahut slow ho gayi.',
   'Not really my type, but agar aap {genreLower} ke big fan ho tabhi try karo, warna skip kar sakte ho.',
 ];
+
+const EN_POSITIVE_TEMPLATES = [
+  'What a ride! {cast} absolutely owns the screen, hands down one of the best {genreLower} films in a while. 🔥',
+  'Loved every bit of it. The direction by {director} is sharp and the pacing never drags. 👏',
+  'Packed theatre, thunderous applause — this is exactly what a big-screen {genreLower} experience should feel like. 🍿',
+  '{cast} delivers a career-defining performance here. The background score alone gives you goosebumps. 🎶',
+  'Went in with low expectations, walked out grinning. Total paisa-vasool watch for the whole family. 💯',
+  'Cinematography and action choreography are top notch. Worth watching this on the biggest screen possible. 🎬',
+  'A genuinely fun theatre experience — whistles, claps, the works. Highly recommend catching this one. ⭐',
+];
+
+const EN_MIXED_TEMPLATES = [
+  'Decent watch overall. Nothing groundbreaking in the story, but the performances hold it together. 🤔',
+  'Slow first half, but the climax mostly makes up for it. An okay one-time watch. 😐',
+  '{cast} does a solid job, though the film feels a touch too long in places. ⏳',
+  'Some scenes really land, others feel unnecessary. A mixed bag but still watchable.',
+  'Not bad, but temper your expectations. Fine for a lazy weekend watch.',
+];
+
+const EN_NEGATIVE_TEMPLATES = [
+  'Expected more honestly, the screenplay feels loose and could have used tighter editing. 😑',
+  'The story felt scattered and character arcs were underdeveloped. Could have been so much better. 👎',
+  'A bit underwhelming, especially the second half where the pacing really drags.',
+  'Only recommend this if you are a die-hard {genreLower} fan, otherwise you can skip it.',
+];
+
+const HI_POSITIVE_TEMPLATES = [
+  'बहुत ज़बरदस्त फिल्म है! {cast} का काम देखकर मज़ा आ गया, {genreLower} पसंद करने वालों के लिए बिल्कुल must watch है। 🔥',
+  'पूरा पैसा वसूल एंटरटेनमेंट! डायरेक्शन इतना कमाल का है कि थिएटर में लोग सीटी बजाते रह गए। 🙌',
+  'कहानी थोड़ी सीधी है लेकिन प्रेजेंटेशन इतनी अच्छी है कि पूरा टाइम पता ही नहीं चलता। 👌',
+  '{cast} का परफॉरमेंस बेहतरीन है, बैकग्राउंड म्यूज़िक ने पूरे अनुभव को और शानदार बना दिया। 🎶',
+  'फर्स्ट डे फर्स्ट शो देखी, बिल्कुल निराश नहीं हुई। बहुत दिनों बाद इतनी ताज़गी भरी फिल्म आई है। 😍',
+  'परिवार के साथ देखी, सबको बहुत पसंद आई। वीकेंड के लिए बढ़िया चॉइस है। 🍿',
+  'डायरेक्शन और स्क्रीनप्ले दोनों कमाल के हैं। {director} ने सच में बहुत अच्छा काम किया है। 💯',
+];
+
+const HI_MIXED_TEMPLATES = [
+  'ठीक-ठाक है, एक बार देख सकते हैं। कहानी में कुछ नया नहीं था लेकिन एक्टिंग संभाल लेती है। 🤔',
+  'पहला हाफ थोड़ा खिंचा हुआ लगा, लेकिन क्लाइमेक्स ने भरपाई कर दी। ओवरऑल ठीक अनुभव रहा। 😐',
+  '{cast} ने अपना रोल ठीक से निभाया है, लेकिन फिल्म थोड़ी लंबी लगी। ⏳',
+  'कुछ सीन बहुत अच्छे बने हैं, कुछ ज़रूरत से ज़्यादा लंबे लगे। मिला-जुला अनुभव रहा।',
+];
+
+const HI_NEGATIVE_TEMPLATES = [
+  'उम्मीद ज़्यादा थी, लेकिन स्क्रीनप्ले थोड़ी ढीली लगी। एडिटिंग और टाइट हो सकती थी। 😑',
+  'कहानी बिखरी हुई लगी, किरदारों पर भी ज़्यादा मेहनत नहीं दिखी। और बेहतर हो सकती थी ये फिल्म। 👎',
+  'थोड़ा उम्मीद से कम रहा अनुभव, खासकर दूसरे हाफ में गति काफी धीमी हो गई।',
+];
+
+// Each language has its own positive/mixed/negative pools so the tone mix
+// (below) stays realistic no matter which language a given review lands in.
+const LANGUAGE_POOLS = [
+  { weight: 0.45, positive: POSITIVE_TEMPLATES, mixed: MIXED_TEMPLATES, negative: NEGATIVE_TEMPLATES },
+  { weight: 0.30, positive: EN_POSITIVE_TEMPLATES, mixed: EN_MIXED_TEMPLATES, negative: EN_NEGATIVE_TEMPLATES },
+  { weight: 0.25, positive: HI_POSITIVE_TEMPLATES, mixed: HI_MIXED_TEMPLATES, negative: HI_NEGATIVE_TEMPLATES },
+];
+
+function pickLanguagePool(rng) {
+  const roll = rng();
+  let acc = 0;
+  for (const pool of LANGUAGE_POOLS) {
+    acc += pool.weight;
+    if (roll < acc) return pool;
+  }
+  return LANGUAGE_POOLS[0];
+}
 
 function mulberry32(seed) {
   return function () {
@@ -107,9 +173,10 @@ function generateReviews(movie, count) {
 
   const reviews = [];
   for (let i = 0; i < count; i++) {
+    const pool = pickLanguagePool(rng);
     const roll = rng();
     // ~65% positive, ~25% mixed, ~10% negative — keeps it realistic, not all 10/10
-    const bucket = roll < 0.65 ? POSITIVE_TEMPLATES : roll < 0.9 ? MIXED_TEMPLATES : NEGATIVE_TEMPLATES;
+    const bucket = roll < 0.65 ? pool.positive : roll < 0.9 ? pool.mixed : pool.negative;
     const rating = roll < 0.65 ? 8 + Math.floor(rng() * 3) : roll < 0.9 ? 6 + Math.floor(rng() * 2) : 3 + Math.floor(rng() * 3);
     const text = fillTemplate(pick(rng, bucket), movie, rng);
     const name = names[i % names.length];
