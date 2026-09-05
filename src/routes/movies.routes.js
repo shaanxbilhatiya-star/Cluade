@@ -18,78 +18,113 @@ function decorate(movie) {
   return Object.assign({}, movie, { reviews: reviewSummary(movie.id), showtimeCount });
 }
 
-// ── External reviews (TMDB) ─────────────────────────────────────────────────
-// Read-only: we never write reviews back to TMDB, only fetch + cache them.
-// Works automatically for existing movies (auto-resolves a tmdbId by title
-// search if one isn't saved yet) and for any future movie added via admin.
-const TMDB_BASE = 'https://api.themoviedb.org/3';
-const TMDB_CACHE_MS = 6 * 60 * 60 * 1000; // 6 hours
-const tmdbIdCache = new Map(); // movie.id -> tmdbId (or null = "looked up, not found")
-const tmdbReviewCache = new Map(); // tmdbId -> { at, reviews }
+// ── Generated reviews (no external API) ─────────────────────────────────────
+// Every movie (existing or newly added via admin) gets 30 deterministic,
+// template-based Hinglish reviews so the section is never empty. "Deterministic"
+// means the same movie always produces the same 30 reviews on every request —
+// they're seeded from the movie's own id, not re-rolled randomly each time.
+const REVIEWER_NAMES = [
+  'Aarav Mehta', 'Priya Nair', 'Rohan Kulkarni', 'Sneha Reddy', 'Vikram Chauhan',
+  'Ananya Iyer', 'Kartik Joshi', 'Isha Malhotra', 'Aditya Verma', 'Meera Pillai',
+  'Rahul Bhatt', 'Divya Menon', 'Sanjay Rao', 'Pooja Agarwal', 'Nikhil Shetty',
+  'Kavya Krishnan', 'Arjun Desai', 'Riya Kapoor', 'Manish Tiwari', 'Neha Saxena',
+  'Suresh Pillai', 'Anjali Gupta', 'Varun Choudhary', 'Tanvi Rane', 'Deepak Yadav',
+  'Shreya Bhattacharya', 'Amit Trivedi', 'Nandini Suri', 'Yash Oberoi', 'Ritika Sharma',
+];
 
-function tmdbHeaders() {
-  const token = process.env.TMDB_API_TOKEN;
-  return token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : null;
+const POSITIVE_TEMPLATES = [
+  'Kya zabardast film hai yaar! {cast} ne apna best diya hai, {genreLower} lovers ke liye must watch.',
+  'Paisa vasool entertainment. Direction top-notch hai aur second half me pura theatre whistle maar raha tha.',
+  'Story thodi predictable hai but presentation itni mast hai ki pata hi nahi chalta time kaise nikal gaya.',
+  '{cast} ka performance is career-best. BGM aur cinematography ne poore experience ko next level bana diya.',
+  'First day first show dekha, bilkul disappoint nahi hui. {genreLower} genre me itna fresh feel bahut dino baad aaya.',
+  'Full paisa vasool! Family ke saath enjoy kiya, sabko pasand aayi. Highly recommended for the weekend.',
+  'Direction aur screenplay dono solid hain. {director} ne kamaal ka kaam kiya hai is film me.',
+  'Interval tak thoda slow tha but second half ekdum blockbuster mode me chala gaya. Worth the ticket price.',
+  'Ekdum mass entertainer! Dialogue-baazi aur action sequences dono top class the, hall me talent milega.',
+  'Genuinely surprised, expectations se zyada acchi nikli. {cast} carried the film beautifully.',
+  'Watched it in a packed theatre and the energy was unmatched — genuinely one of the better {genreLower} films this year.',
+  'Music aur background score bahut hi effective hai, mood set karne me full support karta hai poori film ka.',
+];
+
+const MIXED_TEMPLATES = [
+  'Decent hai, ek baar dekh sakte ho. Story me kuch naya nahi tha but acting carry kar leti hai.',
+  'First half thoda dragged laga lekin climax ne sab compensate kar diya. Overall theek-thaak experience.',
+  'Visuals aur action sequences achhe hain, but writing thodi weak feel hui beech beech me.',
+  '{cast} ne apna role nibhaya hai theek se, but overall film thodi lambi lagi mujhe.',
+  'Ek baar dekh sakte hain, but bahut zyada hype mat rakhna. Average entertainer hai.',
+  'Kuch scenes bahut acche bane hain, kuch unnecessary lage. Mixed bag overall, still watchable.',
+  'Not bad for a one-time watch. {genreLower} fans ko shayad thoda zyada pasand aaye compared to others.',
+];
+
+const NEGATIVE_TEMPLATES = [
+  'Expected zyada tha, but screenplay kaafi loose lagi. Editing thodi tight ho sakti thi.',
+  'Story bikhri hui lagi, character development bhi kam tha. Could have been much better honestly.',
+  'Thoda underwhelming raha experience, especially second half me pacing bahut slow ho gayi.',
+  'Not really my type, but agar aap {genreLower} ke big fan ho tabhi try karo, warna skip kar sakte ho.',
+];
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-async function resolveTmdbId(movie) {
-  if (movie.tmdbId) return movie.tmdbId;
-  if (tmdbIdCache.has(movie.id)) return tmdbIdCache.get(movie.id);
-
-  const headers = tmdbHeaders();
-  if (!headers) return null;
-
-  try {
-    const year = movie.releaseDate ? String(movie.releaseDate).slice(0, 4) : '';
-    const url = `${TMDB_BASE}/search/movie?query=${encodeURIComponent(movie.title)}${year ? `&year=${year}` : ''}&include_adult=false&language=en-US&page=1`;
-    const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`TMDB search failed (${res.status})`);
-    const data = await res.json();
-    const match = (data.results || [])[0];
-    const tmdbId = match ? match.id : null;
-
-    tmdbIdCache.set(movie.id, tmdbId);
-    if (tmdbId) db.update('movies', movie.id, { tmdbId }); // persist so future requests skip the search
-    return tmdbId;
-  } catch (_e) {
-    tmdbIdCache.set(movie.id, null);
-    return null;
+function seedFromString(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
+  return h >>> 0;
 }
 
-async function fetchTmdbReviews(tmdbId) {
-  if (!tmdbId) return [];
-  const cached = tmdbReviewCache.get(tmdbId);
-  if (cached && Date.now() - cached.at < TMDB_CACHE_MS) return cached.reviews;
+function pick(rng, arr) {
+  return arr[Math.floor(rng() * arr.length)];
+}
 
-  const headers = tmdbHeaders();
-  if (!headers) return cached ? cached.reviews : [];
+function fillTemplate(tpl, movie, rng) {
+  const cast = (movie.cast && movie.cast.length) ? pick(rng, movie.cast) : 'the cast';
+  const genre = (movie.genres && movie.genres.length) ? movie.genres[0] : 'is';
+  return tpl
+    .replace(/\{cast\}/g, cast)
+    .replace(/\{director\}/g, movie.director || 'the director')
+    .replace(/\{genreLower\}/g, genre.toLowerCase());
+}
 
-  try {
-    const res = await fetch(`${TMDB_BASE}/movie/${encodeURIComponent(tmdbId)}/reviews?language=en-US&page=1`, { headers });
-    if (!res.ok) throw new Error(`TMDB reviews failed (${res.status})`);
-    const data = await res.json();
-    const reviews = (data.results || []).slice(0, 25).map((r) => ({
-      id: `tmdb_${r.id}`,
-      rating: r.author_details && r.author_details.rating ? Math.round(r.author_details.rating) : null,
-      text: (r.content || '').replace(/\s+/g, ' ').trim().slice(0, 600),
-      createdAt: r.created_at,
-      author: {
-        name: r.author || (r.author_details && r.author_details.username) || 'TMDB user',
-        avatarUrl:
-          r.author_details && r.author_details.avatar_path
-            ? (String(r.author_details.avatar_path).startsWith('/https')
-                ? String(r.author_details.avatar_path).slice(1)
-                : `https://image.tmdb.org/t/p/w185${r.author_details.avatar_path}`)
-            : '/img/avatars/guest.svg',
-      },
-      source: 'tmdb',
-    }));
-    tmdbReviewCache.set(tmdbId, { at: Date.now(), reviews });
-    return reviews;
-  } catch (_e) {
-    return cached ? cached.reviews : [];
+function generateReviews(movie, count) {
+  const rng = mulberry32(seedFromString(movie.id));
+  const names = [...REVIEWER_NAMES];
+  // deterministic shuffle so name order differs per movie but stays stable across requests
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [names[i], names[j]] = [names[j], names[i]];
   }
+
+  const reviews = [];
+  for (let i = 0; i < count; i++) {
+    const roll = rng();
+    // ~65% positive, ~25% mixed, ~10% negative — keeps it realistic, not all 10/10
+    const bucket = roll < 0.65 ? POSITIVE_TEMPLATES : roll < 0.9 ? MIXED_TEMPLATES : NEGATIVE_TEMPLATES;
+    const rating = roll < 0.65 ? 8 + Math.floor(rng() * 3) : roll < 0.9 ? 6 + Math.floor(rng() * 2) : 3 + Math.floor(rng() * 3);
+    const text = fillTemplate(pick(rng, bucket), movie, rng);
+    const name = names[i % names.length];
+    const daysAgo = Math.floor(rng() * 20) + 1;
+
+    reviews.push({
+      id: `gen_${movie.id}_${i}`,
+      rating,
+      text,
+      createdAt: new Date(Date.now() - daysAgo * 86400000).toISOString(),
+      author: { name, avatarUrl: '/img/avatars/guest.svg' },
+      source: 'generated',
+    });
+  }
+  return reviews;
 }
 
 async function getReviewsFor(movie) {
@@ -108,10 +143,9 @@ async function getReviewsFor(movie) {
     })
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 
-  const tmdbId = await resolveTmdbId(movie);
-  const tmdbReviews = await fetchTmdbReviews(tmdbId);
-
-  const reviewList = [...localReviews, ...tmdbReviews];
+  const needed = Math.max(0, 30 - localReviews.length);
+  const generated = needed ? generateReviews(movie, needed) : [];
+  const reviewList = [...localReviews, ...generated];
 
   const rated = reviewList.filter((r) => Number.isFinite(r.rating));
   const summary = rated.length

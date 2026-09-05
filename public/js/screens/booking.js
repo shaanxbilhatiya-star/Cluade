@@ -177,7 +177,7 @@
             '<h2 class="subhead">Reviews' + (movie.reviews.count ? ' (' + movie.reviews.count + ')' : '') + '</h2>' +
             '<div class="list" data-review-list>' +
               (movie.reviewList.length
-                ? movie.reviewList.slice(0, 25).map(function (r) {
+                ? movie.reviewList.slice(0, 10).map(function (r) {
                     return '<div class="review">' +
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
@@ -189,7 +189,7 @@
                   }).join('')
                 : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet.</p>') +
             '</div>' +
-            (movie.reviewList.length > 25
+            (movie.reviewList.length > 10
               ? '<div style="padding:8px 16px 16px"><button class="btn-outline btn-outline--lg" data-action="view-all-reviews">View All ' + movie.reviews.count + ' Reviews</button></div>'
               : '<div style="height:16px"></div>') +
 
