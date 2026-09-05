@@ -88,11 +88,6 @@
           '</header>' +
 
           '<div class="scroll">' +
-            '<div class="search-field" data-action="search" role="button" tabindex="0">' +
-              UI.icon('search', 19) +
-              '<input type="text" placeholder="Search movies, cinemas, snacks" readonly tabindex="-1">' +
-            '</div>' +
-
             '<div class="section" style="margin-top:16px">' +
               (data.hero.length ? UI.carousel(data.hero.map(heroSlide), { autoplay: 4500 }) : '') +
             '</div>' +
@@ -102,7 +97,7 @@
             '<div class="section">' +
               UI.sectionHead('Now Playing', 'all-now-playing') +
               (data.nowPlaying.length
-                ? '<div class="rail">' + data.nowPlaying.map(function (m) { return UI.movieCard(m); }).join('') + '</div>'
+                ? '<div class="rail">' + data.nowPlaying.map(function (m) { return UI.movieCard(m, { book: false }); }).join('') + '</div>'
                 : UI.empty({ icon: 'projector', title: 'No shows in ' + data.city, text: 'Try picking another city from the header.' })) +
             '</div>' +
 
@@ -113,17 +108,12 @@
 
             '<div class="section">' +
               UI.sectionHead('Coming Soon', 'all-coming-soon') +
-              '<div class="rail">' + data.comingSoon.map(function (m) { return UI.movieCard(m); }).join('') + '</div>' +
+              '<div class="rail">' + data.comingSoon.map(function (m) { return UI.movieCard(m, { book: false }); }).join('') + '</div>' +
             '</div>' +
 
             (data.offers.length
               ? '<div class="section">' + UI.sectionHead('Offers for you') + UI.carousel(data.offers.map(offerSlide), { autoplay: 6000 }) + '</div>'
               : '') +
-
-            '<div class="section">' +
-              UI.sectionHead('Cinemas near you', 'all-cinemas') +
-              '<div class="stack">' + data.cinemas.map(cinemaRow).join('') + '</div>' +
-            '</div>' +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
