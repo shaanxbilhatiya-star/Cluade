@@ -133,7 +133,7 @@
               (movie.tagline ? '<p class="detail-head__tagline">' + UI.esc(movie.tagline) + '</p>' : '') +
               '<div class="tag-row" style="margin-top:12px">' +
                 (movie.genres || []).map(function (g) { return '<span class="tag tag--accent">' + UI.esc(g) + '</span>'; }).join('') +
-                '<span class="tag tag--red">मल्टीप्लेक्स में हिंदी में चल रही है</span>' +
+                '<span class="tag tag--red">हिंदी में उपलब्ध</span>' +
               '</div>' +
             '</div>' +
 
@@ -152,7 +152,7 @@
               '<div class="kv"><span class="kv__key">Release date</span><span class="kv__val">' + UI.esc(UI.shortDate(movie.releaseDate)) + '</span></div>' +
               '<div class="kv"><span class="kv__key">Languages</span><span class="kv__val">' + UI.esc((movie.languages || []).join(', ')) + '</span></div>' +
               '<div class="kv"><span class="kv__key">Formats</span><span class="kv__val">' + UI.esc((movie.formats || []).join(', ')) + '</span></div>' +
-              '<div class="kv"><span class="kv__key">Note</span><span class="kv__val" style="color:#dc2626">मल्टीप्लेक्स में हिंदी में चल रही है</span></div>' +
+              '<div class="kv"><span class="kv__key">Note</span><span class="kv__val" style="color:#dc2626">हिंदी में उपलब्ध</span></div>' +
             '</div>' +
 
             (movie.cast && movie.cast.length
