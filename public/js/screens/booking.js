@@ -473,11 +473,13 @@
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({ title: show.movie.title, back: true, alignLeft: true, logo: false }) +
-          '<div style="padding:0 16px 12px;margin-top:-4px;text-align:center">' +
-            '<p style="margin:0;font-size:13px;color:var(--muted)">' +
-              UI.esc(show.cinema.name) + ' · ' + UI.esc(show.screen.name) + '<br>' +
-              UI.esc(UI.relativeDay(show.date)) + ', ' + UI.esc(time12(show.time)) + ' · ' + UI.esc(show.format) + ' · ' + UI.esc(show.language) +
-            '</p>' +
+          '<div style="padding:0 16px 12px;margin-top:-4px">' +
+            '<div class="cinema-info-card">' +
+              '<p style="margin:0;font-size:13px;color:var(--muted)">' +
+                UI.esc(show.cinema.name) + ' · ' + UI.esc(show.screen.name) + '<br>' +
+                UI.esc(UI.relativeDay(show.date)) + ', ' + UI.esc(time12(show.time)) + ' · ' + UI.esc(show.format) + ' · ' + UI.esc(show.language) +
+              '</p>' +
+            '</div>' +
           '</div>' +
 
           '<div class="time-strip" data-times>' +
@@ -516,13 +518,15 @@
                   '</div>';
               }).join('') +
             '</div></div>' +
+          '</div>' +
 
+          '<div class="seatmap-footer">' +
             '<div class="screen-indicator">' +
               '<div class="screen-bar"></div>' +
               '<span>All eyes this way please!</span>' +
             '</div>' +
 
-            '<p class="text-center text-muted" style="font-size:12px;margin:4px 0 12px">' +
+            '<p class="text-center text-muted" style="font-size:12px;margin:2px 0 8px">' +
               UI.esc(data.stats.available) + ' of ' + UI.esc(data.stats.total) + ' seats available · up to ' + MAX + ' per booking</p>' +
 
             '<div class="legend">' +
