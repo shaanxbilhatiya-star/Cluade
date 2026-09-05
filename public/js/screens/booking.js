@@ -290,7 +290,6 @@
             try { await navigator.clipboard.writeText(window.location.href); UI.toast('Link copied', 'success'); return; } catch (_e) {}
           }
         },
-        },
       });
 
       paintHeart(inWatchlist);
