@@ -47,7 +47,7 @@ router.get('/home', (ctx) => {
 
   const nowPlaying = movies
     .filter((m) => m.status === 'now_playing' && (playingInCity.has(m.id) || !moviesWithAnyShowtime.has(m.id)))
-    .sort((a, b) => b.rating - a.rating);
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 
   const comingSoon = movies
     .filter((m) => m.status === 'coming_soon')
