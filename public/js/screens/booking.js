@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var TIER_LABEL = { regular: 'Regular', premium: 'Premium', vip: 'VIP Recliner' };
+  var TIER_LABEL = { regular: 'Regular', premium: 'Premium', vip: 'VIP Recliner', sofa: 'Sofa', recliner: 'Recliner', platinum: 'Platinum', gold: 'Gold', silver: 'Silver' };
 
   // ── Cast photo helpers ─────────────────────────────────────────────────────
   // Cache persists for the session so each actor is only fetched once.
@@ -439,7 +439,7 @@
                   UI.esc(TIER_LABEL[t.tier] || t.tier) + ' ' + UI.money(t.price) + '</span>';
               }).join('') +
               '<span class="legend__item"><span class="legend__swatch" style="background:var(--primary-600)"></span>Selected</span>' +
-              '<span class="legend__item"><span class="legend__swatch" style="background:var(--line-strong);opacity:.55"></span>Taken</span>' +
+              '<span class="legend__item"><span class="legend__swatch" style="background:var(--line-strong);opacity:.55"></span>Sold</span>' +
             '</div>' +
 
             '<p class="text-center text-muted" style="font-size:12px;margin:4px 0 0">' +

@@ -263,38 +263,38 @@ const LAYOUTS = {
     { row: 'F', seats: 18, tier: 'premium', gapAfter: [5, 13] },
     { row: 'G', seats: 12, tier: 'vip', gapAfter: [6] },
   ],
-  // 5-tier luxe layout (Sofa/Recliner/Platinum/Gold/Silver) — Screen 1 style.
-  // The recliner/platinum/gold/silver rows have a few blocked (pillar) seats in
-  // the real venue; set the screen's blockedSeats to reproduce that, e.g.:
-  // RC3,RC4,RC5,RC8,RC9,P110,P111,P112,P113,P114,P210,P211,P212,P213,P214,
-  // G11,G12,G13,G14,G15,G16,G110,G111,G112,G113,G114,V16,V17,V18
+  // 5-tier luxe layout (Sofa/Recliner/Platinum/Gold/Silver) — Kingfisher Multiplex, Audi 1.
+  // Exact seat map from the venue: rows S, R, A-D (Platinum), E-F (Gold), G-H (Silver).
+  // No blocked/pillar seats in this venue.
   grand: [
-    { row: 'SF', seats: 9, tier: 'sofa', gapAfter: [3] },
-    { row: 'RC', seats: 9, tier: 'recliner', gapAfter: [5] },
-    { row: 'P1', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'P2', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'P3', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'P4', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'G1', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'G2', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'V1', seats: 18, tier: 'silver', gapAfter: [9] },
-    { row: 'V2', seats: 18, tier: 'silver', gapAfter: [9] },
+    { row: 'S', seats: 9, tier: 'sofa', gapAfter: [3] },
+    { row: 'R', seats: 9, tier: 'recliner', gapAfter: [5] },
+    { row: 'A', seats: 15, tier: 'platinum', gapAfter: [9] },
+    { row: 'B', seats: 15, tier: 'platinum', gapAfter: [9] },
+    { row: 'C', seats: 15, tier: 'platinum', gapAfter: [9] },
+    { row: 'D', seats: 15, tier: 'platinum', gapAfter: [9] },
+    { row: 'E', seats: 18, tier: 'gold', gapAfter: [9] },
+    { row: 'F', seats: 18, tier: 'gold', gapAfter: [9] },
+    { row: 'G', seats: 18, tier: 'silver', gapAfter: [9] },
+    { row: 'H', seats: 18, tier: 'silver', gapAfter: [9] },
   ],
-  // 5-tier luxe layout — Screen 2 style (wider platinum/gold/silver block, no blocked seats).
+  // 5-tier luxe layout — Kingfisher Multiplex, Audi 2.
+  // Exact seat map from the venue: rows S, R, A-E (Platinum, widens from row D), F-H (Gold),
+  // I-K (Silver). No blocked/pillar seats in this venue.
   twin: [
-    { row: 'SF', seats: 9, tier: 'sofa', gapAfter: [4] },
-    { row: 'RC', seats: 9, tier: 'recliner', gapAfter: [6] },
-    { row: 'P1', seats: 14, tier: 'platinum', gapAfter: [9] },
-    { row: 'P2', seats: 14, tier: 'platinum', gapAfter: [9] },
-    { row: 'P3', seats: 14, tier: 'platinum', gapAfter: [9] },
-    { row: 'P4', seats: 18, tier: 'platinum', gapAfter: [9] },
-    { row: 'P5', seats: 18, tier: 'platinum', gapAfter: [9] },
-    { row: 'G1', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'G2', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'G3', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'V1', seats: 16, tier: 'silver', gapAfter: [9] },
-    { row: 'V2', seats: 16, tier: 'silver', gapAfter: [9] },
-    { row: 'V3', seats: 16, tier: 'silver', gapAfter: [9] },
+    { row: 'S', seats: 9, tier: 'sofa', gapAfter: [4] },
+    { row: 'R', seats: 9, tier: 'recliner', gapAfter: [6] },
+    { row: 'A', seats: 14, tier: 'platinum', gapAfter: [9] },
+    { row: 'B', seats: 14, tier: 'platinum', gapAfter: [9] },
+    { row: 'C', seats: 14, tier: 'platinum', gapAfter: [9] },
+    { row: 'D', seats: 18, tier: 'platinum', gapAfter: [9] },
+    { row: 'E', seats: 18, tier: 'platinum', gapAfter: [9] },
+    { row: 'F', seats: 18, tier: 'gold', gapAfter: [9] },
+    { row: 'G', seats: 18, tier: 'gold', gapAfter: [9] },
+    { row: 'H', seats: 18, tier: 'gold', gapAfter: [9] },
+    { row: 'I', seats: 16, tier: 'silver', gapAfter: [9] },
+    { row: 'J', seats: 16, tier: 'silver', gapAfter: [9] },
+    { row: 'K', seats: 16, tier: 'silver', gapAfter: [9] },
   ],
 };
 
