@@ -672,6 +672,10 @@
         }).join('') : '<tr><td colspan="7" class="empty-state">No screens yet.</td></tr>') +
       '</tbody></table></div></div></div>';
 
+    function parseBlockedSeats(raw) {
+      return String(raw || '').split(/[,\s]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+
     function form(screen) {
       var s = screen || {};
       return h('<div class="form-grid">' +
@@ -684,7 +688,11 @@
         field('Sound system', 'soundSystem', s.soundSystem || 'Dolby 7.1', { options: ['Dolby 7.1', 'Dolby Atmos', 'IMAX 12.1'] }) +
         field('Seat layout', 'layoutPreset', s.layoutPreset || 'standard', {
           options: data.layoutPresets,
-          hint: 'standard ≈ 104 seats, compact ≈ 64, imax ≈ 116',
+          hint: 'standard ≈ 104 seats, compact ≈ 64, imax ≈ 116, grand/twin ≈ 5-tier luxe layouts',
+        }) +
+        field('Blocked seats', 'blockedSeats', (s.blockedSeats || []).join(', '), {
+          type: 'textarea', span: true, placeholder: 'e.g. RC3, RC4, RC5, P110, P111',
+          hint: 'Comma or space separated seat IDs (row+number) — pillar/no-view seats.',
         }) +
         '</div>');
     }
@@ -707,7 +715,9 @@
       var m = modal({ title: 'Add screen', body: form(null), confirmLabel: 'Create screen' });
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
-          await API.post('/admin/screens', readForm(m.body));
+          var raw = readForm(m.body);
+          raw.blockedSeats = parseBlockedSeats(raw.blockedSeats);
+          await API.post('/admin/screens', raw);
           toast('Screen created', 'success');
           navigate('screens');
         });
@@ -726,6 +736,7 @@
             var raw = readForm(m.body);
             await API.put('/admin/screens/' + screen.id, {
               name: raw.name, format: raw.format, soundSystem: raw.soundSystem, layoutPreset: raw.layoutPreset,
+              blockedSeats: parseBlockedSeats(raw.blockedSeats),
             });
             toast('Screen updated', 'success');
             navigate('screens');

@@ -15,6 +15,11 @@ const TIER_LABELS = {
   regular: 'Regular',
   premium: 'Premium',
   vip: 'VIP Recliner',
+  sofa: 'Sofa',
+  recliner: 'Recliner',
+  platinum: 'Platinum',
+  gold: 'Gold',
+  silver: 'Silver',
 };
 
 function nowMs() {

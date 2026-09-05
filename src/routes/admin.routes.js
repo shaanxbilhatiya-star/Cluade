@@ -340,6 +340,20 @@ router.post('/admin/purge-dummy-screens', auth.requireAdmin, () => {
 });
 
 // ── Showtimes ────────────────────────────────────────────────────────────────
+const FIXED_TIER_PRICES = { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
+
+function defaultPricesForScreen(screen, base) {
+  const tiers = [...new Set((screen.layout || []).map((r) => r.tier || 'regular'))];
+  const out = {};
+  for (const t of tiers) {
+    if (FIXED_TIER_PRICES[t] !== undefined) out[t] = FIXED_TIER_PRICES[t];
+    else if (t === 'premium') out[t] = Math.round(base * 1.5);
+    else if (t === 'vip') out[t] = Math.round(base * 2.2);
+    else out[t] = base; // 'regular' and any unrecognized tier
+  }
+  return out;
+}
+
 router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['movieId', 'screenId', 'date', 'time']);
   const movie = db.byId('movies', ctx.body.movieId);
@@ -369,7 +383,7 @@ router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
     endsAt: new Date(start.getTime() + (movie.runtime + 25) * 60_000).toISOString(),
     format: ctx.body.format || screen.format,
     language: ctx.body.language || movie.languages[0] || 'Hindi',
-    prices: ctx.body.prices || { regular: base, premium: Math.round(base * 1.5), vip: Math.round(base * 2.2) },
+    prices: ctx.body.prices || defaultPricesForScreen(screen, base),
     status: 'active',
   });
   ctx.state.status = 201;
