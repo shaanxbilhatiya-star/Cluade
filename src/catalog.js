@@ -263,42 +263,67 @@ const LAYOUTS = {
     { row: 'F', seats: 18, tier: 'premium', gapAfter: [5, 13] },
     { row: 'G', seats: 12, tier: 'vip', gapAfter: [6] },
   ],
-  // 5-tier luxe layout (Sofa/Recliner/Platinum/Gold/Silver) — Kingfisher Multiplex, Audi 1.
-  // Exact seat map from the venue: rows S, R, A-D (Platinum), E-F (Gold), G-H (Silver).
-  // No blocked/pillar seats in this venue.
-  grand: [
-    { row: 'S', seats: 9, tier: 'sofa', gapAfter: [3] },
-    { row: 'R', seats: 9, tier: 'recliner', gapAfter: [5] },
-    { row: 'A', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'B', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'C', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'D', seats: 15, tier: 'platinum', gapAfter: [9] },
-    { row: 'E', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'F', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'G', seats: 18, tier: 'silver', gapAfter: [9] },
-    { row: 'H', seats: 18, tier: 'silver', gapAfter: [9] },
+  // Kingfisher Multiplex — Audi 1 (Screen 1).
+  // Exact BookMyShow seat map: S (Sofa 9), R (Recliner 9),
+  // A-C Platinum 14 seats, D-E Platinum 18 seats,
+  // F-H Gold 18 seats (H only 16), I-K Silver 16 seats.
+  // gapAfter mirrors the aisle break shown on BookMyShow (after seat 4 for S, after 6 for R, after 9 for others).
+  audi1: [
+    { row: 'S', seats: 9,  tier: 'sofa',     gapAfter: [4] },
+    { row: 'R', seats: 9,  tier: 'recliner',  gapAfter: [6] },
+    { row: 'A', seats: 14, tier: 'platinum',  gapAfter: [9] },
+    { row: 'B', seats: 14, tier: 'platinum',  gapAfter: [9] },
+    { row: 'C', seats: 14, tier: 'platinum',  gapAfter: [9] },
+    { row: 'D', seats: 18, tier: 'platinum',  gapAfter: [9] },
+    { row: 'E', seats: 18, tier: 'platinum',  gapAfter: [9] },
+    { row: 'F', seats: 18, tier: 'gold',      gapAfter: [9] },
+    { row: 'G', seats: 18, tier: 'gold',      gapAfter: [9] },
+    { row: 'H', seats: 16, tier: 'gold',      gapAfter: [9] },
+    { row: 'I', seats: 16, tier: 'silver',    gapAfter: [9] },
+    { row: 'J', seats: 16, tier: 'silver',    gapAfter: [9] },
+    { row: 'K', seats: 16, tier: 'silver',    gapAfter: [9] },
   ],
-  // 5-tier luxe layout — Kingfisher Multiplex, Audi 2.
-  // Exact seat map from the venue: rows S, R, A-E (Platinum, widens from row D), F-H (Gold),
-  // I-K (Silver). No blocked/pillar seats in this venue.
-  twin: [
-    { row: 'S', seats: 9, tier: 'sofa', gapAfter: [4] },
-    { row: 'R', seats: 9, tier: 'recliner', gapAfter: [6] },
-    { row: 'A', seats: 14, tier: 'platinum', gapAfter: [9] },
-    { row: 'B', seats: 14, tier: 'platinum', gapAfter: [9] },
-    { row: 'C', seats: 14, tier: 'platinum', gapAfter: [9] },
-    { row: 'D', seats: 18, tier: 'platinum', gapAfter: [9] },
-    { row: 'E', seats: 18, tier: 'platinum', gapAfter: [9] },
-    { row: 'F', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'G', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'H', seats: 18, tier: 'gold', gapAfter: [9] },
-    { row: 'I', seats: 16, tier: 'silver', gapAfter: [9] },
-    { row: 'J', seats: 16, tier: 'silver', gapAfter: [9] },
-    { row: 'K', seats: 16, tier: 'silver', gapAfter: [9] },
+  // Kingfisher Multiplex — Audi 2 (Screen 2).
+  // Exact BookMyShow seat map: S (Sofa 9), R (Recliner 9),
+  // A-D Platinum 15 seats, E-F Gold 18 seats, G-H Silver 18 seats.
+  // gapAfter mirrors the aisle break: after seat 3 for S, after 5 for R, after 9 for all others.
+  audi2: [
+    { row: 'S', seats: 9,  tier: 'sofa',     gapAfter: [3] },
+    { row: 'R', seats: 9,  tier: 'recliner',  gapAfter: [5] },
+    { row: 'A', seats: 15, tier: 'platinum',  gapAfter: [9] },
+    { row: 'B', seats: 15, tier: 'platinum',  gapAfter: [9] },
+    { row: 'C', seats: 15, tier: 'platinum',  gapAfter: [9] },
+    { row: 'D', seats: 15, tier: 'platinum',  gapAfter: [9] },
+    { row: 'E', seats: 18, tier: 'gold',      gapAfter: [9] },
+    { row: 'F', seats: 18, tier: 'gold',      gapAfter: [9] },
+    { row: 'G', seats: 18, tier: 'silver',    gapAfter: [9] },
+    { row: 'H', seats: 18, tier: 'silver',    gapAfter: [9] },
   ],
+  // Legacy aliases kept so any existing DB screens referencing these names still render.
+  grand: [],
+  twin: [],
 };
 
 const CINEMAS = [
+  {
+    slug: 'kingfisher-multiplex',
+    name: 'Kingfisher Multiplex',
+    brand: 'Kingfisher',
+    city: 'Ahmedabad',
+    area: 'Satellite',
+    address: 'Kingfisher Multiplex, Satellite Road, Ahmedabad',
+    lat: 23.0300,
+    lng: 72.5100,
+    distanceKm: 3.5,
+    rating: 4.5,
+    facilities: ['Dolby Atmos', 'Sofa Seats', 'Recliners', 'Parking', 'Food Court', 'Wheelchair Access'],
+    screens: [
+      { name: 'Audi 1', format: '2D', soundSystem: 'Dolby Atmos', layout: 'audi1',
+        prices: { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 } },
+      { name: 'Audi 2', format: '2D', soundSystem: 'Dolby 7.1', layout: 'audi2',
+        prices: { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 } },
+    ],
+  },
   {
     slug: 'pvr-icon-phoenix',
     name: 'PVR ICON: Phoenix Mall',

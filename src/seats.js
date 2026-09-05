@@ -64,9 +64,16 @@ function heldSeatIds(showtimeId, exceptHoldId) {
 function priceFor(showtime, tier) {
   const prices = showtime.prices || {};
   if (typeof prices[tier] === 'number') return prices[tier];
+  // Fallback mappings for tiers not explicitly priced
   const base = typeof prices.regular === 'number' ? prices.regular : 200;
   if (tier === 'premium') return Math.round(base * 1.5);
   if (tier === 'vip') return Math.round(base * 2.2);
+  // 5-tier Kingfisher fallbacks (should normally be set via screen.prices)
+  if (tier === 'sofa') return 500;
+  if (tier === 'recliner') return 500;
+  if (tier === 'platinum') return 400;
+  if (tier === 'gold') return 300;
+  if (tier === 'silver') return 250;
   return base;
 }
 

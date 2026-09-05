@@ -30,7 +30,7 @@ function atTime(key, hhmm) {
 }
 
 function basePrice(brand, slot) {
-  const brandBase = { PVR: 240, INOX: 220, Cinepolis: 230, Rajhans: 170, Miraj: 190 }[brand] || 200;
+  const brandBase = { PVR: 240, INOX: 220, Cinepolis: 230, Rajhans: 170, Miraj: 190, Kingfisher: 250 }[brand] || 200;
   const hour = Number(slot.split(':')[0]);
   if (hour < 11) return Math.round(brandBase * 0.65); // morning show
   if (hour >= 21) return Math.round(brandBase * 1.1); // late night
@@ -90,7 +90,29 @@ function seedCinemas() {
       active: true,
     });
 
-    // Screens are no longer auto-seeded — add real screens via the admin panel
+    // Kingfisher Multiplex screens are seeded here with exact BookMyShow layouts.
+    if (c.screens && c.screens.length) {
+      for (const s of c.screens) {
+        const layoutKey = s.layout;
+        const layout = LAYOUTS[layoutKey] || [];
+        const screenId = `scr_${c.slug}-${s.name.toLowerCase().replace(/\s+/g, '-')}`;
+        if (!db.byId('screens', screenId)) {
+          db.insert('screens', {
+            id: screenId,
+            cinemaId: `cin_${c.slug}`,
+            name: s.name,
+            format: s.format || '2D',
+            soundSystem: s.soundSystem || 'Dolby 7.1',
+            layoutPreset: layoutKey,
+            layout,
+            prices: s.prices || {},
+            blockedSeats: [],
+            active: true,
+          });
+        }
+      }
+    }
+    // Other screens are added via the admin panel
     // (Cinemas → a cinema → Add screen) so seat layouts reflect actual venues.
   }
 }
@@ -291,11 +313,13 @@ function ensureRollingShowtimes() {
             endsAt: end.toISOString(),
             format,
             language,
-            prices: {
-              regular: base,
-              premium: Math.round(base * 1.5),
-              vip: Math.round(base * 2.2),
-            },
+            prices: screen.prices && Object.keys(screen.prices).length
+              ? screen.prices
+              : {
+                  regular: base,
+                  premium: Math.round(base * 1.5),
+                  vip: Math.round(base * 2.2),
+                },
             status: 'active',
           });
           existing.add(fingerprint);
