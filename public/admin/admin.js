@@ -869,8 +869,14 @@
         field('Movie', 'movieId', '', { span: true, options: movies.map(function (m) { return { value: m.id, label: m.title }; }) }) +
         field('Screen', 'screenId', '', { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
         field('Date', 'date', dateInput.value, { type: 'date' }) +
-        field('Time (HH:MM)', 'time', '19:00', { placeholder: '19:00' }) +
-        field('Language', 'language', '', { placeholder: 'Defaults to the movie’s first language' }) +
+        field('Time', 'time', '19:00', { type: 'time' }) +
+        field('Language', 'language', '', {
+          options: [
+            { value: '', label: 'Default (movie\u2019s first language)' },
+            { value: 'Hindi', label: 'Hindi' },
+            { value: 'English', label: 'English' },
+          ],
+        }) +
         '</div>');
       var m = modal({ title: 'Add showtime', body: body, confirmLabel: 'Create showtime' });
       m.confirmBtn.addEventListener('click', function () {
