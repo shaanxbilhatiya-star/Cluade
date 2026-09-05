@@ -236,39 +236,11 @@ const MOVIES = [
 
 /** Seat layout presets. gapAfter renders an aisle after those seat numbers. */
 const LAYOUTS = {
-  standard: [
-    { row: 'A', seats: 12, tier: 'regular', gapAfter: [3, 9] },
-    { row: 'B', seats: 12, tier: 'regular', gapAfter: [3, 9] },
-    { row: 'C', seats: 14, tier: 'regular', gapAfter: [4, 10] },
-    { row: 'D', seats: 14, tier: 'regular', gapAfter: [4, 10] },
-    { row: 'E', seats: 14, tier: 'premium', gapAfter: [4, 10] },
-    { row: 'F', seats: 14, tier: 'premium', gapAfter: [4, 10] },
-    { row: 'G', seats: 14, tier: 'premium', gapAfter: [4, 10] },
-    { row: 'H', seats: 10, tier: 'vip', gapAfter: [5] },
-  ],
-  compact: [
-    { row: 'A', seats: 10, tier: 'regular', gapAfter: [5] },
-    { row: 'B', seats: 10, tier: 'regular', gapAfter: [5] },
-    { row: 'C', seats: 12, tier: 'regular', gapAfter: [6] },
-    { row: 'D', seats: 12, tier: 'premium', gapAfter: [6] },
-    { row: 'E', seats: 12, tier: 'premium', gapAfter: [6] },
-    { row: 'F', seats: 8, tier: 'vip', gapAfter: [4] },
-  ],
-  imax: [
-    { row: 'A', seats: 16, tier: 'regular', gapAfter: [4, 12] },
-    { row: 'B', seats: 16, tier: 'regular', gapAfter: [4, 12] },
-    { row: 'C', seats: 18, tier: 'regular', gapAfter: [5, 13] },
-    { row: 'D', seats: 18, tier: 'premium', gapAfter: [5, 13] },
-    { row: 'E', seats: 18, tier: 'premium', gapAfter: [5, 13] },
-    { row: 'F', seats: 18, tier: 'premium', gapAfter: [5, 13] },
-    { row: 'G', seats: 12, tier: 'vip', gapAfter: [6] },
-  ],
-  // Kingfisher Multiplex — Audi 1 (Screen 1).
+  // Kingfisher Multiplex — Audi 1 "Kingfisher Ultra" (Screen 1).
   // Exact BookMyShow seat map: S (Sofa 9), R (Recliner 9),
   // A-C Platinum 14 seats, D-E Platinum 18 seats,
-  // F-H Gold 18 seats (H only 16), I-K Silver 16 seats.
-  // gapAfter mirrors the aisle break shown on BookMyShow (after seat 4 for S, after 6 for R, after 9 for others).
-  audi1: [
+  // F-G Gold 18 seats, H Gold 16 seats, I-K Silver 16 seats.
+  'kingfisher-ultra': [
     { row: 'S', seats: 9,  tier: 'sofa',     gapAfter: [4] },
     { row: 'R', seats: 9,  tier: 'recliner',  gapAfter: [6] },
     { row: 'A', seats: 14, tier: 'platinum',  gapAfter: [9] },
@@ -283,11 +255,10 @@ const LAYOUTS = {
     { row: 'J', seats: 16, tier: 'silver',    gapAfter: [9] },
     { row: 'K', seats: 16, tier: 'silver',    gapAfter: [9] },
   ],
-  // Kingfisher Multiplex — Audi 2 (Screen 2).
+  // Kingfisher Multiplex — Audi 2 "Kingfisher Standard" (Screen 2).
   // Exact BookMyShow seat map: S (Sofa 9), R (Recliner 9),
   // A-D Platinum 15 seats, E-F Gold 18 seats, G-H Silver 18 seats.
-  // gapAfter mirrors the aisle break: after seat 3 for S, after 5 for R, after 9 for all others.
-  audi2: [
+  'kingfisher-standard': [
     { row: 'S', seats: 9,  tier: 'sofa',     gapAfter: [3] },
     { row: 'R', seats: 9,  tier: 'recliner',  gapAfter: [5] },
     { row: 'A', seats: 15, tier: 'platinum',  gapAfter: [9] },
@@ -299,9 +270,6 @@ const LAYOUTS = {
     { row: 'G', seats: 18, tier: 'silver',    gapAfter: [9] },
     { row: 'H', seats: 18, tier: 'silver',    gapAfter: [9] },
   ],
-  // Legacy aliases kept so any existing DB screens referencing these names still render.
-  grand: [],
-  twin: [],
 };
 
 const CINEMAS = [
@@ -318,9 +286,9 @@ const CINEMAS = [
     rating: 4.5,
     facilities: ['Dolby Atmos', 'Sofa Seats', 'Recliners', 'Parking', 'Food Court', 'Wheelchair Access'],
     screens: [
-      { name: 'Audi 1', format: '2D', soundSystem: 'Dolby Atmos', layout: 'audi1',
+      { name: 'Audi 1', format: '2D', soundSystem: 'Dolby Atmos', layout: 'kingfisher-ultra',
         prices: { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 } },
-      { name: 'Audi 2', format: '2D', soundSystem: 'Dolby 7.1', layout: 'audi2',
+      { name: 'Audi 2', format: '2D', soundSystem: 'Dolby 7.1', layout: 'kingfisher-standard',
         prices: { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 } },
     ],
   },
@@ -336,11 +304,6 @@ const CINEMAS = [
     distanceKm: 2.4,
     rating: 4.6,
     facilities: ['Dolby Atmos', 'Recliners', 'Parking', 'Food Court', 'Wheelchair Access'],
-    screens: [
-      { name: 'Audi 1', format: 'IMAX 2D', soundSystem: 'IMAX 12.1', layout: 'imax' },
-      { name: 'Audi 2', format: '2D', soundSystem: 'Dolby Atmos', layout: 'standard' },
-      { name: 'Audi 3', format: '2D', soundSystem: 'Dolby 7.1', layout: 'compact' },
-    ],
   },
   {
     slug: 'inox-cg-road',
@@ -354,10 +317,6 @@ const CINEMAS = [
     distanceKm: 5.1,
     rating: 4.3,
     facilities: ['Dolby 7.1', 'Cafe', 'Parking'],
-    screens: [
-      { name: 'Screen 1', format: '2D', soundSystem: 'Dolby Atmos', layout: 'standard' },
-      { name: 'Screen 2', format: '4DX', soundSystem: 'Dolby 7.1', layout: 'compact' },
-    ],
   },
   {
     slug: 'cinepolis-alpha-one',
@@ -371,11 +330,6 @@ const CINEMAS = [
     distanceKm: 7.8,
     rating: 4.4,
     facilities: ['4DX', 'VIP Lounge', 'Valet Parking', 'Recliners'],
-    screens: [
-      { name: 'Audi A', format: '3D', soundSystem: 'Dolby Atmos', layout: 'standard' },
-      { name: 'Audi B', format: '2D', soundSystem: 'Dolby 7.1', layout: 'compact' },
-      { name: 'VIP Audi', format: '2D', soundSystem: 'Dolby Atmos', layout: 'compact' },
-    ],
   },
   {
     slug: 'rajhans-cinemas',
@@ -389,10 +343,6 @@ const CINEMAS = [
     distanceKm: 9.2,
     rating: 4.1,
     facilities: ['Dolby 7.1', 'Snack Bar', 'Parking'],
-    screens: [
-      { name: 'Screen 1', format: '2D', soundSystem: 'Dolby 7.1', layout: 'standard' },
-      { name: 'Screen 2', format: '2D', soundSystem: 'Dolby 7.1', layout: 'compact' },
-    ],
   },
   {
     slug: 'miraj-cinemas-mumbai',
@@ -406,10 +356,6 @@ const CINEMAS = [
     distanceKm: 1.8,
     rating: 4.2,
     facilities: ['Dolby Atmos', 'Recliners', 'Food Court'],
-    screens: [
-      { name: 'Audi 1', format: '2D', soundSystem: 'Dolby Atmos', layout: 'standard' },
-      { name: 'Audi 2', format: '2D', soundSystem: 'Dolby 7.1', layout: 'compact' },
-    ],
   },
 ];
 
