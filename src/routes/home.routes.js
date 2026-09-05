@@ -43,9 +43,10 @@ router.get('/home', (ctx) => {
   const playingInCity = new Set(
     db.get('showtimes').filter((s) => s.date >= today && cityCinemaIds.has(s.cinemaId)).map((s) => s.movieId)
   );
+  const moviesWithAnyShowtime = new Set(db.get('showtimes').map((s) => s.movieId));
 
   const nowPlaying = movies
-    .filter((m) => m.status === 'now_playing' && (playingInCity.size === 0 || playingInCity.has(m.id)))
+    .filter((m) => m.status === 'now_playing' && (playingInCity.has(m.id) || !moviesWithAnyShowtime.has(m.id)))
     .sort((a, b) => b.rating - a.rating);
 
   const comingSoon = movies
