@@ -379,6 +379,7 @@ const FOOD_ITEMS = [
   // ── Snacks ─────────────────────────────────────────────────────────────────
   {
     slug: 'grill-sandwich',
+    imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&q=80&fm=jpg&fit=crop',
     name: 'Grill Sandwich',
     category: 'Snacks',
     price: 175,
@@ -392,6 +393,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'maggi-plain',
+    imageUrl: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?w=400&q=80&fm=jpg&fit=crop',
     name: 'Maggi – Plain',
     category: 'Snacks',
     price: 98,
@@ -405,6 +407,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'maggi-masala',
+    imageUrl: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&q=80&fm=jpg&fit=crop',
     name: 'Maggi – Masala',
     category: 'Snacks',
     price: 119,
@@ -418,6 +421,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'paneer-tikka-pizza',
+    imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&q=80&fm=jpg&fit=crop',
     name: 'Paneer Tikka Pizza',
     category: 'Snacks',
     price: 279,
@@ -431,6 +435,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'french-fries',
+    imageUrl: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&q=80&fm=jpg&fit=crop',
     name: 'French Fries',
     category: 'Snacks',
     price: 140,
@@ -444,6 +449,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'sweetcorn',
+    imageUrl: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&q=80&fm=jpg&fit=crop',
     name: 'Sweetcorn',
     category: 'Snacks',
     price: 140,
@@ -459,6 +465,7 @@ const FOOD_ITEMS = [
   // ── Popcorn ────────────────────────────────────────────────────────────────
   {
     slug: 'popcorn-large',
+    imageUrl: 'https://images.unsplash.com/photo-1585647347483-22b66260dfff?w=400&q=80&fm=jpg&fit=crop',
     name: 'Popcorn – Large',
     category: 'Popcorn',
     price: 140,
@@ -472,6 +479,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'popcorn-tub',
+    imageUrl: 'https://images.unsplash.com/photo-1505686994434-e3cc5abf1330?w=400&q=80&fm=jpg&fit=crop',
     name: 'Popcorn – Tub',
     category: 'Popcorn',
     price: 175,
@@ -487,6 +495,7 @@ const FOOD_ITEMS = [
   // ── Cold Beverages ─────────────────────────────────────────────────────────
   {
     slug: 'coldrink-450ml',
+    imageUrl: 'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?w=400&q=80&fm=jpg&fit=crop',
     name: 'Coldrink 450ml',
     category: 'Cold Beverages',
     price: 140,
@@ -502,6 +511,7 @@ const FOOD_ITEMS = [
   // ── Hot Beverages ──────────────────────────────────────────────────────────
   {
     slug: 'cardamom-tea',
+    imageUrl: 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400&q=80&fm=jpg&fit=crop',
     name: 'Cardamom Tea',
     category: 'Hot Beverages',
     price: 35,
@@ -515,6 +525,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'cafe-latte',
+    imageUrl: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&q=80&fm=jpg&fit=crop',
     name: 'Café Latte',
     category: 'Hot Beverages',
     price: 42,
@@ -528,6 +539,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'cafe-mocha',
+    imageUrl: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&q=80&fm=jpg&fit=crop',
     name: 'Café Mocha',
     category: 'Hot Beverages',
     price: 56,
@@ -541,6 +553,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'cappuccino',
+    imageUrl: 'https://images.unsplash.com/photo-1534778101976-62847782c213?w=400&q=80&fm=jpg&fit=crop',
     name: 'Cappuccino',
     category: 'Hot Beverages',
     price: 70,
@@ -554,6 +567,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'hot-tea',
+    imageUrl: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&q=80&fm=jpg&fit=crop',
     name: 'Hot Tea',
     category: 'Hot Beverages',
     price: 35,
@@ -567,6 +581,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'black-coffee',
+    imageUrl: 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?w=400&q=80&fm=jpg&fit=crop',
     name: 'Black Coffee',
     category: 'Hot Beverages',
     price: 49,
@@ -580,6 +595,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'hot-coffee',
+    imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400&q=80&fm=jpg&fit=crop',
     name: 'Hot Coffee',
     category: 'Hot Beverages',
     price: 42,
@@ -593,6 +609,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'hot-chocolate',
+    imageUrl: 'https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?w=400&q=80&fm=jpg&fit=crop',
     name: 'Hot Chocolate',
     category: 'Hot Beverages',
     price: 63,
@@ -608,6 +625,7 @@ const FOOD_ITEMS = [
   // ── Combos ─────────────────────────────────────────────────────────────────
   {
     slug: 'movie-snack-combo',
+    imageUrl: 'https://images.unsplash.com/photo-1603378703578-08b69d2e6a85?w=400&q=80&fm=jpg&fit=crop',
     name: 'Movie Snack Combo',
     category: 'Combos',
     price: 245,
@@ -621,6 +639,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'sandwich-coffee-combo',
+    imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&q=80&fm=jpg&fit=crop',
     name: 'Sandwich & Coffee Combo',
     category: 'Combos',
     price: 189,
@@ -634,6 +653,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'pizza-coldrink-combo',
+    imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80&fm=jpg&fit=crop',
     name: 'Pizza & Coldrink Combo',
     category: 'Combos',
     price: 369,
@@ -647,6 +667,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'snack-platter-combo',
+    imageUrl: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?w=400&q=80&fm=jpg&fit=crop',
     name: 'Snack Platter Combo',
     category: 'Combos',
     price: 349,
@@ -660,6 +681,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'family-feast-combo',
+    imageUrl: 'https://images.unsplash.com/photo-1536392706976-e486e2ba97af?w=400&q=80&fm=jpg&fit=crop',
     name: 'Family Feast Combo',
     category: 'Combos',
     price: 499,
@@ -673,6 +695,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'maggi-tea-combo',
+    imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80&fm=jpg&fit=crop',
     name: 'Maggi & Tea Combo',
     category: 'Combos',
     price: 119,

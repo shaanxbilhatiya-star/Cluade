@@ -130,7 +130,7 @@ function seedFood() {
       size: f.size,
       veg: f.veg,
       popular: f.popular,
-      imageUrl: `/img/food/${f.slug}.svg`,
+      imageUrl: f.imageUrl || `/img/food/${f.slug}.svg`,
       available: true,
     });
   }
@@ -534,7 +534,7 @@ function reseedFood() {
       size: f.size,
       veg: f.veg,
       popular: f.popular,
-      imageUrl: `/img/food/${f.slug}.svg`,
+      imageUrl: f.imageUrl || `/img/food/${f.slug}.svg`,
       available: prev ? prev.available : true,
     };
   });
