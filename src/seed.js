@@ -508,4 +508,41 @@ function run() {
   );
 }
 
-module.exports = { run, ensureRollingShowtimes, dateKey, addDays };
+
+/**
+ * Always replace the foodItems collection with the current catalog on boot.
+ * This ensures live data stays in sync when catalog.js is updated, even
+ * after the initial seed has already run.
+ * Admin-created items (ids not in catalog) are preserved.
+ */
+function reseedFood() {
+  const catalogIds = new Set(FOOD_ITEMS.map((f) => `food_${f.slug}`));
+  const existing = db.get('foodItems');
+  const existingMap = new Map(existing.map((e) => [e.id, e]));
+
+  const catalogRecords = FOOD_ITEMS.map((f) => {
+    const prev = existingMap.get(`food_${f.slug}`);
+    return {
+      createdAt: prev ? prev.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      id: `food_${f.slug}`,
+      slug: f.slug,
+      name: f.name,
+      category: f.category,
+      price: f.price,
+      description: f.description,
+      size: f.size,
+      veg: f.veg,
+      popular: f.popular,
+      imageUrl: `/img/food/${f.slug}.svg`,
+      available: prev ? prev.available : true,
+    };
+  });
+
+  const adminItems = existing.filter((e) => !catalogIds.has(e.id));
+  db.replace('foodItems', [...catalogRecords, ...adminItems]);
+  db.flushNow();
+  console.log(`[seed] food menu synced — ${catalogRecords.length} catalog items, ${adminItems.length} admin item(s) preserved.`);
+}
+
+module.exports = { run, ensureRollingShowtimes, reseedFood, dateKey, addDays };

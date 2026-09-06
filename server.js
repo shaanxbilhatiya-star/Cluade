@@ -28,6 +28,7 @@ if (db.isEmpty()) {
   seed.run();
 }
 seed.ensureRollingShowtimes();
+seed.reseedFood(); // Always sync food catalog from catalog.js
 
 // ── Router ───────────────────────────────────────────────────────────────────
 const api = new Router();
