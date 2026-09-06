@@ -938,12 +938,56 @@
     dateInput.addEventListener('change', function () { expandedMovieId = null; load(); });
     cinemaSelect.addEventListener('change', function () { expandedMovieId = null; load(); });
 
+    // AM/PM time picker helper - renders hour/min/period selects, writes back as HH:MM 24h to a hidden input named `name`
+    function timePickerField(label, name, value24h) {
+      var val = value24h || '19:00';
+      var parts = val.split(':');
+      var h24 = parseInt(parts[0], 10) || 19;
+      var mins = parts[1] || '00';
+      var period = h24 >= 12 ? 'PM' : 'AM';
+      var h12 = h24 % 12; if (h12 === 0) h12 = 12;
+
+      var hourOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(function(h) {
+        return '<option value="' + h + '"' + (h === h12 ? ' selected' : '') + '>' + h + '</option>';
+      }).join('');
+      var minOpts = ['00','05','10','15','20','25','30','35','40','45','50','55'].map(function(m) {
+        return '<option value="' + m + '"' + (m === mins ? ' selected' : '') + '>' + m + '</option>';
+      }).join('');
+      var periodOpts = ['AM','PM'].map(function(p) {
+        return '<option value="' + p + '"' + (p === period ? ' selected' : '') + '>' + p + '</option>';
+      }).join('');
+
+      return '<div class="form-row">' +
+        '<label class="label" for="tp-hour-' + name + '">' + esc(label) + '</label>' +
+        '<div style="display:flex;gap:6px;align-items:center">' +
+          '<select class="input" id="tp-hour-' + name + '" data-tp-hour="' + name + '" style="width:70px;text-align:center">' + hourOpts + '</select>' +
+          '<span style="font-weight:700;font-size:18px;color:var(--ink-soft);line-height:1">:</span>' +
+          '<select class="input" data-tp-min="' + name + '" style="width:70px;text-align:center">' + minOpts + '</select>' +
+          '<select class="input" data-tp-period="' + name + '" style="width:70px;text-align:center">' + periodOpts + '</select>' +
+        '</div>' +
+        '<input type="hidden" name="' + name + '" value="' + esc(val) + '">' +
+      '</div>';
+    }
+
+    function wireTimePicker(body, name) {
+      function update() {
+        var h = parseInt(body.querySelector('[data-tp-hour="' + name + '"]').value, 10);
+        var m = body.querySelector('[data-tp-min="' + name + '"]').value;
+        var p = body.querySelector('[data-tp-period="' + name + '"]').value;
+        var h24 = p === 'PM' ? (h === 12 ? 12 : h + 12) : (h === 12 ? 0 : h);
+        body.querySelector('[name="' + name + '"]').value = String(h24).padStart(2, '0') + ':' + m;
+      }
+      body.querySelector('[data-tp-hour="' + name + '"]').addEventListener('change', update);
+      body.querySelector('[data-tp-min="' + name + '"]').addEventListener('change', update);
+      body.querySelector('[data-tp-period="' + name + '"]').addEventListener('change', update);
+    }
+
     function openAddShowtime(movieId) {
       var body = h('<div class="form-grid">' +
         field('Movie', 'movieId', movieId || '', { span: true, options: allMovies.map(function (m) { return { value: m.id, label: m.title }; }) }) +
         field('Screen', 'screenId', '', { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
         field('Date', 'date', dateInput.value, { type: 'date' }) +
-        field('Time', 'time', '19:00', { type: 'time' }) +
+        timePickerField('Time', 'time', '19:00') +
         field('Language', 'language', '', {
           options: [
             { value: '', label: 'Default (movie\u2019s first language)' },
@@ -953,6 +997,7 @@
           ],
         }) +
         '</div>');
+      wireTimePicker(body, 'time');
       var m = modal({ title: 'Add showtime', body: body, confirmLabel: 'Create showtime' });
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
@@ -974,7 +1019,7 @@
       var body = h('<div class="form-grid">' +
         field('Screen', 'screenId', s.screen ? s.screen.id : '', { span: true, options: screens.map(function (sc) { return { value: sc.id, label: sc.cinemaName + ' — ' + sc.name + ' (' + sc.format + ')' }; }) }) +
         field('Date', 'date', dateInput.value, { type: 'date' }) +
-        field('Time', 'time', s.time || '19:00', { type: 'time' }) +
+        timePickerField('Time', 'time', s.time || '19:00') +
         field('Language', 'language', s.language || '', {
           options: [
             { value: '', label: 'Default' }, { value: 'Hindi', label: 'Hindi' }, { value: 'English', label: 'English' },
@@ -983,6 +1028,7 @@
           ],
         }) +
         '</div>');
+      wireTimePicker(body, 'time');
       var m = modal({ title: 'Edit showtime — ' + (s.movie ? s.movie.title : ''), body: body, confirmLabel: 'Save changes' });
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
