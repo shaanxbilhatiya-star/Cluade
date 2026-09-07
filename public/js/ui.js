@@ -247,7 +247,7 @@
       (meta ? '<p class="movie-card__meta">' + esc(meta) + '</p>' : '') +
       (o.book === false
         ? ''
-        : '<button class="btn-outline" data-action="' + (movie.status === 'coming_soon' ? 'movie' : 'book') + '" data-id="' + esc(movie.id) + '">' +
+        : '<button class="btn-outline" data-action="' + (movie.status === 'coming_soon' ? 'movie' : 'book') + '" data-id="' + esc(movie.id) + '" data-cert="' + esc(movie.certificate || '') + '">' +
             (movie.status === 'coming_soon' ? 'Details' : 'Book Now') + '</button>') +
       '</article>';
   }
@@ -397,8 +397,27 @@
     true
   );
 
-  /* Screen registry. Created here because every js/screens/*.js file registers
-     itself into it, and those files load before app.js (which does the routing). */
+  function showAdultWarning(onConfirm) {
+    var modal = h(
+      '<div style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px">' +
+        '<div style="background:var(--surface);border-radius:var(--radius-xl);padding:28px 24px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">' +
+          '<h2 style="margin:0 0 16px;font-size:18px;font-weight:800">This movie is rated &quot;A&quot;</h2>' +
+          '<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px">' +
+            '<div style="flex-shrink:0;width:58px;height:58px;border-radius:50%;border:3px solid #e53e3e;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#e53e3e">18+</div>' +
+            '<p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--ink-soft)">This movie is only for viewers above 18. Please carry a valid <strong>ID / Age Proof</strong> to the theatre. If you are denied entry due to age or ID issues, <strong>you will not get a refund.</strong></p>' +
+          '</div>' +
+          '<button class="btn" style="width:100%;background:#e53e3e;border-color:#e53e3e" data-action="ok">Continue</button>' +
+          '<button class="btn-outline" style="width:100%;margin-top:10px" data-action="cancel">Go Back</button>' +
+        '</div>' +
+      '</div>'
+    );
+    document.body.appendChild(modal);
+    actions(modal, {
+      ok: function () { document.body.removeChild(modal); onConfirm(); },
+      cancel: function () { document.body.removeChild(modal); },
+    });
+  }
+
   window.Screens = window.Screens || {};
 
   window.UI = {
@@ -409,6 +428,6 @@
     appbar: appbar, sectionHead: sectionHead, posterImg: posterImg, movieCard: movieCard,
     foodCard: foodCard, empty: empty, row: row, statusPill: statusPill,
     spinnerBlock: spinnerBlock, carousel: carousel, initCarousels: initCarousels,
-    actions: actions, MONTHS: MONTHS, DOW: DOW, CURRENCY: CURRENCY,
+    actions: actions, showAdultWarning: showAdultWarning, MONTHS: MONTHS, DOW: DOW, CURRENCY: CURRENCY,
   };
 })();

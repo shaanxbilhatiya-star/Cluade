@@ -293,7 +293,35 @@
       UI.actions(view, {
         watchlist: toggleWatchlist,
         'watchlist-cta': toggleWatchlist,
-        book: function () { App.navigate('/movie/' + movie.id + '/showtimes'); },
+        book: function () {
+          if (movie.certificate && movie.certificate.toUpperCase() === 'A') {
+            var modal = UI.h(
+              '<div style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px">' +
+                '<div style="background:var(--surface);border-radius:var(--radius-xl);padding:28px 24px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)">' +
+                  '<h2 style="margin:0 0 16px;font-size:18px;font-weight:800">This movie is rated "A"</h2>' +
+                  '<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px">' +
+                    '<div style="flex-shrink:0;width:56px;height:56px;border-radius:50%;border:3px solid #e53e3e;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#e53e3e">18+</div>' +
+                    '<p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-soft)">This movie is only for viewers above 18. Please carry a valid ID / Age Proof to the theatre. If you are denied entry due to age or ID issues, <strong>you will not get a refund.</strong></p>' +
+                  '</div>' +
+                  '<button class="btn" style="width:100%;background:#e53e3e;border-color:#e53e3e" data-action="confirm-adult">Continue</button>' +
+                  '<button class="btn-outline" style="width:100%;margin-top:10px" data-action="cancel-adult">Go Back</button>' +
+                '</div>' +
+              '</div>'
+            );
+            document.body.appendChild(modal);
+            UI.actions(modal, {
+              'confirm-adult': function () {
+                document.body.removeChild(modal);
+                App.navigate('/movie/' + movie.id + '/showtimes');
+              },
+              'cancel-adult': function () {
+                document.body.removeChild(modal);
+              },
+            });
+          } else {
+            App.navigate('/movie/' + movie.id + '/showtimes');
+          }
+        },
         trailer: function () {
           // Extract YouTube video ID from embed URL and show inline iframe
           var url = movie.trailerUrl || '';

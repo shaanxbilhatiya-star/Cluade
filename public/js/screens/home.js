@@ -125,7 +125,7 @@
         notifications: function () { App.navigate('/notifications'); },
         search: function () { App.navigate('/search'); },
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
+        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
         cinema: function (el) { App.navigate('/cinema/' + el.getAttribute('data-id')); },
         ticket: function (el) { App.navigate('/ticket/' + el.getAttribute('data-id')); },
         offer: function (el) {
@@ -200,7 +200,7 @@
 
       UI.actions(view, {
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
+        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
       });
 
       // Movie cards render at a fixed rail width; let them fill the grid instead.
@@ -290,7 +290,7 @@
 
       UI.actions(view, {
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
+        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
         cinema: function (el) { App.navigate('/cinema/' + el.getAttribute('data-id')); },
         'food-item': function (el) { App.navigate('/food/' + el.getAttribute('data-id')); },
       });
