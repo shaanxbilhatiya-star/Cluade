@@ -10,6 +10,7 @@
 
   var TABS = [
     { id: 'home', label: 'Home', icon: 'home', path: '/home' },
+    { id: 'experiences', label: 'Experiences', icon: 'sparkle', path: '/experiences' },
     { id: 'food', label: 'Food Order', icon: 'food', path: '/food' },
     { id: 'tickets', label: 'My Tickets', icon: 'ticket', path: '/tickets' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },
@@ -20,6 +21,7 @@
     ['/login', 'login'],
     ['/register', 'register'],
     ['/home', 'home'],
+    ['/experiences', 'experiences'],
     ['/search', 'search'],
     ['/notifications', 'notifications'],
     ['/movies/:status', 'movieList'],

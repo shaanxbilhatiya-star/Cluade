@@ -25,6 +25,7 @@ const COLLECTIONS = [
   'bookings',
   'foodItems',
   'offers',
+  'experiences',
   'notifications',
   'reviews',
   'seatHolds',

@@ -16,6 +16,7 @@ const MOVIE_FIELDS = [
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
 const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'active'];
+const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active'];
 
 function pick(body, fields) {
   const out = {};
@@ -95,6 +96,7 @@ router.get('/admin/stats', auth.requireAdmin, () => {
       showtimes: db.get('showtimes').length,
       foodItems: db.get('foodItems').length,
       offers: db.get('offers').length,
+      experiences: db.get('experiences').length,
       users: db.find('users', (u) => u.role === 'customer').length,
       bookings: bookings.length,
       cancelled: bookings.filter((b) => b.status === 'cancelled').length,
@@ -485,6 +487,37 @@ router.put('/admin/offers/:id', auth.requireAdmin, (ctx) => {
 router.delete('/admin/offers/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('offers', ctx.params.id)) throw new HttpError(404, 'Offer not found');
   db.remove('offers', ctx.params.id);
+  return { deleted: true, id: ctx.params.id };
+});
+
+// ── Experiences (pool party, water park, wedding, etc.) ──────────────────────
+router.get('/admin/experiences', auth.requireAdmin, () => {
+  const list = [...db.get('experiences')].sort((a, b) => (a.order || 0) - (b.order || 0));
+  return { experiences: list };
+});
+
+router.post('/admin/experiences', auth.requireAdmin, (ctx) => {
+  requireFields(ctx.body, ['title', 'category']);
+  const body = Object.assign({}, ctx.body);
+  if (typeof body.features === 'string') body.features = body.features.split(',').map((s) => s.trim()).filter(Boolean);
+  const experience = db.insert('experiences', Object.assign(
+    { id: db.id('exp'), slug: slugify(ctx.body.title), subtitle: '', icon: 'sparkle', color: '#7C3AED', priceLabel: '', priceNote: '', features: [], badge: '', order: db.get('experiences').length + 1, active: true },
+    pick(body, EXPERIENCE_FIELDS)
+  ));
+  ctx.state.status = 201;
+  return { experience };
+});
+
+router.put('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
+  if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
+  const body = Object.assign({}, ctx.body);
+  if (typeof body.features === 'string') body.features = body.features.split(',').map((s) => s.trim()).filter(Boolean);
+  return { experience: db.update('experiences', ctx.params.id, pick(body, EXPERIENCE_FIELDS)) };
+});
+
+router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
+  if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
+  db.remove('experiences', ctx.params.id);
   return { deleted: true, id: ctx.params.id };
 });
 

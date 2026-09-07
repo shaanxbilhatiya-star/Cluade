@@ -1024,3 +1024,51 @@ ul { margin: 0; padding: 0; list-style: none; }
 .notif__title { font-size: 15px; font-weight: 700; }
 .notif__body { font-size: 13.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.5; }
 .notif__time { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+/* ── Experiences tab (pool party, water park, wedding, etc.) ─────────────── */
+.exp-call {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; margin-bottom: 4px;
+  background: var(--primary-600); border-color: var(--primary-600); color: #fff;
+}
+.exp-call__icon {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: center; flex: none;
+}
+.exp-call__text { flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.exp-call__text strong { font-size: 14.5px; font-weight: 800; }
+.exp-call__text span { font-size: 13px; opacity: .92; }
+.exp-call__arrow { opacity: .85; }
+
+.exp-grid { padding: 14px 16px 0; display: flex; flex-direction: column; gap: 14px; }
+
+.exp-card { padding: 0; overflow: hidden; }
+.exp-card__head {
+  position: relative;
+  height: 64px;
+  display: flex; align-items: center; justify-content: flex-end; padding: 0 16px;
+  color: #fff;
+}
+.exp-card__badge {
+  position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,.22); color: #fff;
+  font-size: 11px; font-weight: 800; letter-spacing: .02em;
+  padding: 4px 10px; border-radius: 999px;
+}
+.exp-card__icon { opacity: .95; }
+.exp-card__body { padding: 14px 16px 16px; }
+.exp-card__category {
+  font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--primary-600);
+}
+.exp-card__title { font-size: 17px; font-weight: 800; margin-top: 3px; }
+.exp-card__subtitle { font-size: 13.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.45; }
+.exp-card__price { margin-top: 10px; font-size: 19px; font-weight: 800; color: var(--primary-700); }
+.exp-card__pricenote { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+.exp-card__features { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.exp-card__features li { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; color: var(--ink-soft); }
+.exp-card__features li svg { flex: none; margin-top: 2px; color: var(--primary-600); }
+.exp-card__actions { display: flex; gap: 10px; margin-top: 14px; }
+.exp-card__actions .btn { min-height: 44px; font-size: 14.5px; }
+.exp-card__actions .btn-outline { min-height: 44px; font-size: 14.5px; }

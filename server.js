@@ -30,6 +30,7 @@ if (db.isEmpty()) {
 }
 seed.ensureRollingShowtimes();
 seed.reseedFood(); // Always sync food catalog from catalog.js
+seed.ensureExperiences(); // Seed the Experiences tab once; admin edits persist after that
 generateComboImages().catch(err => console.warn("[combo-images] Failed:", err.message));
 
 // ── Router ───────────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ api.mount('/api', require('./src/routes/cinemas.routes'));
 api.mount('/api', require('./src/routes/showtimes.routes'));
 api.mount('/api', require('./src/routes/bookings.routes'));
 api.mount('/api', require('./src/routes/food.routes'));
+api.mount('/api', require('./src/routes/experiences.routes'));
 api.mount('/api', require('./src/routes/users.routes'));
 api.mount('/api', require('./src/routes/admin.routes'));
 

@@ -772,6 +772,138 @@ const OFFERS = [
   },
 ];
 
+/**
+ * Kingfisher Mandla's non-movie venue offerings (pool parties, water park,
+ * kitty parties, weddings, etc.) — shown in the customer app's Experiences
+ * tab and fully editable from the admin panel.
+ */
+const EXPERIENCES = [
+  {
+    slug: 'private-pool-party',
+    title: 'Private Pool Party',
+    category: 'Pool Party',
+    subtitle: 'Exclusive pool access for your group, 3 hours, with snacks & music',
+    icon: 'waves',
+    color: '#0EA5E9',
+    priceLabel: '\u20B93,000',
+    priceNote: 'up to 10 people \u00b7 \u20B94,999 for 15\u201320 people',
+    features: [
+      '3 hours of exclusive pool access',
+      'Unlimited tea, Maggie & crispy corn',
+      'High-quality music system',
+      'Add-ons: DJ, decoration, photography, cake, cold drinks',
+    ],
+    badge: 'Popular',
+    order: 1,
+  },
+  {
+    slug: 'kitty-party',
+    title: 'Kitty Party',
+    category: 'Kitty Party',
+    subtitle: 'A perfect ladies\u2019 get-together with food, music and games',
+    icon: 'users',
+    color: '#DB2777',
+    priceLabel: '\u20B9499',
+    priceNote: 'per lady',
+    features: [
+      'Welcome drink & reserved seating area',
+      'Full lunch buffet (starter, main course, dessert)',
+      'Music system & Tambola ticket',
+      'Win & get an attractive gift from Kingfisher',
+    ],
+    badge: '',
+    order: 2,
+  },
+  {
+    slug: 'family-fun-day',
+    title: 'Family Fun Day (Water Park)',
+    category: 'Water Park',
+    subtitle: 'Water park + movie + costume + welcome drink, all in one package',
+    icon: 'waves',
+    color: '#2563EB',
+    priceLabel: '\u20B91,499',
+    priceNote: 'family of 3, or \u20B91,799 for family of 4',
+    features: [
+      'Full water park entry & costume',
+      'Movie ticket included',
+      'Kids jumping section & welcome drink',
+      'Add-ons: fish spa, bull ride, massage chair, photography',
+    ],
+    badge: 'Best Value',
+    order: 3,
+  },
+  {
+    slug: 'birthday-party',
+    title: 'Birthday Party',
+    category: 'Celebration',
+    subtitle: 'Celebrate birthdays in grand style with fun, food & memories',
+    icon: 'cake',
+    color: '#16A34A',
+    priceLabel: 'Custom',
+    priceNote: 'packages tailored to guest count',
+    features: [
+      'Decorated venue & seating',
+      'Cake, food & beverages',
+      'Music & entertainment',
+      'Photography add-on available',
+    ],
+    badge: '',
+    order: 4,
+  },
+  {
+    slug: 'get-together',
+    title: 'Get Together',
+    category: 'Celebration',
+    subtitle: 'Plan a relaxed get-together with friends, family or colleagues',
+    icon: 'users',
+    color: '#EA580C',
+    priceLabel: 'Custom',
+    priceNote: 'packages tailored to group size',
+    features: [
+      'Reserved private seating area',
+      'Snacks & beverages',
+      'Music system',
+    ],
+    badge: '',
+    order: 5,
+  },
+  {
+    slug: 'farewell-party',
+    title: 'Farewell Party',
+    category: 'Celebration',
+    subtitle: 'Give a memorable goodbye with music, dance & great vibes',
+    icon: 'music',
+    color: '#7C3AED',
+    priceLabel: 'Custom',
+    priceNote: 'packages tailored to group size',
+    features: [
+      'Dance floor & music system',
+      'Food & beverage packages',
+      'Decoration add-ons available',
+    ],
+    badge: '',
+    order: 6,
+  },
+  {
+    slug: 'wedding-package',
+    title: 'Wedding Package',
+    category: 'Wedding',
+    subtitle: 'More than a venue \u2014 make your big day unforgettable',
+    icon: 'heart',
+    color: '#B45309',
+    priceLabel: '\u20B92,99,000 onwards',
+    priceNote: 'Economy \u20B92.99L\u20134.51L \u00b7 Premium \u20B95.51L\u20138.51L',
+    features: [
+      'Multiple halls, stage, mandap & decoration',
+      'Catering for 100\u2013500 guests',
+      'Staff: security, kitchen & service',
+      'Premium package adds cottages, DJ & bridal suite',
+    ],
+    badge: 'Premium',
+    order: 7,
+  },
+];
+
 const GENRES = [
   'Action', 'Comedy', 'Drama', 'Horror', 'Thriller', 'Romance', 'Sci-Fi',
   'Fantasy', 'Mystery', 'Family', 'Crime', 'History', 'Superhero', 'Mythology',
@@ -784,4 +916,4 @@ const CITIES = ['Mandla'];
 /** Daily show slots (24h) used to generate the rolling schedule. */
 const SHOW_SLOTS = ['09:15', '12:30', '15:45', '17:30', '19:00', '22:15'];
 
-module.exports = { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, GENRES, LANGUAGES, CITIES, SHOW_SLOTS };
+module.exports = { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, GENRES, LANGUAGES, CITIES, SHOW_SLOTS };

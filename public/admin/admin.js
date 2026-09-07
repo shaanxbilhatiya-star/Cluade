@@ -111,6 +111,7 @@
     { id: 'verify', label: 'Verify Ticket', icon: 'qr' },
     { id: 'food', label: 'Food & Drinks', icon: 'food' },
     { id: 'offers', label: 'Offers', icon: 'tag' },
+    { id: 'experiences', label: 'Experiences', icon: 'sparkle' },
     { id: 'customers', label: 'Customers', icon: 'users' },
   ];
 
@@ -1415,6 +1416,92 @@
     });
   }
 
+  // ── Experiences (pool party, water park, wedding, etc.) ────────────────────
+  async function pageExperiences(content, topActions) {
+    topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add experience</button>';
+    content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
+    var data = await API.get('/admin/experiences');
+
+    content.innerHTML =
+      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.experiences.length + ' experiences</h2></div>' +
+      '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Package</th><th>Category</th><th>Price</th><th>Badge</th><th class="num">Order</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + (data.experiences.length ? data.experiences.map(function (e) {
+          return '<tr><td><div class="cell-strong">' + esc(e.title) + '</div><div class="cell-sub">' + esc(e.subtitle || '') + '</div></td>' +
+            '<td><span class="pill pill--purple">' + esc(e.category) + '</span></td>' +
+            '<td>' + esc(e.priceLabel || '\u2014') + '</td>' +
+            '<td>' + esc(e.badge || '\u2014') + '</td>' +
+            '<td class="num">' + esc(e.order || 0) + '</td>' +
+            '<td>' + (e.active !== false ? '<span class="pill pill--green">Active</span>' : '<span class="pill">Hidden</span>') + '</td>' +
+            '<td style="white-space:nowrap">' +
+              '<button class="btn btn--ghost btn--sm" data-edit="' + esc(e.id) + '">Edit</button> ' +
+              '<button class="btn btn--line btn--sm" data-del="' + esc(e.id) + '">Delete</button></td></tr>';
+        }).join('') : '<tr><td colspan="7" class="empty-state">No experiences yet.</td></tr>') +
+      '</tbody></table></div></div></div>';
+
+    function form(exp) {
+      var e = exp || {};
+      return h('<div class="form-grid">' +
+        field('Title', 'title', e.title, { span: true, placeholder: 'Private Pool Party' }) +
+        field('Category', 'category', e.category, { placeholder: 'Pool Party' }) +
+        field('Badge (optional)', 'badge', e.badge, { placeholder: 'Popular' }) +
+        field('Subtitle', 'subtitle', e.subtitle, { type: 'textarea', span: true, placeholder: 'One line describing the package' }) +
+        field('Price label', 'priceLabel', e.priceLabel, { placeholder: '\u20B94,999' }) +
+        field('Price note', 'priceNote', e.priceNote, { placeholder: 'up to 20 people' }) +
+        field('Icon', 'icon', e.icon || 'sparkle', { options: ['sparkle', 'waves', 'users', 'cake', 'music', 'heart', 'gift', 'star', 'tag'] }) +
+        field('Card color', 'color', e.color || '#7C3AED', { type: 'color' }) +
+        field('Features (comma separated)', 'features', (e.features || []).join(', '), { type: 'textarea', span: true, placeholder: 'Unlimited tea, Music system, Free parking' }) +
+        field('Display order', 'order', e.order || 1, { type: 'number' }) +
+        field('Status', 'active', e.active === false ? 'false' : 'true', { options: [{ value: 'true', label: 'Active (visible to customers)' }, { value: 'false', label: 'Hidden' }] }) +
+        '</div>');
+    }
+
+    function payloadFrom(body) {
+      var raw = readForm(body);
+      return {
+        title: raw.title, category: raw.category, badge: raw.badge, subtitle: raw.subtitle,
+        priceLabel: raw.priceLabel, priceNote: raw.priceNote, icon: raw.icon, color: raw.color,
+        features: csvList(raw.features), order: Number(raw.order) || 0, active: raw.active === 'true',
+      };
+    }
+
+    topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
+      var m = modal({ title: 'Add experience', body: form(null), confirmLabel: 'Create experience' });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          await API.post('/admin/experiences', payloadFrom(m.body));
+          toast('Experience created', 'success');
+          navigate('experiences');
+        });
+      });
+    });
+
+    content.addEventListener('click', async function (event) {
+      var edit = event.target.closest('[data-edit]');
+      var del = event.target.closest('[data-del]');
+      if (edit) {
+        var exp = data.experiences.find(function (e) { return e.id === edit.getAttribute('data-edit'); });
+        var m = modal({ title: 'Edit ' + exp.title, body: form(exp), confirmLabel: 'Save changes' });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.put('/admin/experiences/' + exp.id, payloadFrom(m.body));
+            toast('Experience updated', 'success');
+            navigate('experiences');
+          });
+        });
+      }
+      if (del) {
+        var ok = await confirmDialog('Delete this experience?', 'It will no longer be shown in the Experiences tab.', 'Delete experience');
+        if (!ok) return;
+        try {
+          await API.del('/admin/experiences/' + del.getAttribute('data-del'));
+          toast('Experience deleted', 'success');
+          navigate('experiences');
+        } catch (err) { toast(err.message, 'error'); }
+      }
+    });
+  }
+
   // ── Customers ────────────────────────────────────────────────────────────
   async function pageCustomers(content) {
     content.innerHTML =
@@ -1479,6 +1566,7 @@
     verify: pageVerify,
     food: pageFood,
     offers: pageOffers,
+    experiences: pageExperiences,
     customers: pageCustomers,
   };
 

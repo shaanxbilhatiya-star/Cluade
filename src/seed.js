@@ -6,7 +6,7 @@
  */
 const db = require('./db');
 const auth = require('./auth');
-const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, SHOW_SLOTS } = require('./catalog');
+const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, SHOW_SLOTS } = require('./catalog');
 const { computeTotals } = require('./pricing');
 
 const DAYS_BACK = 3;
@@ -152,6 +152,39 @@ function seedOffers() {
       bannerUrl: `/img/banners/${o.slug}.svg`,
       active: true,
     });
+  }
+}
+
+function seedExperiences() {
+  for (const e of EXPERIENCES) {
+    db.insert('experiences', {
+      id: `exp_${e.slug}`,
+      slug: e.slug,
+      title: e.title,
+      category: e.category,
+      subtitle: e.subtitle,
+      icon: e.icon,
+      color: e.color,
+      priceLabel: e.priceLabel,
+      priceNote: e.priceNote,
+      features: e.features,
+      badge: e.badge || '',
+      order: e.order || 0,
+      active: true,
+    });
+  }
+}
+
+/**
+ * Seeds the Experiences (pool party / water park / wedding etc.) catalogue
+ * once, the first time this collection is empty - then leaves it alone so
+ * admin edits, additions and deletions persist across restarts.
+ */
+function ensureExperiences() {
+  if (db.get('experiences').length === 0) {
+    seedExperiences();
+    db.flushNow();
+    console.log(`[seed] added ${db.get('experiences').length} experiences (Pool Party, Water Park, Wedding, etc.)`);
   }
 }
 
@@ -488,6 +521,7 @@ function run() {
   seedCinemas();
   seedFood();
   seedOffers();
+  seedExperiences();
   seedReviews();
   ensureRollingShowtimes();
   seedBookings();
@@ -546,4 +580,4 @@ function reseedFood() {
   console.log(`[seed] food menu synced — ${catalogRecords.length} catalog items, ${adminItems.length} admin item(s) preserved.`);
 }
 
-module.exports = { run, ensureRollingShowtimes, reseedFood, dateKey, addDays };
+module.exports = { run, ensureRollingShowtimes, reseedFood, ensureExperiences, dateKey, addDays };

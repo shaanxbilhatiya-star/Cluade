@@ -111,6 +111,7 @@
     food: function (query) { return request('GET', '/food' + (query ? '?' + query : '')); },
     foodItem: function (id) { return request('GET', '/food/' + id); },
     offers: function (appliesTo) { return request('GET', '/offers' + (appliesTo ? '?appliesTo=' + appliesTo : '')); },
+    experiences: function () { return request('GET', '/experiences'); },
 
     // ── Account ──
     updateProfile: function (patch) { return request('PATCH', '/me', patch); },
