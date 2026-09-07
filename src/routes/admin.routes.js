@@ -31,7 +31,7 @@ function saveExperienceImage(slug, dataUrl) {
   const ext = match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase();
   const base64 = dataUrl.slice(match[0].length);
   const buffer = Buffer.from(base64, 'base64');
-  if (buffer.length > 6 * 1024 * 1024) throw new HttpError(400, 'Image is too large (max 6 MB)');
+  if (buffer.length > 10 * 1024 * 1024) throw new HttpError(400, 'Image is too large (max 10 MB)');
   if (!fs.existsSync(EXPERIENCE_IMG_DIR)) fs.mkdirSync(EXPERIENCE_IMG_DIR, { recursive: true });
   const filename = `${slug}-${Date.now().toString(36)}.${ext}`;
   fs.writeFileSync(path.join(EXPERIENCE_IMG_DIR, filename), buffer);

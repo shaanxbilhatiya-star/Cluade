@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8 MB (allows base64 image uploads, e.g. Experience photos)
+const MAX_BODY_BYTES = 14 * 1024 * 1024; // 14 MB (allows full-quality base64 image uploads, e.g. Experience posters)
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

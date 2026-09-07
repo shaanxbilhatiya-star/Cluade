@@ -216,7 +216,7 @@
       (o.hint ? '<div class="hint">' + esc(o.hint) + '</div>' : '') + '</div>';
   }
 
-  /** Instagram-square (1:1) cover photo picker: crops/resizes client-side to 1080x1080 JPEG. */
+  /** Cover photo picker: keeps the full image (no forced crop), just downsizes if it's huge. */
   function imageField(label, name, value, opts) {
     var o = opts || {};
     var hasImg = !!value;
@@ -229,14 +229,14 @@
         '<div class="img-field__controls">' +
           '<input type="file" accept="image/png,image/jpeg,image/webp" data-imgfield-input>' +
           '<button type="button" class="btn btn--ghost btn--sm" data-imgfield-pick>Choose photo</button>' +
-          '<div class="hint">Square (1:1), Instagram post size \u2014 auto-cropped to 1080\u00d71080.</div>' +
+          '<div class="hint">Any size or ratio \u2014 poster, square post, whatever you use. Uploaded at full quality.</div>' +
         '</div>' +
       '</div>' +
       '<input type="hidden" name="' + name + '" value="' + esc(value || '') + '">' +
       '</div>';
   }
 
-  /** Wires up an imageField() block: pick button, file read, square-crop via canvas. */
+  /** Wires up an imageField() block: pick button, file read, downsize-only via canvas (never crops). */
   function bindImageField(body, name) {
     var wrap = body.querySelector('[data-imgfield="' + name + '"]');
     if (!wrap) return;
@@ -252,20 +252,31 @@
       if (!file) return;
       var reader = new FileReader();
       reader.onload = function () {
-        var img = new Image();
-        img.onload = function () {
-          var SIZE = 1080; // Instagram square post
-          var side = Math.min(img.width, img.height);
-          var sx = (img.width - side) / 2;
-          var sy = (img.height - side) / 2;
-          var canvas = document.createElement('canvas');
-          canvas.width = SIZE; canvas.height = SIZE;
-          var ctx2d = canvas.getContext('2d');
-          ctx2d.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
-          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        var MAX_DIRECT_BYTES = 6 * 1024 * 1024; // send as-is (full quality, no re-encode) below this
+        var MAX_DIMENSION = 2400; // only used as a safety cap for oversized files
+
+        function apply(dataUrl) {
           hidden.value = dataUrl;
           preview.classList.remove('img-field__preview--empty');
           preview.innerHTML = '<img src="' + dataUrl + '" alt="">';
+        }
+
+        if (file.size <= MAX_DIRECT_BYTES) {
+          // Small enough already — upload the original bytes untouched, no cropping, no re-compression.
+          apply(reader.result);
+          return;
+        }
+
+        // Oversized file: downscale (never crop) so the longer side fits MAX_DIMENSION, at high quality.
+        var img = new Image();
+        img.onload = function () {
+          var scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+          var w = Math.round(img.width * scale);
+          var hgt = Math.round(img.height * scale);
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = hgt;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, hgt);
+          apply(canvas.toDataURL('image/jpeg', 0.95));
         };
         img.src = reader.result;
       };
