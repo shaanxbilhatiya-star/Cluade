@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 260" width="400" height="260">
-  <defs>
-    <clipPath id="left"><rect x="0" y="0" width="198" height="260"/></clipPath>
-    <clipPath id="right"><rect x="202" y="0" width="198" height="260"/></clipPath>
-  </defs>
-  <image href="https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&q=80&fm=jpg&fit=crop" x="0" y="0" width="198" height="260" preserveAspectRatio="xMidYMid slice" clip-path="url(#left)"/>
-  <image href="https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400&q=80&fm=jpg&fit=crop" x="202" y="0" width="198" height="260" preserveAspectRatio="xMidYMid slice" clip-path="url(#right)"/>
-  <line x1="200" y1="0" x2="200" y2="260" stroke="white" stroke-width="4"/>
-</svg>
