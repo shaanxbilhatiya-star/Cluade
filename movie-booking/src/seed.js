@@ -6,7 +6,7 @@
  */
 const db = require('./db');
 const auth = require('./auth');
-const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, SHOW_SLOTS } = require('./catalog');
+const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, SHOW_SLOTS } = require('./catalog');
 const { computeTotals } = require('./pricing');
 
 const DAYS_BACK = 3;
@@ -137,9 +137,105 @@ function seedOffers() {
       maxDiscount: o.maxDiscount,
       minAmount: o.minAmount,
       appliesTo: o.appliesTo,
+      order: typeof o.order === 'number' ? o.order : null,
+      showcase: o.showcase === true,
       bannerUrl: `/img/banners/${o.slug}.svg`,
       active: true,
     });
+  }
+}
+
+/**
+ * Idempotently insert any catalog OFFERS that are missing from the offers
+ * collection, matched by slug. Existing/admin-edited offers are left untouched.
+ * Runs on every boot so newly-added catalog offers (e.g. wedding packages)
+ * surface on an already-seeded database without overwriting edits.
+ */
+function syncOffersFromCatalog() {
+  let added = 0;
+  let patched = 0;
+  for (const o of OFFERS) {
+    const existing = db.find('offers', (row) => row.slug === o.slug);
+    if (existing.length > 0) {
+      // Backfill the `showcase` flag on rows seeded before it existed (e.g.
+      // wedding packages from an earlier build) so they stay off the coupon
+      // list. `showcase` is a system-managed field, not an admin-edited one,
+      // so only touch rows where it is missing - admin edits are preserved.
+      if (o.showcase === true) {
+        for (const row of existing) {
+          if (typeof row.showcase !== 'boolean') {
+            db.update('offers', row.id, { showcase: true });
+            patched += 1;
+          }
+        }
+      }
+      continue;
+    }
+    db.insert('offers', {
+      id: `off_${o.slug}`,
+      slug: o.slug,
+      title: o.title,
+      subtitle: o.subtitle,
+      code: o.code,
+      discountType: o.discountType,
+      discountValue: o.discountValue,
+      maxDiscount: o.maxDiscount,
+      minAmount: o.minAmount,
+      appliesTo: o.appliesTo,
+      order: typeof o.order === 'number' ? o.order : null,
+      showcase: o.showcase === true,
+      bannerUrl: `/img/banners/${o.slug}.svg`,
+      active: true,
+    });
+    added += 1;
+  }
+  if (added > 0 || patched > 0) {
+    db.flushNow();
+    if (added > 0) console.log(`[seed] synced ${added} new catalog offer(s).`);
+    if (patched > 0) console.log(`[seed] backfilled showcase flag on ${patched} offer(s).`);
+  }
+}
+
+function experienceRecord(e) {
+  return {
+    id: `exp_${e.slug}`,
+    slug: e.slug,
+    title: e.title,
+    category: e.category,
+    subtitle: e.subtitle,
+    priceLabel: e.priceLabel,
+    priceNote: e.priceNote,
+    features: e.features || [],
+    badge: e.badge || null,
+    icon: e.icon,
+    order: typeof e.order === 'number' ? e.order : null,
+    imageUrl: `/img/experiences/${e.slug}.svg`,
+    active: true,
+  };
+}
+
+function seedExperiences() {
+  for (const e of EXPERIENCES) {
+    db.insert('experiences', experienceRecord(e));
+  }
+}
+
+/**
+ * Idempotently insert any catalog EXPERIENCES that are missing from the
+ * experiences collection, matched by slug. Existing/admin-edited experiences
+ * are left untouched. Mirrors syncOffersFromCatalog so new catalog items
+ * surface on an already-seeded database without overwriting edits.
+ */
+function syncExperiencesFromCatalog() {
+  let added = 0;
+  for (const e of EXPERIENCES) {
+    if (db.find('experiences', (row) => row.slug === e.slug).length > 0) continue;
+    db.insert('experiences', experienceRecord(e));
+    added += 1;
+  }
+  if (added > 0) {
+    db.flushNow();
+    console.log(`[seed] synced ${added} new catalog experience(s).`);
   }
 }
 
@@ -453,6 +549,7 @@ function run() {
   seedCinemas();
   seedFood();
   seedOffers();
+  seedExperiences();
   seedReviews();
   ensureRollingShowtimes();
   seedBookings();
@@ -473,4 +570,4 @@ function run() {
   );
 }
 
-module.exports = { run, ensureRollingShowtimes, dateKey, addDays };
+module.exports = { run, ensureRollingShowtimes, syncOffersFromCatalog, seedExperiences, syncExperiencesFromCatalog, dateKey, addDays };

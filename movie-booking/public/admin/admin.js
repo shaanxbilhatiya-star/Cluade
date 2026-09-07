@@ -99,6 +99,7 @@
     { id: 'verify', label: 'Verify Ticket', icon: 'qr' },
     { id: 'food', label: 'Food & Drinks', icon: 'food' },
     { id: 'offers', label: 'Offers', icon: 'tag' },
+    { id: 'experiences', label: 'Experiences', icon: 'sparkle' },
     { id: 'customers', label: 'Customers', icon: 'users' },
   ];
 
@@ -1172,10 +1173,12 @@
   async function pageOffers(content, topActions) {
     topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add offer</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
-    var data = await API.offers();
+    // Use the admin endpoint (not the public /offers coupon list) so showcase-
+    // only offers such as the wedding packages remain editable here.
+    var data = await API.get('/admin/offers');
 
     content.innerHTML =
-      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.offers.length + ' active offers</h2></div>' +
+      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.offers.length + ' offers</h2></div>' +
       '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
         '<thead><tr><th>Offer</th><th>Code</th><th>Discount</th><th>Applies to</th><th class="num">Min spend</th><th class="num">Max off</th><th></th></tr></thead>' +
         '<tbody>' + (data.offers.length ? data.offers.map(function (o) {
@@ -1205,17 +1208,22 @@
         field('Discount value', 'discountValue', o.discountValue || 10, { type: 'number' }) +
         field('Max discount', 'maxDiscount', o.maxDiscount || 0, { type: 'number' }) +
         field('Minimum order', 'minAmount', o.minAmount || 0, { type: 'number' }) +
+        field('Sort order', 'order', (o.order === 0 || o.order) ? o.order : '', { type: 'number', placeholder: 'Lower shows first' }) +
+        field('Showcase only (Home, not a coupon)', 'showcase', o.showcase ? 'true' : 'false', { options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] }) +
         field('Banner URL', 'bannerUrl', o.bannerUrl || '/img/banners/best-ticket-offers.svg', { span: true }) +
         '</div>');
     }
 
     function payloadFrom(body) {
       var raw = readForm(body);
-      return {
+      var out = {
         title: raw.title, subtitle: raw.subtitle, code: raw.code, appliesTo: raw.appliesTo,
         discountType: raw.discountType, discountValue: Number(raw.discountValue),
         maxDiscount: Number(raw.maxDiscount), minAmount: Number(raw.minAmount), bannerUrl: raw.bannerUrl,
+        showcase: raw.showcase === 'true',
       };
+      if (raw.order !== '' && raw.order !== undefined && raw.order !== null) out.order = Number(raw.order);
+      return out;
     }
 
     topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
@@ -1250,6 +1258,102 @@
           await API.del('/admin/offers/' + del.getAttribute('data-del'));
           toast('Offer deleted', 'success');
           navigate('offers');
+        } catch (err) { toast(err.message, 'error'); }
+      }
+    });
+  }
+
+  // ── Experiences ────────────────────────────────────────────────────────────
+  async function pageExperiences(content, topActions) {
+    topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add experience</button>';
+    content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
+    // Admin listing includes inactive experiences that /experiences hides.
+    var data = await API.get('/admin/experiences');
+    var items = data.experiences;
+
+    content.innerHTML =
+      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + items.length + ' experiences</h2>' +
+        '<span class="hint">Inactive experiences are hidden from the customer app.</span></div>' +
+      '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Experience</th><th>Category</th><th>Price</th><th>Order</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + (items.length ? items.map(function (e) {
+          return '<tr><td><div style="display:flex;align-items:center;gap:11px">' +
+              '<img src="' + esc(e.imageUrl) + '" alt="" style="width:38px;height:38px;border-radius:7px;object-fit:cover">' +
+              '<div class="cell-strong">' + esc(e.title) + '</div></div></td>' +
+            '<td>' + esc(e.category || '—') + '</td>' +
+            '<td>' + esc(e.priceLabel || '—') + '</td>' +
+            '<td>' + esc((e.order === 0 || e.order) ? e.order : '—') + '</td>' +
+            '<td><span class="pill ' + (e.active === false ? 'pill--amber' : 'pill--green') + '">' + (e.active === false ? 'Inactive' : 'Active') + '</span></td>' +
+            '<td style="white-space:nowrap">' +
+              '<button class="btn btn--ghost btn--sm" data-edit="' + esc(e.id) + '">Edit</button> ' +
+              '<button class="btn btn--line btn--sm" data-del="' + esc(e.id) + '">Delete</button></td></tr>';
+        }).join('') : '<tr><td colspan="6" class="empty-state">No experiences yet.</td></tr>') +
+      '</tbody></table></div></div></div>';
+
+    var categories = ['Weddings', 'Celebrations', 'Get Togethers', 'Family'];
+
+    function form(item) {
+      var f = item || {};
+      return h('<div class="form-grid">' +
+        field('Title', 'title', f.title, { span: true }) +
+        field('Category', 'category', f.category || 'Celebrations', { options: categories }) +
+        field('Image URL', 'imageUrl', f.imageUrl || '/img/experiences/_placeholder.svg', { span: true }) +
+        field('Price label', 'priceLabel', f.priceLabel || 'Custom packages') +
+        field('Price note', 'priceNote', f.priceNote) +
+        field('Badge', 'badge', f.badge || '', { placeholder: 'e.g. Popular (optional)' }) +
+        field('Sort order', 'order', (f.order === 0 || f.order) ? f.order : '', { type: 'number', placeholder: 'Lower shows first' }) +
+        field('Active', 'active', f.active === false ? 'false' : 'true', { options: [{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }] }) +
+        field('Subtitle', 'subtitle', f.subtitle, { type: 'textarea', span: true }) +
+        field('Features (comma separated)', 'features', (f.features || []).join(', '), { type: 'textarea', span: true }) +
+        '</div>');
+    }
+
+    function payloadFrom(body) {
+      var raw = readForm(body);
+      var out = {
+        title: raw.title, category: raw.category, imageUrl: raw.imageUrl,
+        priceLabel: raw.priceLabel, priceNote: raw.priceNote,
+        badge: raw.badge ? raw.badge : null,
+        subtitle: raw.subtitle, features: csvList(raw.features),
+        active: raw.active === 'true',
+      };
+      if (raw.order !== '' && raw.order !== undefined && raw.order !== null) out.order = Number(raw.order);
+      return out;
+    }
+
+    topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
+      var m = modal({ title: 'Add experience', body: form(null), confirmLabel: 'Create experience' });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          await API.post('/admin/experiences', payloadFrom(m.body));
+          toast('Experience created', 'success');
+          navigate('experiences');
+        });
+      });
+    });
+
+    content.addEventListener('click', async function (event) {
+      var edit = event.target.closest('[data-edit]');
+      var del = event.target.closest('[data-del]');
+      if (edit) {
+        var item = items.find(function (e) { return e.id === edit.getAttribute('data-edit'); });
+        var m = modal({ title: 'Edit ' + item.title, body: form(item), confirmLabel: 'Save changes' });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.put('/admin/experiences/' + item.id, payloadFrom(m.body));
+            toast('Experience updated', 'success');
+            navigate('experiences');
+          });
+        });
+      }
+      if (del) {
+        var target = items.find(function (e) { return e.id === del.getAttribute('data-del'); });
+        var ok = await confirmDialog('Delete ' + target.title + '?', 'It will disappear from the Experiences tab immediately.', 'Delete experience');
+        if (!ok) return;
+        try {
+          await API.del('/admin/experiences/' + target.id);
+          toast('Experience deleted', 'success');
+          navigate('experiences');
         } catch (err) { toast(err.message, 'error'); }
       }
     });
@@ -1319,6 +1423,7 @@
     verify: pageVerify,
     food: pageFood,
     offers: pageOffers,
+    experiences: pageExperiences,
     customers: pageCustomers,
   };
 

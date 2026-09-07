@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="400" viewBox="0 0 960 400" role="img" aria-label="Dream Wedding - Premium 2 Day">
+  <defs>
+    <linearGradient id="ob" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d6a429"/>
+      <stop offset="1" stop-color="#B8860B"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="400" fill="url(#ob)"/>
+  <circle cx="787.1999999999999" cy="288" r="168" fill="#FFF3C4" opacity="0.9"/>
+  <line x1="0" y1="0" x2="960" y2="40" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="40" x2="960" y2="80" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="80" x2="960" y2="120" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="120" x2="960" y2="160" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="160" x2="960" y2="200" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="200" x2="960" y2="240" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="240" x2="960" y2="280" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="280" x2="960" y2="320" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="320" x2="960" y2="360" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="360" x2="960" y2="400" stroke="#FFF3C4" stroke-width="2" opacity="0.14"/>
+  <text text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="800" fill="#ffffff">
+    <tspan x="480" y="168">Dream Wedding -</tspan>
+    <tspan x="480" y="230">Premium 2 Day</tspan>
+  </text>
+  <text x="480" y="298" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="30" fill="#ffffff" fill-opacity="0.9">₹ 8,51,000 | 2 days | full venue + cottages, catering for 500, all meals, grand decoration. Customization available.</text>
+  <text x="480" y="354" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="24" font-weight="700" fill="#ffffff" fill-opacity="0.8" letter-spacing="3">CODE: WED851</text>
+</svg>

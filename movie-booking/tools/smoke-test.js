@@ -93,6 +93,27 @@ async function run() {
     check('GET /api/home returns offers', home.body.offers.length > 0);
     check('GET /api/home returns cinemas', home.body.cinemas.length > 0);
 
+    const isWeddingOffer = (o) => /wed/i.test(o.code || '') || /wedding/i.test(o.title || '');
+    const weddingOffers = home.body.offers.filter(isWeddingOffer);
+    check('GET /api/home features wedding offers', weddingOffers.length > 0, `got ${weddingOffers.length}`);
+    check('wedding offers carry a banner image', weddingOffers.every((o) => Boolean(o.bannerUrl)));
+    check('wedding offers sort to the front of the carousel', home.body.offers.slice(0, weddingOffers.length).every(isWeddingOffer));
+
+    // Showcase wedding packages must lead Home but never appear in the coupon
+    // picker (GET /offers, consumed by movie checkout + food coupon sheets).
+    const couponOffers = await api('GET', '/api/offers');
+    check('GET /api/offers returns coupons', couponOffers.status === 200 && couponOffers.body.offers.length > 0);
+    // Wedding package codes are WED299/451/551/851 (distinct from CINEWED, a
+    // Wednesday ticket coupon), so match the numbered WED code / "Dream Wedding" title.
+    const isWeddingPackage = (o) => /^WED\d/i.test(o.code || '') || /dream wedding/i.test(o.title || '');
+    check('wedding packages do NOT leak into the coupon list', !couponOffers.body.offers.some(isWeddingPackage));
+    const couponOrders = couponOffers.body.offers.map((o) => (typeof o.order === 'number' ? o.order : Infinity));
+    check('GET /api/offers is sorted by order', couponOrders.every((v, i) => i === 0 || couponOrders[i - 1] <= v));
+
+    const experiences = await api('GET', '/api/experiences');
+    check('GET /api/experiences returns items', experiences.status === 200 && experiences.body.experiences.length > 0, `got ${experiences.body?.experiences?.length}`);
+    check('every experience has an image', experiences.body.experiences.every((e) => Boolean(e.imageUrl)));
+
     const movies = await api('GET', '/api/movies?status=now_playing');
     check('GET /api/movies filters by status', movies.status === 200 && movies.body.movies.every((m) => m.status === 'now_playing'));
     const jawan = movies.body.movies.find((m) => m.slug === 'jawan');
@@ -391,6 +412,17 @@ async function run() {
     check('admin can create an offer (code upper-cased)', newOffer.status === 201 && newOffer.body.offer.code === 'TESTCODE');
     const dupeOffer = await api('POST', '/api/admin/offers', { token: adminToken, body: { title: 'Dupe', code: 'TESTCODE', discountType: 'flat', discountValue: 10 } });
     check('duplicate offer code is rejected', dupeOffer.status === 409);
+    const adminOffers = await api('GET', '/api/admin/offers', { token: adminToken });
+    check('admin offers listing includes showcase wedding packages', adminOffers.status === 200 && adminOffers.body.offers.some((o) => o.showcase === true && /wed/i.test(o.code || '')));
+
+    const adminExps = await api('GET', '/api/admin/experiences', { token: adminToken });
+    check('admin can list all experiences', adminExps.status === 200 && adminExps.body.experiences.length > 0);
+    const newExp = await api('POST', '/api/admin/experiences', { token: adminToken, body: { title: 'Test Corporate Retreat', category: 'Get Togethers', priceLabel: 'Custom packages' } });
+    check('admin can create an experience (with a default image)', newExp.status === 201 && Boolean(newExp.body.experience.imageUrl));
+    const editExp = await api('PUT', `/api/admin/experiences/${newExp.body.experience.id}`, { token: adminToken, body: { imageUrl: '/img/experiences/wedding.svg' } });
+    check('admin can edit an experience image', editExp.body.experience.imageUrl === '/img/experiences/wedding.svg');
+    const delExp = await api('DELETE', `/api/admin/experiences/${newExp.body.experience.id}`, { token: adminToken });
+    check('admin can delete an experience', delExp.status === 200 && delExp.body.deleted === true);
 
     const adminBookings = await api('GET', '/api/admin/bookings', { token: adminToken });
     check('admin can list all bookings', adminBookings.status === 200 && adminBookings.body.bookings.length > 0);
