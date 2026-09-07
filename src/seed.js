@@ -185,6 +185,32 @@ function ensureExperiences() {
     seedExperiences();
     db.flushNow();
     console.log(`[seed] added ${db.get('experiences').length} experiences (Pool Party, Water Park, Wedding, etc.)`);
+  } else {
+    // Upsert any new experiences added to the catalogue that are missing from the DB
+    const existingSlugs = new Set(db.get('experiences').map((e) => e.slug));
+    let added = 0;
+    for (const e of EXPERIENCES) {
+      if (!existingSlugs.has(e.slug)) {
+        db.insert('experiences', {
+          id: `exp_${e.slug}`,
+          slug: e.slug,
+          title: e.title,
+          category: e.category,
+          subtitle: e.subtitle,
+          icon: e.icon,
+          color: e.color,
+          priceLabel: e.priceLabel,
+          priceNote: e.priceNote,
+          features: e.features,
+          badge: e.badge || '',
+          order: e.order || 0,
+          active: true,
+        });
+        added++;
+        console.log(`[seed] upserted new experience: ${e.slug}`);
+      }
+    }
+    if (added > 0) db.flushNow();
   }
 }
 
