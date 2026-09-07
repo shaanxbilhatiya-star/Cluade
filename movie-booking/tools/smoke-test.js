@@ -61,7 +61,82 @@ async function waitForServer(child) {
   throw new Error('Server did not become healthy in time');
 }
 
+/**
+ * Self-heal test for stale, already-seeded databases (e.g. the Railway
+ * persistent volume). The main harness always boots a fresh DATA_DIR, so the
+ * insert path is exercised there; here we pre-populate a scratch DATA_DIR with
+ * rows that PRE-DATE the imageUrl/bannerUrl/order fields and confirm the
+ * syncers backfill the missing system-managed fields without clobbering an
+ * admin-set value. Runs in a child process so it gets its own db module state.
+ */
+async function runSelfHealTest() {
+  section('Self-heal of stale seeded data');
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'cineflex-heal-'));
+  const script = `
+    'use strict';
+    const db = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'db.js'))});
+    const seed = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'seed.js'))});
+    db.load();
+    // Wipe any auto-created rows so we control the exact starting state.
+    db.replace('experiences', [
+      // Stale row: missing imageUrl + order (pre-image build).
+      { id: 'exp_wedding', slug: 'wedding', title: 'Wedding', active: true },
+      // Admin-edited row: custom imageUrl must survive untouched.
+      { id: 'exp_birthday-party', slug: 'birthday-party', title: 'Birthday Party', imageUrl: '/img/custom/mine.svg', active: true },
+    ]);
+    db.replace('offers', [
+      // Stale showcase wedding package: missing bannerUrl/showcase/order.
+      { id: 'off_wedding-premium', slug: 'wedding-premium', title: 'Dream Wedding Premium', code: 'WED551', active: true },
+    ]);
+    db.flushNow();
+    seed.syncExperiencesFromCatalog();
+    seed.syncOffersFromCatalog();
+    const stale = db.byId('experiences', 'exp_wedding');
+    const edited = db.byId('experiences', 'exp_birthday-party');
+    const offer = db.byId('offers', 'off_wedding-premium');
+    // Idempotency: a second pass must change nothing.
+    seed.syncExperiencesFromCatalog();
+    seed.syncOffersFromCatalog();
+    const staleAfter = db.byId('experiences', 'exp_wedding');
+    process.stdout.write(JSON.stringify({
+      staleImage: stale.imageUrl,
+      staleOrder: stale.order,
+      editedImage: edited.imageUrl,
+      offerBanner: offer.bannerUrl,
+      offerShowcase: offer.showcase,
+      offerOrder: offer.order,
+      idempotentUpdatedAt: stale.updatedAt === staleAfter.updatedAt,
+    }));
+  `;
+  const env = Object.assign({}, process.env, { DATA_DIR: scratch });
+  delete env.NODE_OPTIONS;
+  const out = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['-e', script], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => { stdout += d.toString(); });
+    child.stderr.on('data', (d) => { stderr += d.toString(); });
+    child.on('close', (code) => (code === 0 ? resolve(stdout) : reject(new Error(`self-heal child exited ${code}: ${stderr}`))));
+    child.on('error', reject);
+  }).finally(() => { try { fs.rmSync(scratch, { recursive: true, force: true }); } catch (_e) {} });
+
+  let result = null;
+  try { result = JSON.parse(out.trim().split('\n').pop()); } catch (_e) { result = null; }
+  check('self-heal produced a result', Boolean(result), out.slice(0, 200));
+  if (result) {
+    check('stale experience gets its imageUrl backfilled', result.staleImage === '/img/experiences/wedding.svg', String(result.staleImage));
+    check('stale experience gets its order backfilled', typeof result.staleOrder === 'number', String(result.staleOrder));
+    check('admin-edited experience image is NOT overwritten', result.editedImage === '/img/custom/mine.svg', String(result.editedImage));
+    check('stale offer gets its bannerUrl backfilled', result.offerBanner === '/img/banners/wedding-premium.svg', String(result.offerBanner));
+    check('stale showcase offer gets its showcase flag backfilled', result.offerShowcase === true, String(result.offerShowcase));
+    check('stale offer gets its order backfilled', typeof result.offerOrder === 'number', String(result.offerOrder));
+    check('a second sync pass is idempotent (no re-write)', result.idempotentUpdatedAt === true);
+  }
+}
+
 async function run() {
+  await runSelfHealTest();
+
   const env = Object.assign({}, process.env, { PORT: String(PORT), DATA_DIR, HOST: '127.0.0.1' });
   delete env.NODE_OPTIONS;
 
