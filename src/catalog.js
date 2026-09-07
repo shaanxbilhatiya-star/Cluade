@@ -625,7 +625,7 @@ const FOOD_ITEMS = [
   // ── Combos ─────────────────────────────────────────────────────────────────
   {
     slug: 'movie-snack-combo',
-    imageUrl: 'https://images.unsplash.com/photo-1603378703578-08b69d2e6a85?w=400&q=80&fm=jpg&fit=crop',
+    imageUrl: '/img/food/movie-snack-combo.svg',
     name: 'Movie Snack Combo',
     category: 'Combos',
     price: 245,
@@ -639,7 +639,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'sandwich-coffee-combo',
-    imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&q=80&fm=jpg&fit=crop',
+    imageUrl: '/img/food/sandwich-coffee-combo.svg',
     name: 'Sandwich & Coffee Combo',
     category: 'Combos',
     price: 189,
@@ -653,7 +653,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'pizza-coldrink-combo',
-    imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80&fm=jpg&fit=crop',
+    imageUrl: '/img/food/pizza-coldrink-combo.svg',
     name: 'Pizza & Coldrink Combo',
     category: 'Combos',
     price: 369,
@@ -667,7 +667,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'snack-platter-combo',
-    imageUrl: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?w=400&q=80&fm=jpg&fit=crop',
+    imageUrl: '/img/food/snack-platter-combo.svg',
     name: 'Snack Platter Combo',
     category: 'Combos',
     price: 349,
@@ -681,7 +681,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'family-feast-combo',
-    imageUrl: 'https://images.unsplash.com/photo-1536392706976-e486e2ba97af?w=400&q=80&fm=jpg&fit=crop',
+    imageUrl: '/img/food/family-feast-combo.svg',
     name: 'Family Feast Combo',
     category: 'Combos',
     price: 499,
@@ -695,7 +695,7 @@ const FOOD_ITEMS = [
   },
   {
     slug: 'maggi-tea-combo',
-    imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80&fm=jpg&fit=crop',
+    imageUrl: '/img/food/maggi-tea-combo.svg',
     name: 'Maggi & Tea Combo',
     category: 'Combos',
     price: 119,
