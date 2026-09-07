@@ -7,7 +7,6 @@
 
   var TABS = [
     { id: 'home', label: 'Home', icon: 'home', path: '/home' },
-    { id: 'cinemas', label: 'Cinemas', icon: 'grid', path: '/cinemas' },
     { id: 'food', label: 'Food Order', icon: 'food', path: '/food' },
     { id: 'tickets', label: 'My Tickets', icon: 'ticket', path: '/tickets' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },
