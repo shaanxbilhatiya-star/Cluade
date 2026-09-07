@@ -30,7 +30,7 @@ function atTime(key, hhmm) {
 }
 
 function basePrice(brand, slot) {
-  const brandBase = { PVR: 240, INOX: 220, Cinepolis: 230, Rajhans: 170, Miraj: 190, Kingfisher: 250 }[brand] || 200;
+  const brandBase = { PVR: 240, INOX: 220, Cinepolis: 230, Rajhans: 170, Miraj: 190 }[brand] || 200;
   const hour = Number(slot.split(':')[0]);
   if (hour < 11) return Math.round(brandBase * 0.65); // morning show
   if (hour >= 21) return Math.round(brandBase * 1.1); // late night
@@ -66,7 +66,6 @@ function seedMovies() {
         backdropUrl: `/img/backdrops/${m.slug}.svg`,
         accentColor: m.art.colors[1],
         active: true,
-        tierPrices: m.tierPrices || { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 },
       })
     );
   }
@@ -91,30 +90,19 @@ function seedCinemas() {
       active: true,
     });
 
-    // Kingfisher Multiplex screens are seeded here with exact BookMyShow layouts.
-    if (c.screens && c.screens.length) {
-      for (const s of c.screens) {
-        const layoutKey = s.layout;
-        const layout = LAYOUTS[layoutKey] || [];
-        const screenId = `scr_${c.slug}-${s.name.toLowerCase().replace(/\s+/g, '-')}`;
-        if (!db.byId('screens', screenId)) {
-          db.insert('screens', {
-            id: screenId,
-            cinemaId: `cin_${c.slug}`,
-            name: s.name,
-            format: s.format || '2D',
-            soundSystem: s.soundSystem || 'Dolby 7.1',
-            layoutPreset: layoutKey,
-            layout,
-            prices: s.prices || {},
-            blockedSeats: [],
-            active: true,
-          });
-        }
-      }
-    }
-    // Other screens are added via the admin panel
-    // (Cinemas → a cinema → Add screen) so seat layouts reflect actual venues.
+    c.screens.forEach((s, i) => {
+      db.insert('screens', {
+        id: `scr_${c.slug}_${i + 1}`,
+        cinemaId: `cin_${c.slug}`,
+        name: s.name,
+        format: s.format,
+        soundSystem: s.soundSystem,
+        layoutPreset: s.layout,
+        layout: LAYOUTS[s.layout],
+        blockedSeats: [],
+        active: true,
+      });
+    });
   }
 }
 
@@ -130,7 +118,7 @@ function seedFood() {
       size: f.size,
       veg: f.veg,
       popular: f.popular,
-      imageUrl: f.imageUrl || `/img/food/${f.slug}.svg`,
+      imageUrl: `/img/food/${f.slug}.svg`,
       available: true,
     });
   }
@@ -149,42 +137,138 @@ function seedOffers() {
       maxDiscount: o.maxDiscount,
       minAmount: o.minAmount,
       appliesTo: o.appliesTo,
+      order: typeof o.order === 'number' ? o.order : null,
+      showcase: o.showcase === true,
       bannerUrl: `/img/banners/${o.slug}.svg`,
       active: true,
     });
   }
 }
 
-function seedExperiences() {
-  for (const e of EXPERIENCES) {
-    db.insert('experiences', {
-      id: `exp_${e.slug}`,
-      slug: e.slug,
-      title: e.title,
-      category: e.category,
-      subtitle: e.subtitle,
-      icon: e.icon,
-      color: e.color,
-      priceLabel: e.priceLabel,
-      priceNote: e.priceNote,
-      features: e.features,
-      badge: e.badge || '',
-      order: e.order || 0,
+/**
+ * Idempotently insert any catalog OFFERS that are missing from the offers
+ * collection, matched by slug. Existing/admin-edited offers are left untouched.
+ * Runs on every boot so newly-added catalog offers (e.g. wedding packages)
+ * surface on an already-seeded database without overwriting edits.
+ */
+function syncOffersFromCatalog() {
+  let added = 0;
+  let patched = 0;
+  for (const o of OFFERS) {
+    const existing = db.find('offers', (row) => row.slug === o.slug);
+    if (existing.length > 0) {
+      // Backfill system-managed presentation fields on rows seeded before those
+      // fields existed (e.g. wedding packages from an earlier build). These are
+      // system-managed, not admin-edited, so only fill values that are MISSING
+      // - never overwrite an edit an admin may have made.
+      for (const row of existing) {
+        const patch = {};
+        // `showcase` keeps wedding packages off the coupon list.
+        if (o.showcase === true && typeof row.showcase !== 'boolean') {
+          patch.showcase = true;
+        }
+        // `bannerUrl` surfaces the banner art on Home.
+        if (!row.bannerUrl) {
+          patch.bannerUrl = `/img/banners/${o.slug}.svg`;
+        }
+        // `order` restores the catalog ordering on stale rows.
+        if (typeof row.order !== 'number' && typeof o.order === 'number') {
+          patch.order = o.order;
+        }
+        if (Object.keys(patch).length > 0) {
+          db.update('offers', row.id, patch);
+          patched += 1;
+        }
+      }
+      continue;
+    }
+    db.insert('offers', {
+      id: `off_${o.slug}`,
+      slug: o.slug,
+      title: o.title,
+      subtitle: o.subtitle,
+      code: o.code,
+      discountType: o.discountType,
+      discountValue: o.discountValue,
+      maxDiscount: o.maxDiscount,
+      minAmount: o.minAmount,
+      appliesTo: o.appliesTo,
+      order: typeof o.order === 'number' ? o.order : null,
+      showcase: o.showcase === true,
+      bannerUrl: `/img/banners/${o.slug}.svg`,
       active: true,
     });
+    added += 1;
+  }
+  if (added > 0 || patched > 0) {
+    db.flushNow();
+    if (added > 0) console.log(`[seed] synced ${added} new catalog offer(s).`);
+    if (patched > 0) console.log(`[seed] backfilled missing fields on ${patched} offer(s).`);
+  }
+}
+
+function experienceRecord(e) {
+  return {
+    id: `exp_${e.slug}`,
+    slug: e.slug,
+    title: e.title,
+    category: e.category,
+    subtitle: e.subtitle,
+    priceLabel: e.priceLabel,
+    priceNote: e.priceNote,
+    features: e.features || [],
+    badge: e.badge || null,
+    icon: e.icon,
+    order: typeof e.order === 'number' ? e.order : null,
+    imageUrl: `/img/experiences/${e.slug}.svg`,
+    active: true,
+  };
+}
+
+function seedExperiences() {
+  for (const e of EXPERIENCES) {
+    db.insert('experiences', experienceRecord(e));
   }
 }
 
 /**
- * Seeds the Experiences (pool party / water park / wedding etc.) catalogue
- * once, the first time this collection is empty - then leaves it alone so
- * admin edits, additions and deletions persist across restarts.
+ * Idempotently insert any catalog EXPERIENCES that are missing from the
+ * experiences collection, matched by slug. Existing/admin-edited experiences
+ * are left untouched. Mirrors syncOffersFromCatalog so new catalog items
+ * surface on an already-seeded database without overwriting edits.
  */
-function ensureExperiences() {
-  if (db.get('experiences').length === 0) {
-    seedExperiences();
+function syncExperiencesFromCatalog() {
+  let added = 0;
+  let patched = 0;
+  for (const e of EXPERIENCES) {
+    const existing = db.find('experiences', (row) => row.slug === e.slug);
+    if (existing.length > 0) {
+      // Backfill system-managed presentation fields on rows seeded before those
+      // fields existed (e.g. experiences from an earlier build that predate the
+      // image + ordering work). Only fill values that are MISSING so an admin
+      // edit is never overwritten - mirrors syncOffersFromCatalog.
+      for (const row of existing) {
+        const patch = {};
+        if (!row.imageUrl) {
+          patch.imageUrl = `/img/experiences/${e.slug}.svg`;
+        }
+        if (typeof row.order !== 'number' && typeof e.order === 'number') {
+          patch.order = e.order;
+        }
+        if (Object.keys(patch).length > 0) {
+          db.update('experiences', row.id, patch);
+          patched += 1;
+        }
+      }
+      continue;
+    }
+    db.insert('experiences', experienceRecord(e));
+    added += 1;
+  }
+  if (added > 0 || patched > 0) {
     db.flushNow();
-    console.log(`[seed] added ${db.get('experiences').length} experiences (Pool Party, Water Park, Wedding, etc.)`);
+    if (added > 0) console.log(`[seed] synced ${added} new catalog experience(s).`);
+    if (patched > 0) console.log(`[seed] backfilled missing fields on ${patched} experience(s).`);
   }
 }
 
@@ -198,7 +282,7 @@ function seedUsers() {
       password: auth.hashPassword('1234'),
       role: 'customer',
       avatarUrl: '/img/avatars/andrew.svg',
-      city: 'Mandla',
+      city: 'Ahmedabad',
       dateOfBirth: '1994-04-12',
       gender: 'male',
       memberId: 'CF-2024-000117',
@@ -226,7 +310,7 @@ function seedUsers() {
       password: auth.hashPassword('admin123'),
       role: 'admin',
       avatarUrl: '/img/avatars/admin.svg',
-      city: 'Mandla',
+      city: 'Ahmedabad',
       memberId: 'CF-ADMIN-0001',
       loyaltyPoints: 0,
       watchlist: [],
@@ -244,7 +328,7 @@ function seedUsers() {
       password: auth.hashPassword('1234'),
       role: 'customer',
       avatarUrl: '/img/avatars/priya.svg',
-      city: 'Mandla',
+      city: 'Mumbai',
       memberId: 'CF-2024-000118',
       loyaltyPoints: 320,
       watchlist: ['mov_dunki'],
@@ -262,35 +346,9 @@ function seedReviews() {
   const reviews = [
     { movieId: 'mov_jawan', userId: 'usr_priya', rating: 9, text: 'Mass entertainer. The interval block is worth the ticket alone.' },
     { movieId: 'mov_jawan', userId: 'usr_andrew', rating: 8, text: 'Great pace, brilliant background score.' },
-    { movieId: 'mov_jawan', userId: 'usr_priya', rating: 9, text: 'SRK at his absolute best. The action sequences are top-notch and the emotional beats land perfectly.' },
-    { movieId: 'mov_jawan', userId: 'usr_andrew', rating: 7, text: 'A few pacing issues in the second half, but the climax more than makes up for it. Must watch in theatres.' },
-    { movieId: 'mov_jawan', userId: 'usr_priya', rating: 8, text: 'Atlee brings the south masala formula to Bollywood and it works brilliantly. Interval twist is chef\'s kiss.' },
-    { movieId: 'mov_jawan', userId: 'usr_andrew', rating: 9, text: 'One of the best action films to come out of India. Every single penny of the ticket is worth it.' },
-    { movieId: 'mov_jawan', userId: 'usr_priya', rating: 8, text: 'Nayanthara and Vijay Sethupathi are phenomenal. The soundtrack stays with you long after the movie ends.' },
     { movieId: 'mov_the-nun-ii', userId: 'usr_andrew', rating: 7, text: 'Genuinely creepy in places, but the plot drags mid-way.' },
-    { movieId: 'mov_the-nun-ii', userId: 'usr_priya', rating: 6, text: 'Good jump scares but relies too much on the same formula. Taissa Farmiga carries the film.' },
-    { movieId: 'mov_the-nun-ii', userId: 'usr_andrew', rating: 7, text: 'Better than the first one. The French setting adds atmosphere but the pacing could be tighter.' },
-    { movieId: 'mov_the-nun-ii', userId: 'usr_priya', rating: 5, text: 'Started strong but fizzled out. The demon design is still fantastic though.' },
-    { movieId: 'mov_the-nun-ii', userId: 'usr_andrew', rating: 6, text: 'A decent watch if you\'re a Conjuring universe fan. Don\'t expect anything groundbreaking.' },
     { movieId: 'mov_oppenheimer', userId: 'usr_priya', rating: 10, text: 'Watch it in IMAX. Cillian Murphy is extraordinary.' },
-    { movieId: 'mov_oppenheimer', userId: 'usr_andrew', rating: 9, text: 'Nolan at his finest. The courtroom scenes are as tense as any thriller. 3 hours flew by.' },
-    { movieId: 'mov_oppenheimer', userId: 'usr_priya', rating: 10, text: 'A masterpiece. The sound design alone deserves an Oscar. RDJ is unrecognisable and brilliant.' },
-    { movieId: 'mov_oppenheimer', userId: 'usr_andrew', rating: 8, text: 'Dense and demanding but incredibly rewarding. Not a casual watch — bring your full attention.' },
-    { movieId: 'mov_oppenheimer', userId: 'usr_priya', rating: 9, text: 'The Trinity test sequence is the most visceral thing I\'ve experienced in a cinema. Pure cinema.' },
-    { movieId: 'mov_oppenheimer', userId: 'usr_andrew', rating: 9, text: 'Florence Pugh is underused but every other performance is career-best. Stunning photography.' },
     { movieId: 'mov_hu-ane-tu', userId: 'usr_priya', rating: 8, text: 'Sweet, funny and very relatable. Perfect family watch.' },
-    { movieId: 'mov_hu-ane-tu', userId: 'usr_andrew', rating: 7, text: 'Wholesome Gujarati humour. The wedding chaos scenes had the entire theatre laughing.' },
-    { movieId: 'mov_hu-ane-tu', userId: 'usr_priya', rating: 8, text: 'Finally a regional film that doesn\'t try to be Bollywood. Authentic, warm and genuinely funny.' },
-    { movieId: 'mov_hu-ane-tu', userId: 'usr_andrew', rating: 7, text: 'Great chemistry between the leads. A few predictable moments but the charm makes up for it.' },
-    { movieId: 'mov_hu-ane-tu', userId: 'usr_priya', rating: 9, text: 'Took my parents and they loved it. Clean comedy, no vulgarity, just good storytelling.' },
-    { movieId: 'mov_leo', userId: 'usr_andrew', rating: 8, text: 'Lokesh Kanagaraj builds tension like nobody else. The cafe fight is an all-timer.' },
-    { movieId: 'mov_leo', userId: 'usr_priya', rating: 9, text: 'Vijay in a completely different avatar. The LCU is becoming India\'s MCU and I\'m here for it.' },
-    { movieId: 'mov_leo', userId: 'usr_andrew', rating: 7, text: 'First half is slow burn, second half is pure adrenaline. Anirudh\'s BGM elevates every scene.' },
-    { movieId: 'mov_leo', userId: 'usr_priya', rating: 8, text: 'Sanjay Dutt as the villain is terrifying. The gore might put some people off but the story is solid.' },
-    { movieId: 'mov_leo', userId: 'usr_andrew', rating: 8, text: 'Connected universe done right. You need to watch Kaithi and Vikram first for full impact.' },
-    { movieId: 'mov_fukrey-3', userId: 'usr_priya', rating: 6, text: 'Good laughs but feels stretched. Varun Sharma is still the highlight.' },
-    { movieId: 'mov_fukrey-3', userId: 'usr_andrew', rating: 5, text: 'The magic of the first film is missing. A few funny moments but overall forgettable.' },
-    { movieId: 'mov_fukrey-3', userId: 'usr_priya', rating: 7, text: 'Choocha\'s dream sequences are hilarious. Don\'t expect depth, just turn off your brain and enjoy.' },
   ];
   reviews.forEach((r, i) =>
     db.insert('reviews', {
@@ -331,11 +389,10 @@ function ensureRollingShowtimes() {
           const pick = movies[(cinemaIdx + screenIdx * 2 + slotIdx + Math.abs(dayOffset)) % movies.length];
           const start = atTime(key, slot);
           const end = new Date(start.getTime() + (pick.runtime + 25) * 60_000);
+          const base = basePrice(cinema.brand, slot);
+
           const format = pick.formats.includes(screen.format) ? screen.format : pick.formats[0];
           const language = pick.languages[(screenIdx + slotIdx) % pick.languages.length];
-
-          // Prices come from the movie's tierPrices, not a computed base.
-          const moviePrices = pick.tierPrices || { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
 
           db.insert('showtimes', {
             id: db.id('sht'),
@@ -348,7 +405,11 @@ function ensureRollingShowtimes() {
             endsAt: end.toISOString(),
             format,
             language,
-            prices: moviePrices,
+            prices: {
+              regular: base,
+              premium: Math.round(base * 1.5),
+              vip: Math.round(base * 2.2),
+            },
             status: 'active',
           });
           existing.add(fingerprint);
@@ -542,42 +603,4 @@ function run() {
   );
 }
 
-
-/**
- * Always replace the foodItems collection with the current catalog on boot.
- * This ensures live data stays in sync when catalog.js is updated, even
- * after the initial seed has already run.
- * Admin-created items (ids not in catalog) are preserved.
- */
-function reseedFood() {
-  const catalogIds = new Set(FOOD_ITEMS.map((f) => `food_${f.slug}`));
-  const existing = db.get('foodItems');
-  const existingMap = new Map(existing.map((e) => [e.id, e]));
-
-  const catalogRecords = FOOD_ITEMS.map((f) => {
-    const prev = existingMap.get(`food_${f.slug}`);
-    return {
-      createdAt: prev ? prev.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      id: `food_${f.slug}`,
-      slug: f.slug,
-      name: f.name,
-      category: f.category,
-      price: f.price,
-      mrp: f.mrp || null,
-      description: f.description,
-      size: f.size,
-      veg: f.veg,
-      popular: f.popular,
-      imageUrl: f.imageUrl || `/img/food/${f.slug}.svg`,
-      available: prev ? prev.available : true,
-    };
-  });
-
-  const adminItems = existing.filter((e) => !catalogIds.has(e.id));
-  db.replace('foodItems', [...catalogRecords, ...adminItems]);
-  db.flushNow();
-  console.log(`[seed] food menu synced — ${catalogRecords.length} catalog items, ${adminItems.length} admin item(s) preserved.`);
-}
-
-module.exports = { run, ensureRollingShowtimes, reseedFood, ensureExperiences, dateKey, addDays };
+module.exports = { run, ensureRollingShowtimes, syncOffersFromCatalog, seedExperiences, syncExperiencesFromCatalog, dateKey, addDays };

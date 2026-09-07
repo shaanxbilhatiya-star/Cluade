@@ -14,3 +14,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Task-state / agent scaffolding — not part of the app
+.agents/

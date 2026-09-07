@@ -2,157 +2,7 @@
 (function () {
   'use strict';
 
-  var TIER_LABEL = { regular: 'Regular', premium: 'Premium', vip: 'VIP Recliner', sofa: 'Sofa', recliner: 'Recliner', platinum: 'Platinum', gold: 'Gold', silver: 'Silver' };
-
-  // Groups consecutive rows that share a tier into sections, so the seat map
-  // can show one price/tier heading per block (Sofa, Recliner, Platinum, …)
-  // instead of repeating it per row — matches how multiplex seat maps are
-  // conventionally laid out (screen closest tiers first, cheapest last).
-  // Converts a "HH:MM" 24-hour string to "h:MM AM/PM" for display. Storage
-  // and API payloads stay 24-hour throughout.
-  function time12(t) {
-    var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
-    if (!m) return t;
-    var h = parseInt(m[1], 10);
-    var suffix = h >= 12 ? 'PM' : 'AM';
-    var h12 = h % 12 || 12;
-    return h12 + ':' + m[2] + ' ' + suffix;
-  }
-
-  function groupRowsByTier(rows) {
-    var sections = [];
-    rows.forEach(function (row) {
-      var last = sections[sections.length - 1];
-      if (last && last.tier === row.tier) last.rows.push(row);
-      else sections.push({ tier: row.tier, rows: [row] });
-    });
-    return sections;
-  }
-
-  // Splits a row's seats into left/right blocks at its aisle (gapAfter).
-  // Rows with no gap come back as a single block.
-  function splitSeatBlocks(seats) {
-    var blocks = [[]];
-    seats.forEach(function (seat) {
-      blocks[blocks.length - 1].push(seat);
-      if (seat.gapAfter) blocks.push([]);
-    });
-    return blocks.filter(function (b) { return b.length; });
-  }
-
-  // Real seat maps keep the aisle at the same on-screen position for every
-  // row, even when a tier (Sofa/Recliner) has fewer seats than the wide
-  // Platinum/Gold/Silver rows below it. We find the widest block at each
-  // position across the *whole* screen, then size every row's blocks to
-  // that fixed slot count, so shorter rows simply leave trailing space
-  // instead of shifting the aisle around.
-  function maxBlockSlots(rows) {
-    var max = [];
-    rows.forEach(function (row) {
-      splitSeatBlocks(row.seats).forEach(function (block, i) {
-        max[i] = Math.max(max[i] || 0, block.length);
-      });
-    });
-    return max;
-  }
-
-  function renderSeatButton(seat) {
-    return '<button class="seat" ' +
-      'data-seat="' + UI.esc(seat.id) + '" data-tier="' + UI.esc(seat.tier) + '" data-status="' + UI.esc(seat.status) + '" ' +
-      'aria-pressed="false" aria-label="Seat ' + UI.esc(seat.id) + ', ' + UI.esc(TIER_LABEL[seat.tier] || seat.tier) + ', ' + UI.money(seat.price) + '"' +
-      (seat.status !== 'available' ? ' disabled' : '') + '>' + seat.number + '</button>';
-  }
-
-  // ── Cast photo helpers ─────────────────────────────────────────────────────
-  // Cache persists for the session so each actor is only fetched once.
-  var _castPhotoCache = {};
-
-  // Try the Wikipedia REST summary API for a given page title.
-  // Returns the thumbnail URL string, or null on failure.
-  function _wikiSummaryPhoto(title) {
-    return fetch(
-      'https://en.wikipedia.org/api/rest_v1/page/summary/' +
-      encodeURIComponent(title.replace(/\s+/g, '_')),
-      { headers: { Accept: 'application/json' } }
-    )
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { return (d && d.thumbnail) ? d.thumbnail.source : null; })
-      .catch(function () { return null; });
-  }
-
-  // Try the Wikipedia action API as a secondary strategy (includes piprop=thumbnail).
-  function _wikiActionPhoto(title) {
-    return fetch(
-      'https://en.wikipedia.org/w/api.php?action=query' +
-      '&titles=' + encodeURIComponent(title) +
-      '&prop=pageimages&piprop=thumbnail&pithumbsize=300' +
-      '&format=json&origin=*'
-    )
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var pages = data.query && data.query.pages;
-        var page = pages && Object.values(pages)[0];
-        return (page && page.thumbnail) ? page.thumbnail.source : null;
-      })
-      .catch(function () { return null; });
-  }
-
-  // Try a sequence of candidate page titles, returning first non-null photo URL.
-  function _tryTitles(titles) {
-    var idx = 0;
-    function next() {
-      if (idx >= titles.length) return Promise.resolve(null);
-      var title = titles[idx++];
-      // First try REST API, then action API for the same title
-      return _wikiSummaryPhoto(title).then(function (url) {
-        if (url) return url;
-        return _wikiActionPhoto(title);
-      }).then(function (url) {
-        if (url) return url;
-        return next();
-      });
-    }
-    return next();
-  }
-
-  function _loadCastPhoto(name) {
-    if (Object.prototype.hasOwnProperty.call(_castPhotoCache, name)) {
-      return Promise.resolve(_castPhotoCache[name]);
-    }
-    // Build candidate title list: plain name first, then common disambiguation suffixes
-    var candidates = [
-      name,
-      name + ' (actor)',
-      name + ' (actress)',
-      name + ' (Indian actor)',
-      name + ' (film actor)',
-      name + ' (actress, born 1990)',
-    ];
-    return _tryTitles(candidates).then(function (url) {
-      _castPhotoCache[name] = url;
-      return url;
-    });
-  }
-
-  // Finds all cast avatar placeholders in `container` and swaps in real photos.
-  function _enrichCastPhotos(container) {
-    var avatars = container.querySelectorAll('[data-cast-name]');
-    avatars.forEach(function (el) {
-      var name = el.getAttribute('data-cast-name');
-      _loadCastPhoto(name).then(function (url) {
-        if (!url) return;
-        var img = document.createElement('img');
-        img.className = 'cast__avatar-img';
-        img.src = url;
-        img.alt = name;
-        img.onerror = function () {
-          el.textContent = el.getAttribute('data-initials') || '';
-        };
-        el.innerHTML = '';
-        el.appendChild(img);
-      });
-    });
-  }
+  var TIER_LABEL = { regular: 'Regular', premium: 'Premium', vip: 'VIP Recliner' };
 
   function datePill(dateKey, selected) {
     var d = UI.toDate(dateKey);
@@ -192,14 +42,17 @@
               (movie.tagline ? '<p class="detail-head__tagline">' + UI.esc(movie.tagline) + '</p>' : '') +
               '<div class="tag-row" style="margin-top:12px">' +
                 (movie.genres || []).map(function (g) { return '<span class="tag tag--accent">' + UI.esc(g) + '</span>'; }).join('') +
-                '<span class="tag tag--red">हिंदी में उपलब्ध</span>' +
               '</div>' +
             '</div>' +
 
             '<div class="metrics">' +
+              (movie.rating
+                ? '<div class="metric"><div class="metric__value" style="color:var(--primary-600)">' + UI.icon('star', 16) + Number(movie.rating).toFixed(1) + '</div>' +
+                  '<div class="metric__label">' + (movie.votes ? (movie.votes / 1000).toFixed(0) + 'K votes' : 'Rating') + '</div></div>'
+                : '') +
               '<div class="metric"><div class="metric__value">' + UI.esc(UI.runtime(movie.runtime)) + '</div><div class="metric__label">Runtime</div></div>' +
               '<div class="metric"><div class="metric__value">' + UI.esc(movie.certificate) + '</div><div class="metric__label">Rated</div></div>' +
-              '<div class="metric"><div class="metric__value">' + UI.esc((movie.languages || []).join(', ') || '—') + '</div><div class="metric__label">Language</div></div>' +
+              '<div class="metric"><div class="metric__value">' + UI.esc((movie.languages || [])[0] || '—') + '</div><div class="metric__label">Language</div></div>' +
             '</div>' +
 
             '<h2 class="subhead">Synopsis</h2>' +
@@ -207,23 +60,44 @@
 
             '<h2 class="subhead">Details</h2>' +
             '<div style="padding:0 16px">' +
-              '<div class="kv"><span class="kv__key">Director</span><span class="kv__val">' + UI.esc(movie.director || '—') + '</span></div>' +
               '<div class="kv"><span class="kv__key">Release date</span><span class="kv__val">' + UI.esc(UI.shortDate(movie.releaseDate)) + '</span></div>' +
-              '<div class="kv"><span class="kv__key">Languages</span><span class="kv__val">' + UI.esc((movie.languages || []).join(', ')) + '</span></div>' +
+              '<div class="kv"><span class="kv__key">Languages</span>' +
+                '<span class="kv__val" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center">' +
+                  (function() {
+                    var langs = movie.languages || [];
+                    var hasHindi = langs.some(function(l){ return l.toLowerCase()==='hindi'||l.toLowerCase()==='hi'; });
+                    var pills = langs.map(function(lang) {
+                      var isH = lang.toLowerCase()==='hindi'||lang.toLowerCase()==='hi';
+                      return '<span style="background:' + (isH?'var(--primary-600,#7c3aed)':'#1d4ed8') + ';color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">' + UI.esc(lang) + '</span>';
+                    }).join('');
+                    if (!hasHindi) pills += '<span style="background:#16a34a;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">Playing in Hindi</span>';
+                    return pills || '<span style="background:#16a34a;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">Playing in Hindi</span>';
+                  })() +
+                '</span>' +
+              '</div>' +
               '<div class="kv"><span class="kv__key">Formats</span><span class="kv__val">' + UI.esc((movie.formats || []).join(', ')) + '</span></div>' +
-              '<div class="kv"><span class="kv__key">Note</span><span class="kv__val" style="color:#dc2626">हिंदी में उपलब्ध</span></div>' +
             '</div>' +
 
             (movie.cast && movie.cast.length
               ? '<h2 class="subhead">Cast</h2><div class="cast-rail">' +
                 movie.cast.map(function (name) {
-                  var ini = UI.initials(name);
+                  var photo = (movie.castPhotos || {})[name];
                   return '<div class="cast">' +
-                    '<div class="cast__avatar" data-cast-name="' + UI.esc(name) + '" data-initials="' + UI.esc(ini) + '">' +
-                      UI.esc(ini) +
-                    '</div>' +
+                    (photo
+                      ? '<img class="cast__avatar-img" src="' + UI.esc(photo) + '" alt="" data-fallback="/img/avatars/guest.svg">'
+                      : '<div class="cast__avatar">' + UI.esc(UI.initials(name)) + '</div>') +
                     '<div class="cast__name">' + UI.esc(name) + '</div></div>';
                 }).join('') + '</div>'
+              : '') +
+
+            (movie.director
+              ? '<h2 class="subhead">Crew</h2><div class="cast-rail">' +
+                  '<div class="cast">' +
+                    '<div class="cast__avatar" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">' + UI.esc(UI.initials(movie.director)) + '</div>' +
+                    '<div class="cast__name">' + UI.esc(movie.director) + '</div>' +
+                    '<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:2px">Director</div>' +
+                  '</div>' +
+                '</div>'
               : '') +
 
             (movie.playingAt && movie.playingAt.length
@@ -231,27 +105,32 @@
                 movie.playingAt.map(function (c) { return '<span class="tag">' + UI.esc(c.name) + '</span>'; }).join('') + '</div>'
               : '') +
 
-            '<h2 class="subhead">Reviews</h2>' +
-            '<div class="list" data-review-list>' +
-              (movie.reviewList.length
-                ? movie.reviewList.slice(0, 10).map(function (r) {
+            '<h2 class="subhead">Reviews' + (movie.reviews && movie.reviews.count ? ' (' + (movie.reviews.count >= 1000 ? (movie.reviews.count/1000).toFixed(1)+'K' : movie.reviews.count) + ')' : '') + '</h2>' +
+            '<div class="list">' +
+              (movie.reviewList && movie.reviewList.length
+                ? movie.reviewList.map(function (r) {
                     return '<div class="review">' +
                       '<div class="review__head">' +
                         '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
-                        '<div style="flex:1;min-width:0">' +
-                          '<div class="review__name">' + UI.esc(r.author.name) + '</div>' +
-                          (r.createdAt ? '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + UI.esc(UI.shortDate(r.createdAt)) + '</div>' : '') +
-                        '</div>' +
-                        (r.rating != null ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
+                        '<span class="review__name">' + UI.esc(r.author.name) + '</span>' +
+                        (r.rating ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
                       '</div>' +
                       (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
                       '</div>';
                   }).join('')
-                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet.</p>') +
+                : '<p class="prose" style="padding:0;color:var(--muted);font-size:13.5px">No reviews yet — be the first!</p>') +
             '</div>' +
-            (movie.reviewList.length > 10
-              ? '<div style="padding:8px 16px 16px"><button class="btn-outline btn-outline--lg" data-action="view-all-reviews">View All ' + movie.reviews.count + ' Reviews</button></div>'
-              : '<div style="height:16px"></div>') +
+            (movie.tmdbId
+              ? '<div style="padding:8px 16px 4px">' +
+                  '<a href="https://www.themoviedb.org/movie/' + UI.esc(String(movie.tmdbId)) + '/reviews" target="_blank" rel="noopener" ' +
+                    'style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;' +
+                    'border:1.5px solid var(--primary-600,#7c3aed);color:var(--primary-600,#7c3aed);font-weight:600;font-size:14px;text-decoration:none;' +
+                    'background:transparent;box-sizing:border-box">' +
+                    'View all reviews on TMDB' +
+                  '</a>' +
+                '</div>'
+              : '') +
+            '<div style="padding:14px 16px 0"><button class="btn-outline btn-outline--lg" data-action="review">Write a review</button></div>' +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
@@ -294,81 +173,40 @@
         watchlist: toggleWatchlist,
         'watchlist-cta': toggleWatchlist,
         book: function () {
-          if (movie.certificate && movie.certificate.toUpperCase() === 'A') {
-            var modal = UI.h(
-              '<div style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px">' +
-                '<div style="background:var(--surface);border-radius:var(--radius-xl);padding:28px 24px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)">' +
-                  '<h2 style="margin:0 0 16px;font-size:18px;font-weight:800">This movie is rated "A"</h2>' +
-                  '<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px">' +
-                    '<div style="flex-shrink:0;width:56px;height:56px;border-radius:50%;border:3px solid #e53e3e;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#e53e3e">18+</div>' +
-                    '<p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-soft)">This movie is only for viewers above 18. Please carry a valid ID / Age Proof to the theatre. If you are denied entry due to age or ID issues, <strong>you will not get a refund.</strong></p>' +
-                  '</div>' +
-                  '<button class="btn" style="width:100%;background:#e53e3e;border-color:#e53e3e" data-action="confirm-adult">Continue</button>' +
-                  '<button class="btn-outline" style="width:100%;margin-top:10px" data-action="cancel-adult">Go Back</button>' +
+          var cert = ((movie.certificate) || 'UA').toUpperCase();
+          var certMap = {
+            'U':  { label: 'Universal (U)',  color: '#16a34a', desc: 'Suitable for all ages. Unrestricted public exhibition.' },
+            'UA': { label: 'U/A',            color: '#d97706', desc: 'Parental guidance for children below 12. May contain mild violence or mature themes.' },
+            'A':  { label: 'Adults Only (A)',color: '#dc2626', desc: 'Restricted to adults (18+). Contains mature content not suitable for minors.' },
+            'S':  { label: 'Special (S)',    color: '#7c3aed', desc: 'Restricted to specialised audiences such as medical professionals.' },
+          };
+          var info = certMap[cert] || certMap['UA'];
+          var overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px)';
+          overlay.innerHTML =
+            '<div style="background:var(--surface,#1c1c2e);border-radius:24px 24px 0 0;padding:28px 20px 36px;width:100%;max-width:480px;box-sizing:border-box">' +
+              '<div style="width:40px;height:4px;background:#444;border-radius:4px;margin:0 auto 22px"></div>' +
+              '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+                '<div style="width:52px;height:52px;border-radius:14px;background:' + info.color + '22;border:2px solid ' + info.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+                  '<span style="font-weight:900;font-size:18px;color:' + info.color + '">' + UI.esc(cert) + '</span>' +
                 '</div>' +
-              '</div>'
-            );
-            document.body.appendChild(modal);
-            UI.actions(modal, {
-              'confirm-adult': function () {
-                document.body.removeChild(modal);
-                App.navigate('/movie/' + movie.id + '/showtimes');
-              },
-              'cancel-adult': function () {
-                document.body.removeChild(modal);
-              },
-            });
-          } else {
-            App.navigate('/movie/' + movie.id + '/showtimes');
-          }
-        },
-        trailer: function () {
-          // Extract YouTube video ID from embed URL and show inline iframe
-          var url = movie.trailerUrl || '';
-          var videoId = '';
-          var m = url.match(/\/embed\/([^?/]+)/);
-          if (m) videoId = m[1];
-          else {
-            m = url.match(/[?&]v=([^&]+)/);
-            if (m) videoId = m[1];
-          }
-          if (!videoId) { UI.toast('Trailer not available', 'error'); return; }
-
-          var body = UI.h(
-            '<div style="padding:0 16px 16px">' +
-              '<div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:14px;overflow:hidden;background:#000">' +
-                '<iframe src="https://www.youtube.com/embed/' + UI.esc(videoId) + '?autoplay=1&rel=0&modestbranding=1&fs=0" ' +
-                  'style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" ' +
-                  'allow="autoplay; encrypted-media" allowfullscreen="false" ' +
-                  'sandbox="allow-scripts allow-same-origin" ' +
-                  'title="' + UI.esc(movie.title) + ' trailer"></iframe>' +
+                '<div><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:3px">CBFC CERTIFICATE</div>' +
+                '<div style="font-size:18px;font-weight:700">' + UI.esc(info.label) + '</div></div>' +
               '</div>' +
-              '<p style="margin:14px 0 0;font-size:12.5px;color:var(--muted);text-align:center">' + UI.esc(movie.title) + ' — Official Trailer</p>' +
-            '</div>'
-          );
-          UI.sheet({ title: 'Trailer', body: body });
+              '<p style="font-size:14px;color:var(--muted);line-height:1.6;margin:0 0 16px;padding:14px;background:var(--surface2,#2a2a3e);border-radius:12px">' + UI.esc(info.desc) + '</p>' +
+              '<div style="background:#d9770622;border:1px solid #d9770655;border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:12.5px;color:#d97706;display:flex;gap:8px;align-items:flex-start">' +
+                '<span style="flex-shrink:0">&#9888;</span>' +
+                '<span>Certified by the <strong>Central Board of Film Certification (CBFC), India</strong>. Please ensure you meet the age requirements before booking.</span>' +
+              '</div>' +
+              '<button id="cert-confirm" style="width:100%;padding:15px;border-radius:14px;background:var(--primary-600,#7c3aed);color:#fff;font-size:16px;font-weight:700;border:none;cursor:pointer;margin-bottom:10px">Continue to Book Tickets</button>' +
+              '<button id="cert-cancel" style="width:100%;padding:14px;border-radius:14px;background:transparent;color:var(--muted);font-size:14px;font-weight:600;border:1.5px solid #444;cursor:pointer">Cancel</button>' +
+            '</div>';
+          document.body.appendChild(overlay);
+          overlay.querySelector('#cert-confirm').onclick = function() { document.body.removeChild(overlay); App.navigate('/movie/' + movie.id + '/showtimes'); };
+          overlay.querySelector('#cert-cancel').onclick = function() { document.body.removeChild(overlay); };
+          overlay.onclick = function(e) { if (e.target === overlay) document.body.removeChild(overlay); };
         },
-        'view-all-reviews': function () {
-          var allReviews = movie.reviewList;
-          var body = UI.h(
-            '<div class="reviews-sheet">' +
-              allReviews.map(function (r) {
-                return '<div class="review review--sheet">' +
-                  '<div class="review__head">' +
-                    '<img class="review__avatar" src="' + UI.esc(r.author.avatarUrl) + '" alt="" data-fallback="/img/avatars/guest.svg">' +
-                    '<div style="flex:1;min-width:0">' +
-                      '<div class="review__name">' + UI.esc(r.author.name) + '</div>' +
-                      (r.createdAt ? '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + UI.esc(UI.shortDate(r.createdAt)) + '</div>' : '') +
-                    '</div>' +
-                    (r.rating != null ? '<span class="review__score">' + r.rating + '/10</span>' : '') +
-                  '</div>' +
-                  (r.text ? '<p class="review__text">' + UI.esc(r.text) + '</p>' : '') +
-                  '</div>';
-              }).join('') +
-            '</div>'
-          );
-          UI.sheet({ title: 'All Reviews', body: body });
-        },
+        trailer: function () { window.open(movie.trailerUrl, '_blank', 'noopener'); },
         share: async function () {
           var text = movie.title + ' — ' + (movie.tagline || 'now on CineFlex');
           if (navigator.share) {
@@ -378,10 +216,52 @@
             try { await navigator.clipboard.writeText(window.location.href); UI.toast('Link copied', 'success'); return; } catch (_e) {}
           }
         },
+        review: function () {
+          if (!API.isSignedIn()) {
+            sessionStorage.setItem('cineflex.returnTo', '/movie/' + movie.id);
+            App.navigate('/login');
+            return;
+          }
+          var chosen = 8;
+          var form = UI.h(
+            '<form style="padding:0 0 10px">' +
+              '<div style="display:flex;justify-content:center;gap:6px;padding:4px 16px 18px" data-stars></div>' +
+              '<div class="field"><label class="field__label" for="rtext">Your review (optional)</label>' +
+                '<div class="field__control"><textarea id="rtext" name="text" placeholder="What did you think?" maxlength="600"></textarea></div></div>' +
+              '<div style="padding:0 16px"><button class="btn" type="submit">Post review</button></div>' +
+            '</form>'
+          );
+          var stars = form.querySelector('[data-stars]');
+
+          function paintStars() {
+            stars.innerHTML = Array.from({ length: 10 }, function (_x, i) {
+              var n = i + 1;
+              return '<button type="button" data-star="' + n + '" aria-label="' + n + ' out of 10" ' +
+                'style="color:' + (n <= chosen ? 'var(--primary-600)' : 'var(--line-strong)') + '">' + UI.icon('star', 20, { solid: n <= chosen }) + '</button>';
+            }).join('');
+          }
+          stars.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-star]');
+            if (!b) return;
+            chosen = Number(b.getAttribute('data-star'));
+            paintStars();
+          });
+          paintStars();
+
+          var sheet = UI.sheet({ title: 'Rate ' + movie.title, body: form });
+          form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            try {
+              await API.review(movie.id, { rating: chosen, text: form.text.value.trim() });
+              sheet.close();
+              UI.toast('Thanks for your review!', 'success');
+              App.render();
+            } catch (err) { UI.toast(err.message, 'error'); }
+          });
+        },
       });
 
       paintHeart(inWatchlist);
-      _enrichCastPhotos(view);
       return view;
     },
   };
@@ -479,89 +359,59 @@
       var chosen = [];
       var MAX = 10;
 
-      // Other showtimes for this same movie at this cinema, on the same
-      // date — rendered as a scrollable strip so the person can switch
-      // times without leaving the seat map (mirrors how multiplex booking
-      // apps let you retime a show right from the seat page).
-      var siblingShows = [];
-      try {
-        var cinemaDay = await API.cinemaShowtimes(show.cinema.id, show.date);
-        var movieGroup = (cinemaDay.movies || []).filter(function (m) { return m.movie.id === show.movie.id; })[0];
-        siblingShows = movieGroup ? movieGroup.shows : [{ id: show.id, time: show.time, isPast: false }];
-      } catch (err) {
-        siblingShows = [{ id: show.id, time: show.time, isPast: false }];
-      }
-
       var priceOf = {};
       data.rows.forEach(function (row) {
         row.seats.forEach(function (seat) { priceOf[seat.id] = seat.price; });
       });
-      var slots = maxBlockSlots(data.rows);
 
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({ title: show.movie.title, back: true, alignLeft: true, logo: false }) +
           '<div style="padding:0 16px 12px;margin-top:-4px">' +
-            '<div class="cinema-info-card">' +
-              '<p style="margin:0;font-size:13px;color:var(--muted)">' +
-                UI.esc(show.cinema.name) + ' · ' + UI.esc(show.screen.name) + '<br>' +
-                UI.esc(UI.relativeDay(show.date)) + ', ' + UI.esc(time12(show.time)) + ' · ' + UI.esc(show.format) + ' · ' + UI.esc(show.language) +
-              '</p>' +
-            '</div>' +
-          '</div>' +
-
-          '<div class="time-strip" data-times>' +
-            siblingShows.map(function (s) {
-              return '<button class="time-pill' + (s.id === show.id ? ' time-pill--selected' : '') + '" data-time-id="' + UI.esc(s.id) + '"' +
-                (s.isPast ? ' disabled' : '') + '>' + UI.esc(time12(s.time)) + '</button>';
-            }).join('') +
+            '<p style="margin:0;font-size:13px;color:var(--muted)">' +
+              UI.esc(show.cinema.name) + ' · ' + UI.esc(show.screen.name) + '<br>' +
+              UI.esc(UI.relativeDay(show.date)) + ', ' + UI.esc(show.time) + ' · ' + UI.esc(show.format) + ' · ' + UI.esc(show.language) +
+            '</p>' +
           '</div>' +
 
           '<div class="scroll">' +
-            '<div class="seat-scroll"><div class="seat-sections" data-rows>' +
-              groupRowsByTier(data.rows).map(function (section, i) {
-                var tierMeta = data.tiers.filter(function (t) { return t.tier === section.tier; })[0];
-                return (i > 0 ? '<div class="seatmap-divider"></div>' : '') +
-                  '<div class="seatmap-section" data-tier-section="' + UI.esc(section.tier) + '">' +
-                    '<div class="seatmap-section__head">' +
-                      '<span class="seatmap-section__dot" data-tier="' + UI.esc(section.tier) + '"></span>' +
-                      '<span class="seatmap-section__label">' + UI.esc(TIER_LABEL[section.tier] || section.tier) + '</span>' +
-                      (tierMeta ? '<span class="seatmap-section__price">' + UI.money(tierMeta.price) + '</span>' : '') +
-                    '</div>' +
-                    '<div class="seat-rows">' +
-                      section.rows.map(function (row) {
-                        var blocks = splitSeatBlocks(row.seats);
-                        return '<div class="seat-row">' +
-                          '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
-                          blocks.map(function (block, bi) {
-                            return (bi > 0 ? '<span class="seat-aisle"></span>' : '') +
-                              '<div class="seat-block" style="grid-template-columns:repeat(' + slots[bi] + ',26px)">' +
-                              block.map(renderSeatButton).join('') +
-                              '</div>';
-                          }).join('') +
-                          '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
-                          '</div>';
-                      }).join('') +
-                    '</div>' +
+            '<div class="screen-curve">' +
+              '<svg viewBox="0 0 300 34" preserveAspectRatio="none" aria-hidden="true">' +
+                '<path d="M4 30 Q150 0 296 30" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>' +
+              '</svg>' +
+              '<span>Screen this way</span>' +
+            '</div>' +
+
+            '<div class="seat-scroll"><div class="seat-rows" data-rows>' +
+              data.rows.map(function (row) {
+                return '<div class="seat-row">' +
+                  '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
+                  row.seats.map(function (seat) {
+                    return '<button class="seat' + (seat.gapAfter ? ' seat--gap' : '') + '" ' +
+                      'data-seat="' + UI.esc(seat.id) + '" data-tier="' + UI.esc(seat.tier) + '" data-status="' + UI.esc(seat.status) + '" ' +
+                      'aria-pressed="false" aria-label="Seat ' + UI.esc(seat.id) + ', ' + UI.esc(TIER_LABEL[seat.tier] || seat.tier) + ', ' + UI.money(seat.price) + '"' +
+                      (seat.status !== 'available' ? ' disabled' : '') + '>' + seat.number + '</button>';
+                  }).join('') +
+                  '<span class="seat-row__label">' + UI.esc(row.row) + '</span>' +
                   '</div>';
               }).join('') +
             '</div></div>' +
-          '</div>' +
-
-          '<div class="seatmap-footer">' +
-            '<div class="screen-indicator">' +
-              '<div class="screen-bar"></div>' +
-              '<span>All eyes this way please!</span>' +
-            '</div>' +
-
-            '<p class="text-center text-muted" style="font-size:12px;margin:2px 0 8px">' +
-              UI.esc(data.stats.available) + ' of ' + UI.esc(data.stats.total) + ' seats available · up to ' + MAX + ' per booking</p>' +
 
             '<div class="legend">' +
-              '<span class="legend__item"><span class="legend__swatch legend__swatch--available"></span>Available</span>' +
-              '<span class="legend__item"><span class="legend__swatch legend__swatch--selected"></span>Selected</span>' +
-              '<span class="legend__item"><span class="legend__swatch legend__swatch--sold"></span>Sold</span>' +
+              data.tiers.map(function (t) {
+                return '<span class="legend__item"><span class="legend__swatch" style="background:' +
+                  (t.tier === 'premium' ? 'color-mix(in srgb, var(--primary-600) 16%, var(--seat-available))'
+                    : t.tier === 'vip' ? 'color-mix(in srgb, #D97706 22%, var(--seat-available))'
+                    : 'var(--seat-available)') + '"></span>' +
+                  UI.esc(TIER_LABEL[t.tier] || t.tier) + ' ' + UI.money(t.price) + '</span>';
+              }).join('') +
+              '<span class="legend__item"><span class="legend__swatch" style="background:var(--primary-600)"></span>Selected</span>' +
+              '<span class="legend__item"><span class="legend__swatch" style="background:var(--line-strong);opacity:.55"></span>Taken</span>' +
             '</div>' +
+
+            '<p class="text-center text-muted" style="font-size:12px;margin:4px 0 0">' +
+              UI.esc(data.stats.available) + ' of ' + UI.esc(data.stats.total) + ' seats available · up to ' + MAX + ' per booking</p>' +
+            '<div class="spacer-24"></div>' +
           '</div>' +
 
           '<div class="actionbar">' +
@@ -584,16 +434,6 @@
         totalEl.textContent = UI.money(total);
         proceedBtn.disabled = chosen.length === 0;
         proceedBtn.textContent = chosen.length ? 'Proceed (' + chosen.length + ')' : 'Proceed';
-      }
-
-      var timeStrip = view.querySelector('[data-times]');
-      if (timeStrip) {
-        timeStrip.addEventListener('click', function (event) {
-          var pill = event.target.closest('[data-time-id]');
-          if (!pill || pill.disabled) return;
-          var id = pill.getAttribute('data-time-id');
-          if (id !== show.id) App.navigate('/seats/' + id);
-        });
       }
 
       view.querySelector('[data-rows]').addEventListener('click', function (event) {

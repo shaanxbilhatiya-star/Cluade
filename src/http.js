@@ -134,7 +134,7 @@ function serveStatic(rootDir, urlPath, req, res) {
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Content-Length': stat.size,
     ETag: etag,
-    'Cache-Control': 'no-cache',
+    'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
   });
 
   if (req.method === 'HEAD') {

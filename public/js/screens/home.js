@@ -80,7 +80,7 @@
             '<img class="locbar__avatar" src="' + UI.esc((user && user.avatarUrl) || '/img/avatars/guest.svg') + '" alt="" data-fallback="/img/avatars/guest.svg">' +
             '<div class="locbar__text">' +
               '<div class="locbar__label">Your location</div>' +
-              '<div class="locbar__city" style="cursor:default">Mandla</div>' +
+              '<button class="locbar__city" data-action="city">' + UI.esc(data.city) + UI.icon('chevron-down', 17) + '</button>' +
             '</div>' +
             '<button class="icon-btn icon-btn--ring icon-btn--badge" data-action="notifications" data-count="' + (data.unreadNotifications || 0) + '" aria-label="Notifications">' +
               UI.icon('bell', 21) +
@@ -88,6 +88,11 @@
           '</header>' +
 
           '<div class="scroll">' +
+            '<div class="search-field" data-action="search" role="button" tabindex="0">' +
+              UI.icon('search', 19) +
+              '<input type="text" placeholder="Search movies, cinemas, snacks" readonly tabindex="-1">' +
+            '</div>' +
+
             '<div class="section" style="margin-top:16px">' +
               (data.hero.length ? UI.carousel(data.hero.map(heroSlide), { autoplay: 4500 }) : '') +
             '</div>' +
@@ -97,7 +102,7 @@
             '<div class="section">' +
               UI.sectionHead('Now Playing', 'all-now-playing') +
               (data.nowPlaying.length
-                ? '<div class="rail">' + data.nowPlaying.map(function (m) { return UI.movieCard(m, { book: false }); }).join('') + '</div>'
+                ? '<div class="rail">' + data.nowPlaying.map(function (m) { return UI.movieCard(m); }).join('') + '</div>'
                 : UI.empty({ icon: 'projector', title: 'No shows in ' + data.city, text: 'Try picking another city from the header.' })) +
             '</div>' +
 
@@ -108,12 +113,17 @@
 
             '<div class="section">' +
               UI.sectionHead('Coming Soon', 'all-coming-soon') +
-              '<div class="rail">' + data.comingSoon.map(function (m) { return UI.movieCard(m, { book: false }); }).join('') + '</div>' +
+              '<div class="rail">' + data.comingSoon.map(function (m) { return UI.movieCard(m); }).join('') + '</div>' +
             '</div>' +
 
             (data.offers.length
               ? '<div class="section">' + UI.sectionHead('Offers for you') + UI.carousel(data.offers.map(offerSlide), { autoplay: 6000 }) + '</div>'
               : '') +
+
+            '<div class="section">' +
+              UI.sectionHead('Cinemas near you', 'all-cinemas') +
+              '<div class="stack">' + data.cinemas.map(cinemaRow).join('') + '</div>' +
+            '</div>' +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
@@ -125,7 +135,7 @@
         notifications: function () { App.navigate('/notifications'); },
         search: function () { App.navigate('/search'); },
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
+        book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
         cinema: function (el) { App.navigate('/cinema/' + el.getAttribute('data-id')); },
         ticket: function (el) { App.navigate('/ticket/' + el.getAttribute('data-id')); },
         offer: function (el) {
@@ -136,6 +146,10 @@
         'all-now-playing': function () { App.navigate('/movies/now_playing'); },
         'all-coming-soon': function () { App.navigate('/movies/coming_soon'); },
         'all-cinemas': function () { App.navigate('/cinemas'); },
+      });
+
+      view.querySelector('.search-field').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); App.navigate('/search'); }
       });
 
       return view;
@@ -200,7 +214,7 @@
 
       UI.actions(view, {
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
+        book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
       });
 
       // Movie cards render at a fixed rail width; let them fill the grid instead.
@@ -290,7 +304,7 @@
 
       UI.actions(view, {
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
+        book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
         cinema: function (el) { App.navigate('/cinema/' + el.getAttribute('data-id')); },
         'food-item': function (el) { App.navigate('/food/' + el.getAttribute('data-id')); },
       });

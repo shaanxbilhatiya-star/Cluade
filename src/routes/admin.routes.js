@@ -9,14 +9,14 @@ const router = new Router();
 
 const MOVIE_FIELDS = [
   'title', 'tagline', 'status', 'genres', 'languages', 'formats', 'certificate',
-  'runtime', 'rating', 'votes', 'releaseDate', 'director', 'cast', 'castPhotos', 'synopsis',
-  'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active', 'tmdbId',
-  'tierPrices', // per-movie tier pricing: { sofa, recliner, platinum, gold, silver }
+  'runtime', 'rating', 'votes', 'releaseDate', 'director', 'cast', 'synopsis',
+  'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active',
+  'castPhotos', 'tmdbId',
 ];
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
-const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'active'];
-const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active'];
+const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'order', 'showcase', 'active'];
+const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'priceLabel', 'priceNote', 'features', 'badge', 'icon', 'imageUrl', 'order', 'active'];
 
 function pick(body, fields) {
   const out = {};
@@ -96,7 +96,6 @@ router.get('/admin/stats', auth.requireAdmin, () => {
       showtimes: db.get('showtimes').length,
       foodItems: db.get('foodItems').length,
       offers: db.get('offers').length,
-      experiences: db.get('experiences').length,
       users: db.find('users', (u) => u.role === 'customer').length,
       bookings: bookings.length,
       cancelled: bookings.filter((b) => b.status === 'cancelled').length,
@@ -108,71 +107,6 @@ router.get('/admin/stats', auth.requireAdmin, () => {
     today: { bookings: todays.length, revenue: todays.reduce((s, b) => s + (b.amounts?.total || 0), 0) },
     topMovies,
     trend,
-  };
-});
-
-// ── TMDB lookup (movie autofill) ────────────────────────────────────────────
-const TMDB_BASE = 'https://api.themoviedb.org/3';
-const TMDB_IMG = 'https://image.tmdb.org/t/p';
-
-function tmdbHeaders() {
-  const token = process.env.TMDB_API_TOKEN;
-  if (!token) throw new HttpError(503, 'TMDB is not configured on the server (missing TMDB_API_TOKEN)');
-  return { Authorization: `Bearer ${token}`, Accept: 'application/json' };
-}
-
-router.get('/admin/tmdb/search', auth.requireAdmin, async (ctx) => {
-  const q = (ctx.query.q || '').trim();
-  if (!q) return { results: [] };
-  const url = `${TMDB_BASE}/search/movie?query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`;
-  const res = await fetch(url, { headers: tmdbHeaders() });
-  if (!res.ok) throw new HttpError(res.status === 401 ? 503 : 502, 'TMDB search failed');
-  const data = await res.json();
-  return {
-    results: (data.results || []).slice(0, 8).map((m) => ({
-      id: m.id,
-      title: m.title,
-      year: (m.release_date || '').slice(0, 4),
-      posterUrl: m.poster_path ? `${TMDB_IMG}/w185${m.poster_path}` : null,
-      overview: m.overview,
-    })),
-  };
-});
-
-router.get('/admin/tmdb/movie/:id', auth.requireAdmin, async (ctx) => {
-  const detailUrl = `${TMDB_BASE}/movie/${encodeURIComponent(ctx.params.id)}?append_to_response=credits,videos&language=en-US`;
-  const res = await fetch(detailUrl, { headers: tmdbHeaders() });
-  if (!res.ok) throw new HttpError(res.status === 401 ? 503 : 502, 'TMDB lookup failed');
-  const m = await res.json();
-
-  const director = (m.credits?.crew || []).find((c) => c.job === 'Director');
-  const castPeople = (m.credits?.cast || []).slice(0, 8);
-  const cast = castPeople.map((c) => c.name);
-  const castPhotos = {};
-  castPeople.forEach((c) => { if (c.profile_path) castPhotos[c.name] = `${TMDB_IMG}/w185${c.profile_path}`; });
-  const trailer = (m.videos?.results || []).find((v) => v.site === 'YouTube' && v.type === 'Trailer');
-  const certLookup = { G: 'U', PG: 'UA', 'PG-13': 'UA', R: 'A', 'NC-17': 'A' };
-
-  return {
-    movie: {
-      tmdbId: m.id,
-      title: m.title || '',
-      tagline: m.tagline || '',
-      genres: (m.genres || []).map((g) => g.name),
-      languages: [m.original_language ? m.original_language.toUpperCase() : ''].filter(Boolean),
-      runtime: m.runtime || 120,
-      rating: m.vote_average ? Math.round(m.vote_average * 10) / 10 : 0,
-      votes: m.vote_count || 0,
-      releaseDate: m.release_date || '',
-      director: director ? director.name : '',
-      cast,
-      castPhotos,
-      synopsis: m.overview || '',
-      trailerUrl: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : '',
-      posterUrl: m.poster_path ? `${TMDB_IMG}/w500${m.poster_path}` : '',
-      backdropUrl: m.backdrop_path ? `${TMDB_IMG}/w1280${m.backdrop_path}` : '',
-      certificate: certLookup[m.certification] || 'UA',
-    },
   };
 });
 
@@ -194,14 +128,11 @@ router.post('/admin/movies', auth.requireAdmin, (ctx) => {
       rating: 0,
       votes: 0,
       cast: [],
-      castPhotos: {},
-      tmdbId: null,
       synopsis: '',
       posterUrl: '/img/posters/_placeholder.svg',
       backdropUrl: '/img/posters/_placeholder.svg',
       accentColor: '#6D28D9',
       active: true,
-      tierPrices: { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 },
     },
     pick(ctx.body, MOVIE_FIELDS)
   ));
@@ -325,35 +256,6 @@ router.delete('/admin/screens/:id', auth.requireAdmin, (ctx) => {
   return { deleted: true, id: screen.id };
 });
 
-// One-time cleanup: wipes every screen, showtime, booking and seat hold — including ones
-// with confirmed bookings — so demo/dummy seating data can be cleared before adding real
-// screens. This is intentionally forceful (skips the "archive instead of delete" guard
-// used elsewhere) since it's meant for clearing out seed/demo data, not day-to-day use.
-// Clear all showtimes and seat holds without touching bookings or screens.
-router.post('/admin/clear-showtimes', auth.requireAdmin, () => {
-  const counts = {
-    showtimes: db.get('showtimes').length,
-    seatHolds: db.get('seatHolds').length,
-  };
-  db.replace('showtimes', []);
-  db.replace('seatHolds', []);
-  return { cleared: counts };
-});
-
-router.post('/admin/purge-dummy-screens', auth.requireAdmin, () => {
-  const counts = {
-    screens: db.get('screens').length,
-    showtimes: db.get('showtimes').length,
-    bookings: db.get('bookings').length,
-    seatHolds: db.get('seatHolds').length,
-  };
-  db.replace('screens', []);
-  db.replace('showtimes', []);
-  db.replace('bookings', []);
-  db.replace('seatHolds', []);
-  return { purged: counts };
-});
-
 // ── Showtimes ────────────────────────────────────────────────────────────────
 router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['movieId', 'screenId', 'date', 'time']);
@@ -371,9 +273,7 @@ router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
   const [y, m, d] = ctx.body.date.split('-').map(Number);
   const [hh, mm] = ctx.body.time.split(':').map(Number);
   const start = new Date(y, m - 1, d, hh, mm);
-
-  // Prices come from the movie's tierPrices — not a base multiplier.
-  const moviePrices = movie.tierPrices || { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
+  const base = Number(ctx.body.basePrice) || 220;
 
   const showtime = db.insert('showtimes', {
     id: db.id('sht'),
@@ -386,7 +286,7 @@ router.post('/admin/showtimes', auth.requireAdmin, (ctx) => {
     endsAt: new Date(start.getTime() + (movie.runtime + 25) * 60_000).toISOString(),
     format: ctx.body.format || screen.format,
     language: ctx.body.language || movie.languages[0] || 'Hindi',
-    prices: moviePrices,
+    prices: ctx.body.prices || { regular: base, premium: Math.round(base * 1.5), vip: Math.round(base * 2.2) },
     status: 'active',
   });
   ctx.state.status = 201;
@@ -398,18 +298,6 @@ router.put('/admin/showtimes/:id', auth.requireAdmin, (ctx) => {
   if (!show) throw new HttpError(404, 'Showtime not found');
   const patch = {};
   for (const f of ['format', 'language', 'prices', 'status']) if (ctx.body[f] !== undefined) patch[f] = ctx.body[f];
-  if (ctx.body.time) patch.time = ctx.body.time;
-  if (ctx.body.date) patch.date = ctx.body.date;
-  if (ctx.body.screenId) {
-    const screen = db.byId('screens', ctx.body.screenId);
-    if (!screen) throw new HttpError(404, 'Screen not found');
-    // check for conflict
-    const conflict = db.findOne('showtimes', (s) => s.id !== show.id && s.screenId === screen.id && s.date === (patch.date || show.date) && s.time === (patch.time || show.time));
-    if (conflict) throw new HttpError(409, 'A showtime already exists for that screen/date/time');
-    patch.screenId = screen.id;
-    patch.cinemaId = screen.cinemaId;
-    patch.format = screen.format;
-  }
   return { showtime: db.update('showtimes', show.id, patch) };
 });
 
@@ -428,18 +316,6 @@ router.post('/admin/showtimes/generate', auth.requireAdmin, () => ({
   created: ensureRollingShowtimes(),
   total: db.get('showtimes').length,
 }));
-
-// Backfill: update all existing showtime prices from their movie's tierPrices.
-router.post('/admin/showtimes/sync-prices', auth.requireAdmin, () => {
-  let updated = 0;
-  for (const show of db.get('showtimes')) {
-    const movie = db.byId('movies', show.movieId);
-    if (!movie || !movie.tierPrices) continue;
-    db.update('showtimes', show.id, { prices: movie.tierPrices });
-    updated += 1;
-  }
-  return { updated };
-});
 
 // ── Food & offers ────────────────────────────────────────────────────────────
 router.post('/admin/food', auth.requireAdmin, (ctx) => {
@@ -462,6 +338,20 @@ router.delete('/admin/food/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('foodItems', ctx.params.id)) throw new HttpError(404, 'Food item not found');
   db.remove('foodItems', ctx.params.id);
   return { deleted: true, id: ctx.params.id };
+});
+
+// Admin listing returns ALL offers (including showcase-only wedding packages
+// that the public /offers coupon list hides), sorted by order like Home.
+router.get('/admin/offers', auth.requireAdmin, () => {
+  const offers = [...db.get('offers')]
+    .map((o, i) => ({ o, i }))
+    .sort((a, b) => {
+      const ao = typeof a.o.order === 'number' ? a.o.order : Infinity;
+      const bo = typeof b.o.order === 'number' ? b.o.order : Infinity;
+      return ao - bo || a.i - b.i;
+    })
+    .map(({ o }) => o);
+  return { offers };
 });
 
 router.post('/admin/offers', auth.requireAdmin, (ctx) => {
@@ -490,19 +380,41 @@ router.delete('/admin/offers/:id', auth.requireAdmin, (ctx) => {
   return { deleted: true, id: ctx.params.id };
 });
 
-// ── Experiences (pool party, water park, wedding, etc.) ──────────────────────
+// ── Experiences ──────────────────────────────────────────────────────────────
+// Admin listing returns ALL experiences (including inactive ones the public
+// /experiences endpoint hides), sorted by order like the customer view.
 router.get('/admin/experiences', auth.requireAdmin, () => {
-  const list = [...db.get('experiences')].sort((a, b) => (a.order || 0) - (b.order || 0));
-  return { experiences: list };
+  const experiences = [...db.get('experiences')]
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => {
+      const ao = typeof a.e.order === 'number' ? a.e.order : Infinity;
+      const bo = typeof b.e.order === 'number' ? b.e.order : Infinity;
+      return ao - bo || a.i - b.i;
+    })
+    .map(({ e }) => e);
+  return { experiences };
 });
 
 router.post('/admin/experiences', auth.requireAdmin, (ctx) => {
-  requireFields(ctx.body, ['title', 'category']);
-  const body = Object.assign({}, ctx.body);
-  if (typeof body.features === 'string') body.features = body.features.split(',').map((s) => s.trim()).filter(Boolean);
+  requireFields(ctx.body, ['title']);
+  const slug = slugify(ctx.body.slug || ctx.body.title);
+  if (db.findOne('experiences', (e) => e.slug === slug)) throw new HttpError(409, 'An experience with that name already exists');
   const experience = db.insert('experiences', Object.assign(
-    { id: db.id('exp'), slug: slugify(ctx.body.title), subtitle: '', icon: 'sparkle', color: '#7C3AED', priceLabel: '', priceNote: '', features: [], badge: '', order: db.get('experiences').length + 1, active: true },
-    pick(body, EXPERIENCE_FIELDS)
+    {
+      id: db.id('exp'),
+      slug,
+      category: 'Celebrations',
+      subtitle: '',
+      priceLabel: 'Custom packages',
+      priceNote: '',
+      features: [],
+      badge: null,
+      icon: 'sparkle',
+      order: null,
+      imageUrl: '/img/experiences/_placeholder.svg',
+      active: true,
+    },
+    pick(ctx.body, EXPERIENCE_FIELDS)
   ));
   ctx.state.status = 201;
   return { experience };
@@ -510,9 +422,7 @@ router.post('/admin/experiences', auth.requireAdmin, (ctx) => {
 
 router.put('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
-  const body = Object.assign({}, ctx.body);
-  if (typeof body.features === 'string') body.features = body.features.split(',').map((s) => s.trim()).filter(Boolean);
-  return { experience: db.update('experiences', ctx.params.id, pick(body, EXPERIENCE_FIELDS)) };
+  return { experience: db.update('experiences', ctx.params.id, pick(ctx.body, EXPERIENCE_FIELDS)) };
 });
 
 router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
@@ -634,6 +544,83 @@ router.post('/admin/bookings/:id/checkin', auth.requireAdmin, (ctx) => {
   if (!booking) throw new HttpError(404, 'Booking not found');
   if (booking.status !== 'confirmed') throw new HttpError(400, `Cannot check in a ${booking.status} booking`);
   return { booking: db.update('bookings', booking.id, { checkedInAt: new Date().toISOString(), status: 'completed' }) };
+});
+
+
+// ── TMDB Integration ─────────────────────────────────────────────────────────
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_IMG  = 'https://image.tmdb.org/t/p';
+
+async function tmdbGet(path) {
+  const token = process.env.TMDB_API_TOKEN;
+  if (!token) throw new HttpError(503, 'TMDB_API_TOKEN env var is not set. Add it to your environment and restart.');
+  const res = await fetch(`${TMDB_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  if (!res.ok) throw new HttpError(502, `TMDB error ${res.status}`);
+  return res.json();
+}
+
+function tmdbMovieShape(d, credits, reviews) {
+  const cast = (credits.cast || []).slice(0, 12);
+  const castPhotos = {};
+  for (const c of cast) {
+    if (c.profile_path) castPhotos[c.name] = `${TMDB_IMG}/w185${c.profile_path}`;
+  }
+  const director = ((credits.crew || []).find((c) => c.job === 'Director') || {}).name || '';
+  const genres   = (d.genres || []).map((g) => g.name);
+  const langs    = (d.spoken_languages || []).map((l) => l.english_name || l.name);
+
+  const reviewList = ((reviews && reviews.results) || []).slice(0, 6).map((r) => ({
+    id: r.id,
+    author: { name: r.author || 'Anonymous', avatarUrl: '/img/avatars/guest.svg' },
+    rating: r.author_details && r.author_details.rating ? Math.round(r.author_details.rating) : null,
+    text: (r.content || '').replace(/\s+/g, ' ').trim().slice(0, 400),
+    createdAt: r.created_at,
+  }));
+
+  return {
+    tmdbId: d.id,
+    title: d.title || d.original_title,
+    tagline: d.tagline || '',
+    synopsis: d.overview || '',
+    runtime: d.runtime || 0,
+    releaseDate: (d.release_date || '').slice(0, 10),
+    rating: d.vote_average ? Math.round(d.vote_average * 10) / 10 : 0,
+    votes: d.vote_count || 0,
+    certificate: 'UA',
+    genres,
+    languages: langs,
+    director,
+    cast: cast.map((c) => c.name),
+    castPhotos,
+    posterUrl: d.poster_path ? `${TMDB_IMG}/w500${d.poster_path}` : '/img/posters/_placeholder.svg',
+    backdropUrl: d.backdrop_path ? `${TMDB_IMG}/w1280${d.backdrop_path}` : '/img/posters/_placeholder.svg',
+    trailerUrl: '',
+    reviewList,
+  };
+}
+
+router.get('/admin/tmdb/search', auth.requireAdmin, async (ctx) => {
+  const q = (ctx.query.q || '').trim();
+  if (!q) return { results: [] };
+  const data = await tmdbGet(`/search/movie?query=${encodeURIComponent(q)}&language=en-US&page=1`);
+  const results = (data.results || []).slice(0, 8).map((r) => ({
+    id: r.id,
+    title: r.title,
+    year: r.release_date ? r.release_date.slice(0, 4) : '',
+    posterUrl: r.poster_path ? `${TMDB_IMG}/w185${r.poster_path}` : null,
+  }));
+  return { results };
+});
+
+router.get('/admin/tmdb/movie/:id', auth.requireAdmin, async (ctx) => {
+  const [detail, creditsData, reviewsData] = await Promise.all([
+    tmdbGet(`/movie/${ctx.params.id}?language=en-US`),
+    tmdbGet(`/movie/${ctx.params.id}/credits?language=en-US`),
+    tmdbGet(`/movie/${ctx.params.id}/reviews?language=en-US&page=1`),
+  ]);
+  return { movie: tmdbMovieShape(detail, creditsData, reviewsData) };
 });
 
 module.exports = router;

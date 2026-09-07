@@ -224,8 +224,8 @@
   }
 
   function ratingBadge(movie) {
-    // Ratings are intentionally hidden across the app.
-    return '';
+    if (!movie.rating) return '';
+    return '<span class="poster__badge">' + icon('star', 11, { solid: false }) + Number(movie.rating).toFixed(1) + '</span>';
   }
 
   /** Poster + title + optional "Book Now" — the Now Playing / Coming Soon card. */
@@ -247,30 +247,17 @@
       (meta ? '<p class="movie-card__meta">' + esc(meta) + '</p>' : '') +
       (o.book === false
         ? ''
-        : '<button class="btn-outline" data-action="' + (movie.status === 'coming_soon' ? 'movie' : 'book') + '" data-id="' + esc(movie.id) + '" data-cert="' + esc(movie.certificate || '') + '">' +
+        : '<button class="btn-outline" data-action="' + (movie.status === 'coming_soon' ? 'movie' : 'book') + '" data-id="' + esc(movie.id) + '">' +
             (movie.status === 'coming_soon' ? 'Details' : 'Book Now') + '</button>') +
       '</article>';
   }
 
   function foodCard(item) {
-    var saving = item.mrp && item.mrp > item.price
-      ? Math.round((1 - item.price / item.mrp) * 100)
-      : 0;
-    var priceHtml = item.mrp && item.mrp > item.price
-      ? '<span style="color:var(--primary-500);font-weight:700">' + money(item.price) + '</span>' +
-        ' <span style="text-decoration:line-through;color:var(--neutral-400);font-size:12px">' + money(item.mrp) + '</span>'
-      : money(item.price);
-    var badge = saving
-      ? '<span style="position:absolute;top:8px;left:8px;background:var(--primary-600);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;letter-spacing:.4px">' + saving + '% OFF</span>'
-      : '';
     return '<article class="food-card">' +
       '<button data-action="food-item" data-id="' + esc(item.id) + '" style="width:100%;text-align:left">' +
-        '<div style="position:relative">' +
-          '<img class="food-card__img" src="' + esc(item.imageUrl) + '" alt="' + esc(item.name) + '" loading="lazy" data-fallback="/img/food/_placeholder.svg">' +
-          badge +
-        '</div>' +
+        '<img class="food-card__img" src="' + esc(item.imageUrl) + '" alt="' + esc(item.name) + '" loading="lazy" data-fallback="/img/food/_placeholder.svg">' +
         '<h3 class="food-card__name">' + esc(item.name) + '</h3>' +
-        '<p class="food-card__price">' + priceHtml + '</p>' +
+        '<p class="food-card__price">' + money(item.price) + '</p>' +
       '</button>' +
       '</article>';
   }
@@ -397,27 +384,8 @@
     true
   );
 
-  function showAdultWarning(onConfirm) {
-    var modal = h(
-      '<div style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px">' +
-        '<div style="background:var(--surface);border-radius:var(--radius-xl);padding:28px 24px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">' +
-          '<h2 style="margin:0 0 16px;font-size:18px;font-weight:800">This movie is rated &quot;A&quot;</h2>' +
-          '<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px">' +
-            '<div style="flex-shrink:0;width:58px;height:58px;border-radius:50%;border:3px solid #e53e3e;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#e53e3e">18+</div>' +
-            '<p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--ink-soft)">This movie is only for viewers above 18. Please carry a valid <strong>ID / Age Proof</strong> to the theatre. If you are denied entry due to age or ID issues, <strong>you will not get a refund.</strong></p>' +
-          '</div>' +
-          '<button class="btn" style="width:100%;background:#e53e3e;border-color:#e53e3e" data-action="ok">Continue</button>' +
-          '<button class="btn-outline" style="width:100%;margin-top:10px" data-action="cancel">Go Back</button>' +
-        '</div>' +
-      '</div>'
-    );
-    document.body.appendChild(modal);
-    actions(modal, {
-      ok: function () { document.body.removeChild(modal); onConfirm(); },
-      cancel: function () { document.body.removeChild(modal); },
-    });
-  }
-
+  /* Screen registry. Created here because every js/screens/*.js file registers
+     itself into it, and those files load before app.js (which does the routing). */
   window.Screens = window.Screens || {};
 
   window.UI = {
@@ -428,6 +396,6 @@
     appbar: appbar, sectionHead: sectionHead, posterImg: posterImg, movieCard: movieCard,
     foodCard: foodCard, empty: empty, row: row, statusPill: statusPill,
     spinnerBlock: spinnerBlock, carousel: carousel, initCarousels: initCarousels,
-    actions: actions, showAdultWarning: showAdultWarning, MONTHS: MONTHS, DOW: DOW, CURRENCY: CURRENCY,
+    actions: actions, MONTHS: MONTHS, DOW: DOW, CURRENCY: CURRENCY,
   };
 })();

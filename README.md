@@ -21,6 +21,23 @@ No `npm install`. No database to set up. No build step.
 | Customer | `andrew@example.com` | `1234` |
 | Admin | `admin@cineflex.com` | `admin123` |
 
+
+## TMDB Integration (cast photos & reviews)
+
+Cast photos and live reviews are pulled from [The Movie Database](https://www.themoviedb.org/).
+
+1. Create a free account at tmdb.org → Settings → API → copy your **API Read Access Token**
+2. Start the server with the token:
+
+**Windows:**
+
+
+**Mac / Linux:**
+
+
+Without this token the server still works — cast photos and TMDB reviews simply won't load.
+
+---
 ---
 
 ## Getting started
@@ -28,6 +45,7 @@ No `npm install`. No database to set up. No build step.
 **Requirements:** Node.js 18 or newer. That's it.
 
 ```bash
+cd movie-booking
 node server.js
 ```
 
@@ -50,51 +68,11 @@ Open that on your phone (same network). The customer UI is designed phone-first;
 
 ```bash
 npm start          # node server.js
-npm test           # end-to-end API smoke test (134 assertions)
+npm test           # end-to-end API smoke test (140 assertions)
 npm run seed       # wipe data/ and re-seed the demo catalogue
 npm run assets     # regenerate the SVG artwork
 PORT=8080 node server.js
 ```
-
----
-
-## Deploying
-
-The app is a single Node process that serves its own front end, so most
-platforms need no configuration beyond "run `node server.js`".
-
-- It binds `0.0.0.0` and reads **`PORT`** from the environment, so platform-assigned ports work as-is.
-- There are **no dependencies to install**, so builds are near-instant.
-- `/api/health` is a ready-made health check endpoint.
-
-### Railway
-
-Deploy the repository as-is. `railway.json` already sets the start command and
-health check, and `package.json` at the repository root is what tells the
-builder this is a Node app — so the project must be deployed from the root, not
-from a subdirectory. If you point Railway at a subdirectory (or the app is
-nested), the builder reports *"could not determine how to build the app"*.
-
-### Persisting data between deploys
-
-`data/` is the database, and it is deliberately git-ignored. On a platform with
-an ephemeral filesystem (Railway, Render, Fly, Heroku) the directory is
-recreated and **re-seeded with the demo catalogue on every deploy** — which is
-usually what you want for a demo, and definitely not what you want in
-production.
-
-To keep real bookings, mount a persistent volume and point the app at it:
-
-```bash
-DATA_DIR=/data node server.js
-```
-
-`DATA_DIR` overrides where the JSON collections live (see `src/db.js`). On
-Railway: add a volume, mount it at `/data`, and set `DATA_DIR=/data`.
-
-For anything beyond a single cinema, replace `src/db.js` with a real database —
-the in-memory cache means only one server process can safely own the data, so
-the app cannot be scaled to multiple replicas as-is.
 
 ---
 
@@ -123,7 +101,7 @@ Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinema
 ## How it works
 
 ```
-.
+movie-booking/
 ├── server.js              HTTP server, routing, static hosting, SPA fallback
 ├── src/
 │   ├── router.js           Express-like router built on node:http

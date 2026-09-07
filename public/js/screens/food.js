@@ -26,20 +26,12 @@
   }
 
   function foodRow(item) {
-    var saving = item.mrp && item.mrp > item.price
-      ? Math.round((1 - item.price / item.mrp) * 100)
-      : 0;
-    var priceHtml = item.mrp && item.mrp > item.price
-      ? '<span style="color:var(--primary-500);font-weight:700">' + UI.money(item.price) + '</span>' +
-        ' <span style="text-decoration:line-through;color:var(--neutral-400);font-size:12px">' + UI.money(item.mrp) + '</span>' +
-        ' <span style="background:var(--primary-600);color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:20px;margin-left:4px">' + saving + '% OFF</span>'
-      : UI.money(item.price);
     return '<div class="food-row" data-row="' + UI.esc(item.id) + '">' +
       '<img class="food-row__img" src="' + UI.esc(item.imageUrl) + '" alt="" data-fallback="/img/food/_placeholder.svg">' +
       '<button class="food-row__text" data-action="food-item" data-id="' + UI.esc(item.id) + '" style="text-align:left">' +
         '<div class="food-row__name">' + UI.esc(item.name) + '</div>' +
         '<div class="food-row__meta">' + UI.esc(item.size || item.category) + (item.veg ? ' · Veg' : ' · Non-veg') + '</div>' +
-        '<div class="food-row__price">' + priceHtml + '</div>' +
+        '<div class="food-row__price">' + UI.money(item.price) + '</div>' +
       '</button>' +
       '<div data-stepper="' + UI.esc(item.id) + '">' + stepperMarkup(item) + '</div>' +
       '</div>';
@@ -146,18 +138,6 @@
                 (item.popular ? '<span class="tag">Bestseller</span>' : '') +
               '</div>' +
               '<h1 style="margin:12px 0 0;font-size:24px;font-weight:800;letter-spacing:-.4px;line-height:1.25">' + UI.esc(item.name) + '</h1>' +
-              (item.mrp && item.mrp > item.price
-                ? '<div style="margin:10px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
-                    '<span style="font-size:22px;font-weight:800;color:var(--primary-500)">' + UI.money(item.price) + '</span>' +
-                    '<span style="font-size:15px;text-decoration:line-through;color:var(--neutral-400)">' + UI.money(item.mrp) + '</span>' +
-                    '<span style="background:var(--primary-600);color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px">' +
-                      Math.round((1 - item.price / item.mrp) * 100) + '% OFF' +
-                    '</span>' +
-                  '</div>' +
-                  '<div style="margin:8px 0 0;background:rgba(var(--primary-rgb,99,102,241),.1);border:1px solid rgba(var(--primary-rgb,99,102,241),.25);border-radius:var(--radius-md);padding:8px 12px;font-size:13px;color:var(--primary-500);font-weight:600">' +
-                    '🎉 You save ' + UI.money(item.mrp - item.price) + ' on this item!' +
-                  '</div>'
-                : '') +
               '<p style="margin:10px 0 0;font-size:14.5px;line-height:1.6;color:var(--ink-soft)">' + UI.esc(item.description) + '</p>' +
             '</div>' +
             (item.related && item.related.length
@@ -169,7 +149,6 @@
             '<div class="actionbar__price">' +
               '<div class="actionbar__label">Price</div>' +
               '<div class="actionbar__value">' + UI.money(item.price) + '</div>' +
-              (item.mrp && item.mrp > item.price ? '<div style="font-size:11px;color:var(--neutral-400);text-decoration:line-through">' + UI.money(item.mrp) + '</div>' : '') +
             '</div>' +
             '<div data-cta style="flex:1;display:flex;gap:12px;align-items:center"></div>' +
           '</div>' +

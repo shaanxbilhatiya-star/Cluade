@@ -1,73 +1,57 @@
-/* Experiences tab — promotes Kingfisher's non-movie packages (pool party,
-   water park, kitty party, weddings, birthdays, etc.). Content and pricing
-   are fully editable from the admin panel; this screen just renders it. */
+/* Experiences (Events) tab: Kingfisher celebrations & venue packages. Every
+   item renders a prominent image, price info and Call / WhatsApp actions. */
 (function () {
   'use strict';
 
-  function telHref(phone) { return 'tel:' + String(phone).replace(/\s+/g, ''); }
-  function waHref(phone, text) {
-    return 'https://wa.me/91' + String(phone).replace(/\D/g, '') + '?text=' + encodeURIComponent(text);
+  var PHONE = '7648913272';
+  var WHATSAPP = 'https://wa.me/91' + PHONE;
+
+  function featureList(features) {
+    if (!features || !features.length) return '';
+    return '<ul class="exp-card__features">' +
+      features.map(function (f) {
+        return '<li>' + UI.icon('check', 15) + '<span>' + UI.esc(f) + '</span></li>';
+      }).join('') +
+      '</ul>';
   }
 
-  function callBanner(phone) {
-    return '<a class="card exp-call" href="' + telHref(phone) + '">' +
-      '<span class="exp-call__icon">' + UI.icon('phone', 22) + '</span>' +
-      '<span class="exp-call__text">' +
-        '<strong>Book instantly — Call or WhatsApp</strong>' +
-        '<span>' + UI.esc(phone.slice(0, 4) + ' ' + phone.slice(4)) + '</span>' +
-      '</span>' +
-      '<span class="exp-call__arrow">' + UI.icon('arrow-right', 18) + '</span>' +
-      '</a>';
-  }
-
-  function experienceCard(exp, phone) {
-    var msg = 'Hi Kingfisher, I am interested in the ' + exp.title + '. Please share more details.';
-    return '<article class="card exp-card">' +
-      '<div class="exp-card__head" style="background:' + UI.esc(exp.color || '#7C3AED') + '">' +
-        (exp.badge ? '<span class="exp-card__badge">' + UI.esc(exp.badge) + '</span>' : '') +
-        '<span class="exp-card__icon">' + UI.icon(exp.icon || 'sparkle', 30) + '</span>' +
+  function expCard(item) {
+    return '<article class="exp-card">' +
+      '<div class="exp-card__media">' +
+        '<img class="exp-card__img" src="' + UI.esc(item.imageUrl) + '" alt="' + UI.esc(item.title) + '" loading="lazy" data-fallback="/img/posters/_placeholder.svg">' +
+        (item.badge ? '<span class="exp-card__badge">' + UI.esc(item.badge) + '</span>' : '') +
       '</div>' +
       '<div class="exp-card__body">' +
-        '<span class="exp-card__category">' + UI.esc(exp.category) + '</span>' +
-        '<h3 class="exp-card__title">' + UI.esc(exp.title) + '</h3>' +
-        '<p class="exp-card__subtitle">' + UI.esc(exp.subtitle) + '</p>' +
-        (exp.priceLabel
-          ? '<div class="exp-card__price">' + UI.esc(exp.priceLabel) +
-            (exp.priceNote ? '<span class="exp-card__pricenote">' + UI.esc(exp.priceNote) + '</span>' : '') + '</div>'
-          : '') +
-        (exp.features && exp.features.length
-          ? '<ul class="exp-card__features">' + exp.features.map(function (f) {
-              return '<li>' + UI.icon('check', 14) + '<span>' + UI.esc(f) + '</span></li>';
-            }).join('') + '</ul>'
-          : '') +
+        '<span class="exp-card__cat">' + UI.esc(item.category || '') + '</span>' +
+        '<h3 class="exp-card__title">' + UI.esc(item.title) + '</h3>' +
+        '<p class="exp-card__sub">' + UI.esc(item.subtitle || '') + '</p>' +
+        '<div class="exp-card__price">' + UI.esc(item.priceLabel || '') + '</div>' +
+        (item.priceNote ? '<div class="exp-card__note">' + UI.esc(item.priceNote) + '</div>' : '') +
+        featureList(item.features) +
         '<div class="exp-card__actions">' +
-          '<a class="btn" href="' + telHref(phone) + '">' + UI.icon('phone', 16) + ' Call to book</a>' +
-          '<a class="btn-outline" href="' + waHref(phone, msg) + '" target="_blank" rel="noopener">WhatsApp</a>' +
+          '<a class="btn" href="tel:' + PHONE + '">' + UI.icon('phone', 18) + ' Call to book</a>' +
+          '<a class="btn-outline" href="' + WHATSAPP + '?text=' + encodeURIComponent('Hi, I would like to enquire about the ' + item.title + ' package.') + '" target="_blank" rel="noopener">WhatsApp</a>' +
         '</div>' +
       '</div>' +
-      '</article>';
+    '</article>';
   }
 
   window.Screens.experiences = {
     tab: 'experiences',
     render: async function () {
       var data = await API.experiences();
-      var phone = data.phone || '7648913272';
+      var items = (data && data.experiences) || [];
 
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({ title: 'Experiences' }) +
           '<div class="scroll">' +
-            '<div style="padding:14px 16px 0">' +
-              '<p style="color:var(--muted);font-size:13.5px;margin:0 0 12px">' +
-                'Beyond the movies — pool parties, water park days, kitty parties and wedding venues at Kingfisher Mandla.' +
-              '</p>' +
-              callBanner(phone) +
-            '</div>' +
-            '<div class="exp-grid">' +
-              (data.experiences.length
-                ? data.experiences.map(function (e) { return experienceCard(e, phone); }).join('')
-                : UI.empty({ icon: 'sparkle', title: 'Nothing here yet', text: 'Check back soon for new packages and offers.' })) +
+            '<div class="section">' +
+              UI.sectionHead('Celebrate at Kingfisher') +
+              '<p class="exp-intro">Weddings, parties and family days out - every experience is fully customizable. Tap to call or WhatsApp us to book.</p>' +
+              (items.length
+                ? '<div class="exp-list">' + items.map(expCard).join('') + '</div>'
+                : UI.empty({ icon: 'sparkle', title: 'No experiences yet', text: 'Check back soon for our celebration packages.' })) +
             '</div>' +
             '<div class="spacer-24"></div>' +
           '</div>' +

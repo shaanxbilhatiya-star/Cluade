@@ -11,18 +11,6 @@
     return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Converts a "HH:MM" 24-hour string to "h:MM AM/PM" for display. Storage/inputs stay 24-hour.
-  function time12(t) {
-    var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
-    if (!m) return esc(t);
-    var h24 = Number(m[1]);
-    var mins = m[2];
-    var period = h24 >= 12 ? 'PM' : 'AM';
-    var h12 = h24 % 12;
-    if (h12 === 0) h12 = 12;
-    return h12 + ':' + mins + ' ' + period;
-  }
-
   function h(html) {
     var t = document.createElement('template');
     t.innerHTML = String(html).trim();
@@ -250,68 +238,47 @@
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
     var data = await API.movies('');
 
-    var nowPlaying  = data.movies.filter(function (m) { return m.status === 'now_playing'; });
-    var comingSoon  = data.movies.filter(function (m) { return m.status === 'coming_soon'; });
-    var archived    = data.movies.filter(function (m) { return m.status !== 'now_playing' && m.status !== 'coming_soon'; });
-
-    var activeTab = 'now_playing';
+    var nowPlaying = data.movies.filter(function (m) { return m.status === 'now_playing'; });
+    var comingSoon = data.movies.filter(function (m) { return m.status === 'coming_soon'; });
+    var archived = data.movies.filter(function (m) { return m.status === 'archived'; });
 
     content.innerHTML =
-      '<div class="panel" style="margin-top:0">' +
-        '<div class="panel__head" style="flex-direction:column;align-items:flex-start;gap:12px;padding-bottom:0">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;width:100%">' +
-            '<h2 class="panel__title" data-movie-count>' + data.movies.length + ' movies</h2>' +
-            '<input class="input" data-search placeholder="Filter by title…" style="width:auto;min-width:200px">' +
-          '</div>' +
-          '<div class="status-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);width:100%">' +
-            '<button class="status-tab status-tab--active" data-tab="now_playing" style="padding:8px 18px;background:none;border:none;border-bottom:2.5px solid #7c3aed;margin-bottom:-2px;font-weight:600;color:#7c3aed;cursor:pointer;font-size:13.5px">▶ Now Playing <span class="tab-count" style="background:#7c3aed22;color:#7c3aed;border-radius:10px;padding:1px 7px;font-size:12px;margin-left:4px">' + nowPlaying.length + '</span></button>' +
-            '<button class="status-tab" data-tab="coming_soon" style="padding:8px 18px;background:none;border:none;border-bottom:2.5px solid transparent;margin-bottom:-2px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:13.5px">⏳ Coming Soon <span class="tab-count" style="background:#7c3aed11;color:var(--muted);border-radius:10px;padding:1px 7px;font-size:12px;margin-left:4px">' + comingSoon.length + '</span></button>' +
-            '<button class="status-tab" data-tab="archived" style="padding:8px 18px;background:none;border:none;border-bottom:2.5px solid transparent;margin-bottom:-2px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:13.5px">📦 Archived <span class="tab-count" style="background:#7c3aed11;color:var(--muted);border-radius:10px;padding:1px 7px;font-size:12px;margin-left:4px">' + archived.length + '</span></button>' +
-          '</div>' +
+      '<div style="border-bottom:1px solid var(--line);background:var(--panel);padding:0 26px;margin:-24px -26px 24px;position:sticky;top:61px;z-index:4">' +
+        '<div style="display:flex;gap:4px">' +
+          '<button class="tab-btn active" data-tab="now_playing" style="padding:14px 18px;border:0;background:transparent;color:var(--muted);font-weight:600;font-size:14px;cursor:pointer;border-bottom:3px solid transparent">' +
+            'Now Playing <span style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:999px;font-size:11px;margin-left:5px">' + nowPlaying.length + '</span></button>' +
+          '<button class="tab-btn" data-tab="coming_soon" style="padding:14px 18px;border:0;background:transparent;color:var(--muted);font-weight:600;font-size:14px;cursor:pointer;border-bottom:3px solid transparent">' +
+            'Coming Soon <span style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:999px;font-size:11px;margin-left:5px">' + comingSoon.length + '</span></button>' +
+          '<button class="tab-btn" data-tab="archived" style="padding:14px 18px;border:0;background:transparent;color:var(--muted);font-weight:600;font-size:14px;cursor:pointer;border-bottom:3px solid transparent">' +
+            'Archived <span style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:999px;font-size:11px;margin-left:5px">' + archived.length + '</span></button>' +
         '</div>' +
-        '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Movie</th><th>Status</th><th>Genres</th><th>Languages</th><th class="num">Runtime</th><th class="num">Rating</th><th class="num">Shows</th><th></th></tr></thead>' +
+      '</div>' +
+      '<div class="panel" style="margin-top:0"><div class="panel__head">' +
+        '<h2 class="panel__title" data-count-label>' + nowPlaying.length + ' movies</h2>' +
+        '<input class="input" data-search placeholder="Filter by title…" style="width:auto;min-width:200px">' +
+      '</div><div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Movie</th><th>Genres</th><th>Languages</th><th class="num">Runtime</th><th class="num">Rating</th><th class="num">Shows</th><th></th></tr></thead>' +
         '<tbody data-rows></tbody></table></div></div></div>';
 
     var tbody = content.querySelector('[data-rows]');
-
-    function tabList() {
-      if (activeTab === 'now_playing') return nowPlaying;
-      if (activeTab === 'coming_soon') return comingSoon;
-      return archived;
-    }
-
-    content.querySelectorAll('.status-tab').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        activeTab = btn.getAttribute('data-tab');
-        content.querySelectorAll('.status-tab').forEach(function (b) {
-          var isActive = b.getAttribute('data-tab') === activeTab;
-          b.style.borderBottomColor = isActive ? '#7c3aed' : 'transparent';
-          b.style.color = isActive ? '#7c3aed' : 'var(--ink-soft)';
-          b.style.fontWeight = isActive ? '600' : '500';
-          b.querySelector('.tab-count').style.background = isActive ? '#7c3aed22' : '#7c3aed11';
-          b.querySelector('.tab-count').style.color = isActive ? '#7c3aed' : 'var(--muted)';
-        });
-        var searchEl = content.querySelector('[data-search]');
-        paint(searchEl ? searchEl.value : '');
-      });
-    });
+    var countLabel = content.querySelector('[data-count-label]');
+    var activeTab = 'now_playing';
 
     function paint(filter) {
       var needle = String(filter || '').toLowerCase();
-      var source = tabList();
-      var list = needle ? source.filter(function (m) { return m.title.toLowerCase().indexOf(needle) !== -1; }) : source;
-      content.querySelector('[data-movie-count]').textContent = list.length + ' movies';
+      var baseList = activeTab === 'now_playing' ? nowPlaying : activeTab === 'coming_soon' ? comingSoon : archived;
+      var list = needle ? baseList.filter(function (m) { return m.title.toLowerCase().indexOf(needle) !== -1; }) : baseList;
+      
+      var statusLabel = activeTab === 'now_playing' ? 'Now Playing' : activeTab === 'coming_soon' ? 'Coming Soon' : 'Archived';
+      countLabel.textContent = list.length + ' ' + statusLabel + ' movie' + (list.length !== 1 ? 's' : '');
+
       tbody.innerHTML = list.length
         ? list.map(function (m) {
-            var pill = m.status === 'now_playing' ? 'pill--green' : m.status === 'coming_soon' ? 'pill--purple' : 'pill--grey';
             return '<tr>' +
               '<td><div style="display:flex;align-items:center;gap:11px">' +
                 '<img src="' + esc(m.posterUrl) + '" alt="" style="width:34px;height:48px;border-radius:5px;object-fit:cover">' +
                 '<div><div class="cell-strong">' + esc(m.title) + '</div>' +
                 '<div class="cell-sub">' + esc(m.certificate) + ' · ' + esc(shortDate(m.releaseDate)) + '</div></div></div></td>' +
-              '<td><span class="pill ' + pill + '">' + esc(String(m.status).replace('_', ' ')) + '</span>' +
-                (m.active === false ? ' <span class="pill pill--grey">inactive</span>' : '') + '</td>' +
               '<td>' + esc((m.genres || []).join(', ')) + '</td>' +
               '<td>' + esc((m.languages || []).join(', ')) + '</td>' +
               '<td class="num">' + esc(m.runtime) + 'm</td>' +
@@ -322,25 +289,60 @@
                 '<button class="btn btn--line btn--sm" data-del="' + esc(m.id) + '">Delete</button>' +
               '</td></tr>';
           }).join('')
-        : '<tr><td colspan="8" class="empty-state">No movies in this category.</td></tr>';
+        : '<tr><td colspan="7" class="empty-state">No movies in this category.</td></tr>';
+    }
+
+    content.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        content.querySelectorAll('.tab-btn').forEach(function(b) {
+          b.classList.remove('active');
+          b.style.color = 'var(--muted)';
+          b.style.borderBottomColor = 'transparent';
+        });
+        btn.classList.add('active');
+        btn.style.color = 'var(--primary)';
+        btn.style.borderBottomColor = 'var(--primary)';
+        activeTab = btn.getAttribute('data-tab');
+        content.querySelector('[data-search]').value = '';
+        paint('');
+      });
+    });
+
+    // Style active tab
+    content.querySelector('.tab-btn.active').style.color = 'var(--primary)';
+    content.querySelector('.tab-btn.active').style.borderBottomColor = 'var(--primary)';
+
+    function paint(filter) {
+      var needle = String(filter || '').toLowerCase();
+      var baseList = activeTab === 'now_playing' ? nowPlaying : activeTab === 'coming_soon' ? comingSoon : archived;
+      var list = needle ? baseList.filter(function (m) { return m.title.toLowerCase().indexOf(needle) !== -1; }) : baseList;
+      
+      var statusLabel = activeTab === 'now_playing' ? 'Now Playing' : activeTab === 'coming_soon' ? 'Coming Soon' : 'Archived';
+      countLabel.textContent = list.length + ' ' + statusLabel + ' movie' + (list.length !== 1 ? 's' : '');
+
+      tbody.innerHTML = list.length
+        ? list.map(function (m) {
+            return '<tr>' +
+              '<td><div style="display:flex;align-items:center;gap:11px">' +
+                '<img src="' + esc(m.posterUrl) + '" alt="" style="width:34px;height:48px;border-radius:5px;object-fit:cover">' +
+                '<div><div class="cell-strong">' + esc(m.title) + '</div>' +
+                '<div class="cell-sub">' + esc(m.certificate) + ' · ' + esc(shortDate(m.releaseDate)) + '</div></div></div></td>' +
+              '<td>' + esc((m.genres || []).join(', ')) + '</td>' +
+              '<td>' + esc((m.languages || []).join(', ')) + '</td>' +
+              '<td class="num">' + esc(m.runtime) + 'm</td>' +
+              '<td class="num">' + esc(m.rating || '—') + '</td>' +
+              '<td class="num">' + esc(m.showtimeCount) + '</td>' +
+              '<td style="white-space:nowrap">' +
+                '<button class="btn btn--ghost btn--sm" data-edit="' + esc(m.id) + '">Edit</button> ' +
+                '<button class="btn btn--line btn--sm" data-del="' + esc(m.id) + '">Delete</button>' +
+              '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="7" class="empty-state">No movies in this category.</td></tr>';
     }
 
     function form(movie) {
       var m = movie || {};
       return h('<div class="form-grid">' +
-        '<input type="hidden" name="tmdbId" value="' + esc(m.tmdbId || '') + '">' +
-        '<input type="hidden" name="votes" value="' + esc(m.votes || 0) + '">' +
-        '<input type="hidden" name="castPhotos" value=\'' + esc(JSON.stringify(m.castPhotos || {})) + '\'>' +
-        '<div class="form-row col-span" style="position:relative;background:#f5f0ff;border:1.5px solid #7c3aed44;border-radius:10px;padding:14px 14px 10px;margin-bottom:4px">' +
-          '<label class="label" for="tmdb-search" style="font-weight:600;color:#6d28d9;margin-bottom:6px;display:block">' + (movie ? 'Re-fetch from TMDB - updates cast photos, reviews & all fields' : 'Find on TMDB - autofills all fields below') + '</label>' +
-          '<div style="display:flex;gap:8px;align-items:center">' +
-            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name..." style="flex:1" value="' + esc(movie ? (m.title || '') : '') + '">' +
-            (movie && m.tmdbId
-              ? '<button type="button" class="btn btn--primary btn--sm" id="tmdb-refetch-btn" data-tmdb-id="' + esc(String(m.tmdbId)) + '" style="white-space:nowrap;flex-shrink:0">Refetch TMDB</button>'
-              : '<button type="button" class="btn btn--primary btn--sm" id="tmdb-search-btn" style="white-space:nowrap;flex-shrink:0">Search TMDB</button>') +
-          '</div>' +
-          '<div class="tmdb-results" id="tmdb-results" hidden></div>' +
-        '</div>' +
         field('Title', 'title', m.title, { span: true }) +
         field('Tagline', 'tagline', m.tagline, { span: true }) +
         field('Status', 'status', m.status || 'now_playing', { options: [
@@ -356,37 +358,35 @@
         field('Genres', 'genres', (m.genres || []).join(', '), { span: true, hint: 'Comma separated, e.g. Action, Thriller' }) +
         field('Languages', 'languages', (m.languages || []).join(', '), { span: true, hint: 'Comma separated' }) +
         '<div class="form-row col-span">' +
-          '<label class="label">Formats available in Mandla <span style="color:#f59e0b;font-size:11px;font-weight:600;margin-left:6px">Ask the theatre / confirm locally</span></label>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="format-pills">' +
+          '<label class="label">Formats <span style="color:#f59e0b;font-size:11px;font-weight:600;margin-left:6px">Confirm with theatre for Mandla</span></label>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px" id="format-pills">' +
             ['2D','3D','IMAX 2D','4DX'].map(function(fmt) {
-              var selected = (m.formats || ['2D']).indexOf(fmt) !== -1;
-              return '<button type="button" class="pill-toggle' + (selected ? ' pill-toggle--on' : '') + '" data-fmt="' + fmt + '" ' +
-                'style="padding:7px 14px;border-radius:20px;border:1.5px solid ' + (selected ? '#7c3aed' : '#555') + ';' +
-                'background:' + (selected ? '#7c3aed22' : 'transparent') + ';color:' + (selected ? '#7c3aed' : 'var(--muted)') + ';' +
-                'font-size:13px;font-weight:600;cursor:pointer">' + fmt + '</button>';
+              var sel = (m.formats || ['2D']).indexOf(fmt) !== -1;
+              return '<button type="button" class="' + (sel ? 'pill-on' : '') + '" data-fmt="' + esc(fmt) + '" ' +
+                'style="padding:7px 14px;border-radius:20px;border:1.5px solid ' + (sel ? '#7c3aed' : '#555') + ';' +
+                'background:' + (sel ? '#7c3aed22' : 'transparent') + ';color:' + (sel ? '#7c3aed' : 'var(--muted)') + ';' +
+                'font-size:13px;font-weight:600;cursor:pointer">' + esc(fmt) + '</button>';
             }).join('') +
           '</div>' +
           '<input type="hidden" name="formats" value="' + esc((m.formats || ['2D']).join(', ')) + '">' +
-          '<p style="font-size:11.5px;color:var(--muted);margin:0">Most shows in Mandla run in <strong>2D</strong>. Confirm with the theatre before selecting IMAX or 3D.</p>' +
+          '<p style="font-size:11.5px;color:var(--muted);margin:0">Most shows in Mandla run in 2D. Confirm 3D/IMAX with the theatre.</p>' +
         '</div>' +
         field('Cast', 'cast', (m.cast || []).join(', '), { span: true, hint: 'Comma separated' }) +
         field('Poster URL', 'posterUrl', m.posterUrl || '/img/posters/_placeholder.svg', { span: true }) +
         field('Backdrop URL', 'backdropUrl', m.backdropUrl || '/img/posters/_placeholder.svg', { span: true }) +
         field('Trailer URL', 'trailerUrl', m.trailerUrl, { span: true }) +
         field('Synopsis', 'synopsis', m.synopsis, { type: 'textarea', span: true }) +
-        '<div class=\"form-row col-span\" style=\"background:#f0fdf4;border:1.5px solid #16a34a44;border-radius:10px;padding:14px 14px 10px;margin-top:4px\">' +
-          '<label class=\"label\" style=\"font-weight:600;color:#16a34a;margin-bottom:8px;display:block\">Ticket Prices — by Seat Tier</label>' +
-          '<p style=\"font-size:11.5px;color:var(--muted);margin:0 0 10px\">Set the price for each seat category for this movie. These apply to every showtime of this movie.</p>' +
-          '<div style=\"display:grid;grid-template-columns:repeat(5,1fr);gap:10px\">' +
-            ['sofa','recliner','platinum','gold','silver'].map(function(tier) {
-              var tp = m.tierPrices || {};
-              var defaults = { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 };
-              return '<div>' +
-                '<label class=\"label\" style=\"font-size:11px;text-transform:capitalize;margin-bottom:4px\">' + tier + '</label>' +
-                '<input class=\"input\" type=\"number\" name=\"tierPrice_' + tier + '\" value=\"' + esc(String(tp[tier] !== undefined ? tp[tier] : defaults[tier])) + '\" min=\"0\" style=\"width:100%\">' +
-              '</div>';
-            }).join('') +
+        '<input type="hidden" name="tmdbId" value="' + esc(String(m.tmdbId || '')) + '">' +
+        '<input type="hidden" name="castPhotos" value=\'' + esc(JSON.stringify(m.castPhotos || {})) + '\'>' +
+        '<div class="form-row col-span" style="position:relative;background:#f5f0ff;border:1.5px solid #7c3aed44;border-radius:10px;padding:14px 14px 10px;margin-bottom:4px">' +
+          '<label class="label" for="tmdb-search" style="font-weight:600;color:#6d28d9;margin-bottom:6px;display:block">' + (movie ? 'Re-fetch from TMDB - updates cast photos, reviews & all fields' : 'Find on TMDB - autofills all fields below') + '</label>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            '<input class="input" id="tmdb-search" autocomplete="off" placeholder="Type a movie name..." style="flex:1" value="' + esc(movie ? (m.title || '') : '') + '">' +
+            (movie && m.tmdbId
+              ? '<button type="button" class="btn btn--primary btn--sm" id="tmdb-refetch-btn" data-tmdb-id="' + esc(String(m.tmdbId)) + '" style="white-space:nowrap;flex-shrink:0">Refetch TMDB</button>'
+              : '<button type="button" class="btn btn--primary btn--sm" id="tmdb-search-btn" style="white-space:nowrap;flex-shrink:0">Search TMDB</button>') +
           '</div>' +
+          '<div class="tmdb-results" id="tmdb-results" hidden></div>' +
         '</div>' +
         '</div>');
     }
@@ -394,26 +394,18 @@
     function payloadFrom(body) {
       var raw = readForm(body);
       var castPhotos = {};
-      try { castPhotos = JSON.parse(raw.castPhotos || '{}'); } catch (_e) { castPhotos = {}; }
+      try { castPhotos = JSON.parse(raw.castPhotos || '{}'); } catch(_e) { castPhotos = {}; }
       return {
         title: raw.title, tagline: raw.tagline, status: raw.status, certificate: raw.certificate,
         runtime: Number(raw.runtime), releaseDate: raw.releaseDate, rating: Number(raw.rating),
         director: raw.director, genres: csvList(raw.genres), languages: csvList(raw.languages),
-        formats: csvList(raw.formats), cast: csvList(raw.cast), castPhotos: castPhotos,
+        formats: csvList(raw.formats), cast: csvList(raw.cast),
         posterUrl: raw.posterUrl, backdropUrl: raw.backdropUrl, trailerUrl: raw.trailerUrl, synopsis: raw.synopsis,
-        tmdbId: raw.tmdbId || null, votes: Number(raw.votes) || 0,
-        tierPrices: {
-          sofa:     Number(raw.tierPrice_sofa)     || 500,
-          recliner: Number(raw.tierPrice_recliner)  || 500,
-          platinum: Number(raw.tierPrice_platinum)  || 400,
-          gold:     Number(raw.tierPrice_gold)      || 300,
-          silver:   Number(raw.tierPrice_silver)    || 250,
-        },
+        castPhotos: castPhotos, tmdbId: raw.tmdbId || null, votes: Number(raw.votes) || 0,
       };
     }
 
     content.querySelector('[data-search]').addEventListener('input', function (e) { paint(e.target.value); });
-    paint('');
 
     content.addEventListener('click', async function (event) {
       var edit = event.target.closest('[data-edit]');
@@ -465,23 +457,15 @@
       container.addEventListener('click', function(e) {
         var btn = e.target.closest('[data-fmt]');
         if (!btn) return;
-        var isOn = btn.classList.contains('pill-toggle--on');
-        if (isOn) {
-          btn.classList.remove('pill-toggle--on');
-          btn.style.borderColor = '#555';
-          btn.style.background = 'transparent';
-          btn.style.color = 'var(--muted)';
-        } else {
-          btn.classList.add('pill-toggle--on');
-          btn.style.borderColor = '#7c3aed';
-          btn.style.background = '#7c3aed22';
-          btn.style.color = '#7c3aed';
-        }
-        var selected = Array.from(container.querySelectorAll('.pill-toggle--on')).map(function(b){ return b.getAttribute('data-fmt'); });
+        var isOn = btn.classList.contains('pill-on');
+        btn.classList.toggle('pill-on', !isOn);
+        btn.style.borderColor = !isOn ? '#7c3aed' : '#555';
+        btn.style.background = !isOn ? '#7c3aed22' : 'transparent';
+        btn.style.color = !isOn ? '#7c3aed' : 'var(--muted)';
+        var selected = Array.from(container.querySelectorAll('.pill-on')).map(function(b){ return b.getAttribute('data-fmt'); });
         if (!selected.length) {
-          // Always keep at least 2D
-          var twoDBtn = container.querySelector('[data-fmt="2D"]');
-          if (twoDBtn) { twoDBtn.classList.add('pill-toggle--on'); twoDBtn.style.borderColor='#7c3aed'; twoDBtn.style.background='#7c3aed22'; twoDBtn.style.color='#7c3aed'; selected = ['2D']; }
+          var twod = container.querySelector('[data-fmt="2D"]');
+          if (twod) { twod.classList.add('pill-on'); twod.style.borderColor='#7c3aed'; twod.style.background='#7c3aed22'; twod.style.color='#7c3aed'; selected=['2D']; }
         }
         hiddenInput.value = selected.join(', ');
       });
@@ -490,140 +474,98 @@
     function wireTmdbSearch(body) {
       var input = body.querySelector('#tmdb-search');
       var results = body.querySelector('#tmdb-results');
-      if (!input) return;
+      if (!input || !results) return;
       var timer = null;
 
       function hide() { results.hidden = true; results.innerHTML = ''; }
 
-      // "Search TMDB" button (movies with no tmdbId yet) - triggers search with current input value
+      function renderResults(list) {
+        if (!list.length) {
+          results.innerHTML = '<div style="padding:12px 14px;color:var(--muted);font-size:13px">No results found on TMDB</div>';
+        } else {
+          results.innerHTML = list.map(function(r) {
+            return '<button type="button" class="tmdb-result" data-tmdb-id="' + esc(String(r.id)) + '">' +
+              (r.posterUrl ? '<img src="' + esc(r.posterUrl) + '" alt="" style="width:36px;height:52px;object-fit:cover;border-radius:4px;flex-shrink:0">' : '<div style="width:36px;height:52px;background:#333;border-radius:4px;flex-shrink:0"></div>') +
+              '<span style="display:flex;flex-direction:column;gap:2px"><strong>' + esc(r.title) + '</strong>' + (r.year ? '<span style="font-size:11px;color:var(--muted)">' + esc(r.year) + '</span>' : '') + '</span>' +
+              '</button>';
+          }).join('');
+        }
+        results.hidden = false;
+      }
+
+      async function doSearch(q) {
+        if (!q) { hide(); return; }
+        try {
+          var data = await API.get('/admin/tmdb/search?q=' + encodeURIComponent(q));
+          renderResults(data.results || []);
+        } catch(e) { hide(); }
+      }
+
+      input.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(function() { doSearch(input.value.trim()); }, 300);
+      });
+
+      // "Search TMDB" button (no tmdbId yet)
       var searchBtn = body.querySelector('#tmdb-search-btn');
       if (searchBtn) {
-        searchBtn.addEventListener('click', function () {
+        searchBtn.addEventListener('click', function() {
           var q = input.value.trim();
           if (!q) { input.focus(); return; }
           clearTimeout(timer);
-          searchBtn.disabled = true;
-          searchBtn.textContent = 'Searching...';
-          (async function () {
-            try {
-              var data = await API.get('/admin/tmdb/search?q=' + encodeURIComponent(q));
-              if (!data.results.length) {
-                results.hidden = false;
-                results.innerHTML = '<div class="tmdb-results__empty">No matches on TMDB</div>';
-              } else {
-                results.innerHTML = data.results.map(function (r) {
-                  return '<button type="button" class="tmdb-result" data-tmdb-id="' + r.id + '">' +
-                    (r.posterUrl ? '<img src="' + esc(r.posterUrl) + '" alt="">' : '<span class="tmdb-result__noposter"></span>') +
-                    '<span class="tmdb-result__text"><strong>' + esc(r.title) + '</strong>' + (r.year ? ' <span class="tmdb-result__year">(' + esc(r.year) + ')</span>' : '') + '</span>' +
-                    '</button>';
-                }).join('');
-                results.hidden = false;
-              }
-            } catch (err) {
-              results.hidden = false;
-              results.innerHTML = '<div class="tmdb-results__empty">' + esc(err.message) + '</div>';
-            }
-            searchBtn.disabled = false;
-            searchBtn.textContent = 'Search TMDB';
-          })();
+          searchBtn.disabled = true; searchBtn.textContent = 'Searching...';
+          doSearch(q).then(function() { searchBtn.disabled=false; searchBtn.textContent='Search TMDB'; });
         });
       }
 
-      input.addEventListener('input', function () {
-        var q = input.value.trim();
-        clearTimeout(timer);
-        if (!q) { hide(); return; }
-        timer = setTimeout(async function () {
-          try {
-            var data = await API.get('/admin/tmdb/search?q=' + encodeURIComponent(q));
-            if (!data.results.length) { results.hidden = false; results.innerHTML = '<div class="tmdb-results__empty">No matches on TMDB</div>'; return; }
-            results.innerHTML = data.results.map(function (r) {
-              return '<button type="button" class="tmdb-result" data-tmdb-id="' + r.id + '">' +
-                (r.posterUrl ? '<img src="' + esc(r.posterUrl) + '" alt="">' : '<span class="tmdb-result__noposter"></span>') +
-                '<span class="tmdb-result__text"><strong>' + esc(r.title) + '</strong>' + (r.year ? ' <span class="tmdb-result__year">(' + esc(r.year) + ')</span>' : '') + '</span>' +
-                '</button>';
-            }).join('');
-            results.hidden = false;
-          } catch (err) { results.hidden = false; results.innerHTML = '<div class="tmdb-results__empty">' + esc(err.message) + '</div>'; }
-        }, 400);
-      });
-
-      results.addEventListener('click', async function (e) {
-        var btn = e.target.closest('[data-tmdb-id]');
-        if (!btn) return;
-        var id = btn.getAttribute('data-tmdb-id');
-        btn.disabled = true;
-        try {
-          var data = await API.get('/admin/tmdb/movie/' + id);
-          var mv = data.movie;
-          function set(name, value) { var el = body.querySelector('[name="' + name + '"]'); if (el) el.value = value; }
-          set('title', mv.title);
-          set('tagline', mv.tagline);
-          set('certificate', mv.certificate);
-          set('runtime', mv.runtime);
-          set('releaseDate', mv.releaseDate);
-          set('rating', mv.rating);
-          set('director', mv.director);
-          set('genres', mv.genres.join(', '));
-          set('languages', mv.languages.join(', '));
-          set('cast', mv.cast.join(', '));
-          set('posterUrl', mv.posterUrl);
-          set('backdropUrl', mv.backdropUrl);
-          set('trailerUrl', mv.trailerUrl);
-          set('synopsis', mv.synopsis);
-          set('tmdbId', mv.tmdbId);
-          set('votes', mv.votes);
-          set('castPhotos', JSON.stringify(mv.castPhotos || {}));
-          input.value = mv.title;
-          hide();
-          toast('Filled from TMDB — review before saving', 'success');
-        } catch (err) { toast(err.message, 'error'); }
-      });
-
-
+      // "Refetch TMDB" button (has tmdbId)
       var refetchBtn = body.querySelector('#tmdb-refetch-btn');
       if (refetchBtn) {
-        refetchBtn.addEventListener('click', async function () {
-          var tmdbId = refetchBtn.getAttribute('data-tmdb-id');
-          refetchBtn.disabled = true;
-          refetchBtn.textContent = 'Fetching…';
+        refetchBtn.addEventListener('click', async function() {
+          refetchBtn.disabled = true; refetchBtn.textContent = 'Fetching...';
           try {
-            var data = await API.get('/admin/tmdb/movie/' + tmdbId);
+            var data = await API.get('/admin/tmdb/movie/' + refetchBtn.getAttribute('data-tmdb-id'));
             var mv = data.movie;
-            function setR(name, value) { var el = body.querySelector('[name="' + name + '"]'); if (el) el.value = value; }
-            setR('title', mv.title);
-            setR('tagline', mv.tagline);
-            setR('certificate', mv.certificate);
-            setR('runtime', mv.runtime);
-            setR('releaseDate', mv.releaseDate);
-            setR('rating', mv.rating);
-            setR('director', mv.director);
-            setR('genres', mv.genres.join(', '));
-            setR('languages', mv.languages.join(', '));
-            setR('cast', mv.cast.join(', '));
-            setR('posterUrl', mv.posterUrl);
-            setR('backdropUrl', mv.backdropUrl);
-            setR('trailerUrl', mv.trailerUrl);
-            setR('synopsis', mv.synopsis);
-            setR('tmdbId', mv.tmdbId);
-            setR('votes', mv.votes);
-            setR('castPhotos', JSON.stringify(mv.castPhotos || {}));
-            toast('✅ Re-fetched from TMDB — review & save', 'success');
-          } catch (err) { toast(err.message, 'error'); }
-          refetchBtn.disabled = false;
-          refetchBtn.textContent = '↻ Re-fetch from TMDB';
+            function setF(name, val) { var el = body.querySelector('[name="'+name+'"]'); if (el) el.value = val; }
+            setF('title', mv.title); setF('tagline', mv.tagline); setF('certificate', mv.certificate);
+            setF('runtime', mv.runtime); setF('releaseDate', mv.releaseDate); setF('rating', mv.rating);
+            setF('director', mv.director); setF('genres', mv.genres.join(', ')); setF('languages', mv.languages.join(', '));
+            setF('cast', mv.cast.join(', ')); setF('posterUrl', mv.posterUrl); setF('backdropUrl', mv.backdropUrl);
+            setF('trailerUrl', mv.trailerUrl); setF('synopsis', mv.synopsis);
+            setF('tmdbId', mv.tmdbId); setF('votes', mv.votes);
+            setF('castPhotos', JSON.stringify(mv.castPhotos || {}));
+            toast('Re-fetched from TMDB - review & save', 'success');
+          } catch(e) { toast(e.message, 'error'); }
+          refetchBtn.disabled = false; refetchBtn.textContent = 'Refetch TMDB';
         });
       }
-      var closeOnOutsideClick = function (e) {
-        if (!results.contains(e.target) && e.target !== input) hide();
-      };
-      document.addEventListener('click', closeOnOutsideClick);
-      var host = document.getElementById('modal-host');
-      var stop = new MutationObserver(function () {
-        if (host.hidden) { document.removeEventListener('click', closeOnOutsideClick); stop.disconnect(); }
+
+      results.addEventListener('click', async function(e) {
+        var btn = e.target.closest('[data-tmdb-id]');
+        if (!btn) return;
+        hide();
+        var tmdbId = btn.getAttribute('data-tmdb-id');
+        try {
+          var data = await API.get('/admin/tmdb/movie/' + tmdbId);
+          var mv = data.movie;
+          function set(name, val) { var el = body.querySelector('[name="'+name+'"]'); if (el) el.value = val; }
+          set('title', mv.title); set('tagline', mv.tagline); set('certificate', mv.certificate);
+          set('runtime', mv.runtime); set('releaseDate', mv.releaseDate); set('rating', mv.rating);
+          set('director', mv.director); set('genres', mv.genres.join(', ')); set('languages', mv.languages.join(', '));
+          set('cast', mv.cast.join(', ')); set('posterUrl', mv.posterUrl); set('backdropUrl', mv.backdropUrl);
+          set('trailerUrl', mv.trailerUrl); set('synopsis', mv.synopsis);
+          set('tmdbId', mv.tmdbId); set('votes', mv.votes);
+          set('castPhotos', JSON.stringify(mv.castPhotos || {}));
+          input.value = mv.title;
+        } catch(e) { toast(e.message, 'error'); }
       });
-      stop.observe(host, { attributes: true, attributeFilter: ['hidden'] });
+
+      document.addEventListener('click', function closeOut(e) {
+        if (!body.contains(e.target)) { hide(); document.removeEventListener('click', closeOut); }
+      });
     }
+
+    paint('');
   }
 
   // ── Cinemas ──────────────────────────────────────────────────────────────
@@ -710,9 +652,7 @@
 
   // ── Screens ──────────────────────────────────────────────────────────────
   async function pageScreens(content, topActions) {
-    topActions.innerHTML =
-      '<button class="btn btn--ghost" data-action="purge">' + icon('trash', 17) + ' Purge all screens</button> ' +
-      '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add screen</button>';
+    topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add screen</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
     var results = await Promise.all([API.get('/admin/screens'), API.cinemas('')]);
     var data = results[0];
@@ -732,10 +672,6 @@
         }).join('') : '<tr><td colspan="7" class="empty-state">No screens yet.</td></tr>') +
       '</tbody></table></div></div></div>';
 
-    function parseBlockedSeats(raw) {
-      return String(raw || '').split(/[,\s]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-    }
-
     function form(screen) {
       var s = screen || {};
       return h('<div class="form-grid">' +
@@ -748,36 +684,16 @@
         field('Sound system', 'soundSystem', s.soundSystem || 'Dolby 7.1', { options: ['Dolby 7.1', 'Dolby Atmos', 'IMAX 12.1'] }) +
         field('Seat layout', 'layoutPreset', s.layoutPreset || 'standard', {
           options: data.layoutPresets,
-          hint: 'standard ≈ 104 seats, compact ≈ 64, imax ≈ 116, grand/twin ≈ 5-tier luxe layouts',
-        }) +
-        field('Blocked seats', 'blockedSeats', (s.blockedSeats || []).join(', '), {
-          type: 'textarea', span: true, placeholder: 'e.g. RC3, RC4, RC5, P110, P111',
-          hint: 'Comma or space separated seat IDs (row+number) — pillar/no-view seats.',
+          hint: 'standard ≈ 104 seats, compact ≈ 64, imax ≈ 116',
         }) +
         '</div>');
     }
-
-    topActions.querySelector('[data-action="purge"]').addEventListener('click', async function () {
-      var ok = await confirmDialog(
-        'Purge ALL screens?',
-        'This permanently deletes every screen, showtime, booking and seat hold — including real ones, not just demo data. Use this only to clear out dummy/seed screens before adding real ones.',
-        'Purge everything'
-      );
-      if (!ok) return;
-      try {
-        var res = await API.post('/admin/purge-dummy-screens', {});
-        toast('Purged ' + res.purged.screens + ' screens, ' + res.purged.showtimes + ' showtimes, ' + res.purged.bookings + ' bookings', 'success');
-        navigate('screens');
-      } catch (err) { toast(err.message, 'error'); }
-    });
 
     topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
       var m = modal({ title: 'Add screen', body: form(null), confirmLabel: 'Create screen' });
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
-          var raw = readForm(m.body);
-          raw.blockedSeats = parseBlockedSeats(raw.blockedSeats);
-          await API.post('/admin/screens', raw);
+          await API.post('/admin/screens', readForm(m.body));
           toast('Screen created', 'success');
           navigate('screens');
         });
@@ -796,7 +712,6 @@
             var raw = readForm(m.body);
             await API.put('/admin/screens/' + screen.id, {
               name: raw.name, format: raw.format, soundSystem: raw.soundSystem, layoutPreset: raw.layoutPreset,
-              blockedSeats: parseBlockedSeats(raw.blockedSeats),
             });
             toast('Screen updated', 'success');
             navigate('screens');
@@ -819,288 +734,213 @@
   // ── Showtimes ────────────────────────────────────────────────────────────
   async function pageShowtimes(content, topActions) {
     topActions.innerHTML =
-      '<button class="btn btn--ghost" data-action="generate">' + icon('refresh', 17) + ' Auto-schedule</button> ' +
-      '<button class="btn btn--ghost btn--danger" data-action="clear-showtimes" style="color:#dc2626;border-color:#dc2626">' + icon('trash', 17) + ' Clear all showtimes</button> ' +
-      '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add showtime</button>';
+      '<button class="btn btn--ghost" data-action="generate">' + icon('refresh', 17) + ' Auto-schedule</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
 
     var today = new Date().toISOString().slice(0, 10);
+    var currentDate = today;
     var results = await Promise.all([API.movies(''), API.cinemas(''), API.get('/admin/screens')]);
-    var movies = results[0].movies.filter(function (m) { return m.status === 'now_playing' || m.status === 'coming_soon'; });
-    var allMovies = results[0].movies;
+    var movies = results[0].movies.filter(function(m) { return m.status === 'now_playing'; });
     var cinemas = results[1].cinemas;
     var screens = results[2].screens;
 
-    // expanded movie id
-    var expandedMovieId = null;
+    async function render() {
+      content.innerHTML =
+        '<div class="panel" style="margin-top:0"><div class="panel__head">' +
+          '<h2 class="panel__title">Schedule</h2>' +
+          '<input class="input" type="date" data-date value="' + currentDate + '" style="width:auto">' +
+          '<select class="input" data-cinema style="width:auto;min-width:200px">' +
+            '<option value="">All cinemas</option>' +
+            cinemas.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join('') +
+          '</select>' +
+        '</div><div class="panel__body" style="padding:0" data-movie-groups></div></div>';
 
-    content.innerHTML =
-      '<div class="panel" style="margin-top:0"><div class="panel__head">' +
-        '<h2 class="panel__title">Schedule</h2>' +
-        '<input class="input" type="date" data-date value="' + today + '" style="width:auto">' +
-        '<select class="input" data-cinema style="width:auto;min-width:200px">' +
-          '<option value="">All cinemas</option>' +
-          cinemas.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join('') +
-        '</select>' +
-      '</div>' +
-      '<div style="padding:0 16px 6px;font-size:12px;color:var(--muted)">Click a movie row to view and manage its showtimes for the selected date.</div>' +
-      '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Movie</th><th>Status</th><th>Languages</th><th class="num">Showtimes</th><th></th></tr></thead>' +
-        '<tbody data-movie-rows><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>' +
-      '</table></div></div></div>';
+      var dateInput = content.querySelector('[data-date]');
+      var cinemaSelect = content.querySelector('[data-cinema]');
+      var groupsContainer = content.querySelector('[data-movie-groups]');
 
-    var movieTbody = content.querySelector('[data-movie-rows]');
-    var dateInput = content.querySelector('[data-date]');
-    var cinemaSelect = content.querySelector('[data-cinema]');
+      async function loadShowtimes() {
+        groupsContainer.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Loading…</div>';
+        
+        var qs = 'date=' + currentDate + (cinemaSelect.value ? '&cinemaId=' + cinemaSelect.value : '') + '&limit=400';
+        var data = await API.get('/showtimes?' + qs);
+        
+        // Group showtimes by movie
+        var movieGroups = {};
+        data.showtimes.forEach(function(s) {
+          if (!s.movie) return;
+          if (!movieGroups[s.movie.id]) {
+            movieGroups[s.movie.id] = {
+              movie: s.movie,
+              showtimes: []
+            };
+          }
+          movieGroups[s.movie.id].showtimes.push(s);
+        });
 
-    // All showtimes for the day (cached on load)
-    var dayShowtimes = [];
-
-    function countForMovie(movieId) {
-      return dayShowtimes.filter(function (s) { return s.movie && s.movie.id === movieId; }).length;
-    }
-
-    function renderMovieRows() {
-      if (!movies.length) {
-        movieTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No active movies found.</td></tr>';
-        return;
-      }
-      var html = '';
-      movies.forEach(function (m) {
-        var pill = m.status === 'now_playing' ? 'pill--green' : 'pill--purple';
-        var label = m.status === 'now_playing' ? 'Now Playing' : 'Coming Soon';
-        var count = countForMovie(m.id);
-        var isExpanded = expandedMovieId === m.id;
-        html +=
-          '<tr class="movie-row" data-movie-row="' + esc(m.id) + '" style="cursor:pointer;' + (isExpanded ? 'background:var(--surface-alt,#f5f0ff22);border-left:3px solid #7c3aed' : '') + '">' +
-            '<td><div style="display:flex;align-items:center;gap:10px">' +
-              '<span style="font-size:13px;color:#7c3aed;transition:transform .2s;display:inline-block;transform:rotate(' + (isExpanded ? '90' : '0') + 'deg)">▶</span>' +
-              '<img src="' + esc(m.posterUrl) + '" alt="" style="width:30px;height:42px;border-radius:4px;object-fit:cover">' +
-              '<div><div class="cell-strong">' + esc(m.title) + '</div>' +
-              '<div class="cell-sub">' + esc(m.certificate) + ' · ' + esc(m.runtime) + 'm</div></div>' +
-            '</div></td>' +
-            '<td><span class="pill ' + pill + '">' + esc(label) + '</span></td>' +
-            '<td>' + esc((m.languages || []).join(', ')) + '</td>' +
-            '<td class="num"><span style="background:#7c3aed22;color:#7c3aed;padding:2px 10px;border-radius:10px;font-weight:600;font-size:13px">' + count + '</span></td>' +
-            '<td><button class="btn btn--ghost btn--sm" data-add-for="' + esc(m.id) + '" style="white-space:nowrap">' + icon('plus', 14) + ' Add</button></td>' +
-          '</tr>';
-        if (isExpanded) {
-          html += '<tr data-showtimes-row="' + esc(m.id) + '"><td colspan="5" style="padding:0;background:#faf8ff">' +
-            '<div style="padding:12px 16px">' + renderShowtimesForMovie(m.id) + '</div>' +
-          '</td></tr>';
+        var movieList = Object.values(movieGroups);
+        
+        if (movieList.length === 0) {
+          groupsContainer.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">No showtimes scheduled for this date.</div>';
+          return;
         }
-      });
-      movieTbody.innerHTML = html;
-    }
 
-    function renderShowtimesForMovie(movieId) {
-      var list = dayShowtimes.filter(function (s) { return s.movie && s.movie.id === movieId; });
-      if (!list.length) {
-        return '<div style="color:var(--muted);font-size:13px;padding:8px 0">No showtimes on this date. <button class="btn btn--ghost btn--sm" data-add-for="' + esc(movieId) + '" style="margin-left:8px">' + icon('plus', 14) + ' Add showtime</button></div>';
-      }
-      var rows = list.map(function (s) {
-        var pct = s.capacity ? Math.round((s.seatsBooked / s.capacity) * 100) : 0;
-        return '<tr>' +
-          '<td class="cell-strong" style="font-size:14px;color:#7c3aed">' + time12(s.time) + '</td>' +
-          '<td>' + esc(s.cinema ? s.cinema.name : '—') + '</td>' +
-          '<td>' + esc(s.screen ? s.screen.name : '—') + '</td>' +
-          '<td><span style="background:#e0e7ff;color:#3730a3;padding:1px 8px;border-radius:8px;font-size:12px">' + esc(s.format) + '</span></td>' +
-          '<td>' + esc(s.language) + '</td>' +
-          '<td class="num">' + (function(p){var v=p.silver||p.gold||p.platinum||p.recliner||p.sofa||p.regular||0;return money(v)+'+';})((s.prices||{})) + '</td>' +
-          '<td class="num">' + s.seatsBooked + '/' + s.capacity + ' <span class="cell-sub">(' + pct + '%)</span></td>' +
-          '<td style="white-space:nowrap">' +
-            (s.status === 'cancelled' ? '<span class="pill pill--red">cancelled</span> ' : '') +
-            '<button class="btn btn--ghost btn--sm" data-edit-showtime="' + esc(s.id) + '" data-movie-id="' + esc(movieId) + '" style="margin-right:4px">Edit</button>' +
-            '<button class="btn btn--line btn--sm" data-del="' + esc(s.id) + '">Delete</button>' +
-          '</td></tr>';
-      }).join('');
-      return '<table style="width:100%;font-size:13px;border-collapse:collapse">' +
-        '<thead><tr style="color:var(--muted);font-size:11px;text-transform:uppercase">' +
-          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Time</th>' +
-          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Cinema</th>' +
-          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Screen</th>' +
-          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Format</th>' +
-          '<th style="text-align:left;padding:4px 8px 6px 0;font-weight:600">Language</th>' +
-          '<th style="text-align:right;padding:4px 8px 6px 0;font-weight:600">Price</th>' +
-          '<th style="text-align:right;padding:4px 8px 6px 0;font-weight:600">Seats</th>' +
-          '<th></th>' +
-        '</tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-      '</table>';
-    }
+        groupsContainer.innerHTML = movieList.map(function(group) {
+          var m = group.movie;
+          return '<div class="movie-group" style="border-bottom:1px solid var(--line)">' +
+            '<div class="movie-group__header" style="padding:16px 20px;background:#fafafa;display:flex;align-items:center;gap:12px;cursor:pointer" data-movie-id="' + esc(m.id) + '">' +
+              '<img src="' + esc(m.posterUrl) + '" alt="" style="width:40px;height:56px;border-radius:6px;object-fit:cover">' +
+              '<div style="flex:1">' +
+                '<div class="cell-strong" style="font-size:15px">' + esc(m.title) + '</div>' +
+                '<div class="cell-sub">' + esc((m.languages || []).join(', ')) + ' · ' + esc((m.genres || []).slice(0,2).join(', ')) + '</div>' +
+              '</div>' +
+              '<span class="pill pill--purple" style="margin-right:8px">' + group.showtimes.length + ' show' + (group.showtimes.length !== 1 ? 's' : '') + '</span>' +
+              '<button class="btn btn--ghost btn--sm" data-add-for-movie="' + esc(m.id) + '" onclick="event.stopPropagation()">' + icon('plus', 15) + ' Add show</button>' +
+              '<span class="toggle-icon" style="color:var(--muted);transition:transform 0.2s">' + icon('chevron-down', 18) + '</span>' +
+            '</div>' +
+            '<div class="movie-group__shows" style="display:none" data-shows-for="' + esc(m.id) + '">' +
+              '<div class="table-wrap"><table>' +
+                '<thead><tr><th>Time</th><th>Cinema</th><th>Screen</th><th>Format</th><th>Language</th><th class="num">Price</th><th class="num">Seats</th><th></th></tr></thead>' +
+                '<tbody>' +
+                  group.showtimes.map(function(s) {
+                    var pct = s.capacity ? Math.round((s.seatsBooked / s.capacity) * 100) : 0;
+                    return '<tr>' +
+                      '<td class="cell-strong">' + esc(s.time) + '</td>' +
+                      '<td>' + esc(s.cinema ? s.cinema.name : '—') + '</td>' +
+                      '<td>' + esc(s.screen ? s.screen.name : '—') + '</td>' +
+                      '<td>' + esc(s.format) + '</td>' +
+                      '<td>' + esc(s.language) + '</td>' +
+                      '<td class="num">' + money(s.prices.regular) + '</td>' +
+                      '<td class="num">' + s.seatsBooked + '/' + s.capacity + ' <span class="cell-sub">(' + pct + '%)</span></td>' +
+                      '<td style="white-space:nowrap">' +
+                        (s.status === 'cancelled' ? '<span class="pill pill--red">cancelled</span> ' : '') +
+                        '<button class="btn btn--ghost btn--sm" data-edit-show="' + esc(s.id) + '">Edit</button> ' +
+                        '<button class="btn btn--line btn--sm" data-del-show="' + esc(s.id) + '">Delete</button>' +
+                      '</td></tr>';
+                  }).join('') +
+                '</tbody>' +
+              '</table></div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
 
-    async function load() {
-      var qs = 'date=' + dateInput.value + (cinemaSelect.value ? '&cinemaId=' + cinemaSelect.value : '') + '&limit=400';
-      var data = await API.get('/showtimes?' + qs);
-      dayShowtimes = data.showtimes || [];
-      renderMovieRows();
-    }
-
-    dateInput.addEventListener('change', function () { expandedMovieId = null; load(); });
-    cinemaSelect.addEventListener('change', function () { expandedMovieId = null; load(); });
-
-    // AM/PM time picker helper - renders hour/min/period selects, writes back as HH:MM 24h to a hidden input named `name`
-    function timePickerField(label, name, value24h) {
-      var val = value24h || '19:00';
-      var parts = val.split(':');
-      var h24 = parseInt(parts[0], 10) || 19;
-      var mins = parts[1] || '00';
-      var period = h24 >= 12 ? 'PM' : 'AM';
-      var h12 = h24 % 12; if (h12 === 0) h12 = 12;
-
-      var hourOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(function(h) {
-        return '<option value="' + h + '"' + (h === h12 ? ' selected' : '') + '>' + h + '</option>';
-      }).join('');
-      var minOpts = ['00','05','10','15','20','25','30','35','40','45','50','55'].map(function(m) {
-        return '<option value="' + m + '"' + (m === mins ? ' selected' : '') + '>' + m + '</option>';
-      }).join('');
-      var periodOpts = ['AM','PM'].map(function(p) {
-        return '<option value="' + p + '"' + (p === period ? ' selected' : '') + '>' + p + '</option>';
-      }).join('');
-
-      return '<div class="form-row">' +
-        '<label class="label" for="tp-hour-' + name + '">' + esc(label) + '</label>' +
-        '<div style="display:flex;gap:6px;align-items:center">' +
-          '<select class="input" id="tp-hour-' + name + '" data-tp-hour="' + name + '" style="width:70px;text-align:center">' + hourOpts + '</select>' +
-          '<span style="font-weight:700;font-size:18px;color:var(--ink-soft);line-height:1">:</span>' +
-          '<select class="input" data-tp-min="' + name + '" style="width:70px;text-align:center">' + minOpts + '</select>' +
-          '<select class="input" data-tp-period="' + name + '" style="width:70px;text-align:center">' + periodOpts + '</select>' +
-        '</div>' +
-        '<input type="hidden" name="' + name + '" value="' + esc(val) + '">' +
-      '</div>';
-    }
-
-    function wireTimePicker(body, name) {
-      function update() {
-        var h = parseInt(body.querySelector('[data-tp-hour="' + name + '"]').value, 10);
-        var m = body.querySelector('[data-tp-min="' + name + '"]').value;
-        var p = body.querySelector('[data-tp-period="' + name + '"]').value;
-        var h24 = p === 'PM' ? (h === 12 ? 12 : h + 12) : (h === 12 ? 0 : h);
-        body.querySelector('[name="' + name + '"]').value = String(h24).padStart(2, '0') + ':' + m;
-      }
-      body.querySelector('[data-tp-hour="' + name + '"]').addEventListener('change', update);
-      body.querySelector('[data-tp-min="' + name + '"]').addEventListener('change', update);
-      body.querySelector('[data-tp-period="' + name + '"]').addEventListener('change', update);
-    }
-
-    function openAddShowtime(movieId) {
-      var body = h('<div class="form-grid">' +
-        field('Movie', 'movieId', movieId || '', { span: true, options: allMovies.map(function (m) { return { value: m.id, label: m.title }; }) }) +
-        field('Screen', 'screenId', '', { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
-        field('Date', 'date', dateInput.value, { type: 'date' }) +
-        timePickerField('Time', 'time', '19:00') +
-        field('Language', 'language', '', {
-          options: [
-            { value: '', label: 'Default (movie\u2019s first language)' },
-            { value: 'Hindi', label: 'Hindi' }, { value: 'English', label: 'English' },
-            { value: 'Telugu', label: 'Telugu' }, { value: 'Tamil', label: 'Tamil' },
-            { value: 'Kannada', label: 'Kannada' }, { value: 'Gujarati', label: 'Gujarati' },
-          ],
-        }) +
-        '</div>');
-      wireTimePicker(body, 'time');
-      var m = modal({ title: 'Add showtime', body: body, confirmLabel: 'Create showtime' });
-      m.confirmBtn.addEventListener('click', function () {
-        submitModal(m, async function () {
-          var raw = readForm(m.body);
-          await API.post('/admin/showtimes', {
-            movieId: raw.movieId, screenId: raw.screenId, date: raw.date, time: raw.time,
-            language: raw.language || undefined,
+        // Toggle movie groups
+        groupsContainer.querySelectorAll('.movie-group__header').forEach(function(header) {
+          header.addEventListener('click', function() {
+            var movieId = header.getAttribute('data-movie-id');
+            var showsDiv = groupsContainer.querySelector('[data-shows-for="' + movieId + '"]');
+            var icon = header.querySelector('.toggle-icon');
+            var isOpen = showsDiv.style.display !== 'none';
+            
+            showsDiv.style.display = isOpen ? 'none' : 'block';
+            icon.style.transform = isOpen ? 'none' : 'rotate(180deg)';
           });
-          toast('Showtime created', 'success');
-          if (movieId) expandedMovieId = movieId;
-          load();
         });
-      });
-    }
 
-    function openEditShowtime(showtimeId, movieId) {
-      var s = dayShowtimes.find(function (x) { return x.id === showtimeId; });
-      if (!s) return;
-      var body = h('<div class="form-grid">' +
-        field('Screen', 'screenId', s.screen ? s.screen.id : '', { span: true, options: screens.map(function (sc) { return { value: sc.id, label: sc.cinemaName + ' — ' + sc.name + ' (' + sc.format + ')' }; }) }) +
-        field('Date', 'date', dateInput.value, { type: 'date' }) +
-        timePickerField('Time', 'time', s.time || '19:00') +
-        field('Language', 'language', s.language || '', {
-          options: [
-            { value: '', label: 'Default' }, { value: 'Hindi', label: 'Hindi' }, { value: 'English', label: 'English' },
-            { value: 'Telugu', label: 'Telugu' }, { value: 'Tamil', label: 'Tamil' },
-            { value: 'Kannada', label: 'Kannada' }, { value: 'Gujarati', label: 'Gujarati' },
-          ],
-        }) +
-        '</div>');
-      wireTimePicker(body, 'time');
-      var m = modal({ title: 'Edit showtime — ' + (s.movie ? s.movie.title : ''), body: body, confirmLabel: 'Save changes' });
-      m.confirmBtn.addEventListener('click', function () {
-        submitModal(m, async function () {
-          var raw = readForm(m.body);
-          await API.put('/admin/showtimes/' + showtimeId, {
-            screenId: raw.screenId, date: raw.date, time: raw.time,
-            language: raw.language || undefined,
+        // Handle Add show button
+        groupsContainer.querySelectorAll('[data-add-for-movie]').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var movieId = btn.getAttribute('data-add-for-movie');
+            var movie = movies.find(function(m) { return m.id === movieId; });
+            if (!movie) return;
+
+            var body = h('<div class="form-grid">' +
+              '<div class="form-row col-span" style="background:var(--primary-soft);padding:12px;border-radius:8px;margin-bottom:8px">' +
+                '<div class="cell-strong" style="color:var(--primary-dark)">' + esc(movie.title) + '</div>' +
+                '<div class="cell-sub">' + esc((movie.languages || []).join(', ')) + '</div>' +
+              '</div>' +
+              field('Screen', 'screenId', '', { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
+              field('Date', 'date', currentDate, { type: 'date' }) +
+              field('Time (HH:MM)', 'time', '19:00', { placeholder: '19:00' }) +
+              field('Base ticket price', 'basePrice', 240, { type: 'number', hint: 'Premium = 1.5×, VIP = 2.2×' }) +
+              field('Language', 'language', (movie.languages && movie.languages[0]) || '', { placeholder: "Defaults to the movie's first language" }) +
+              '</div>');
+            var m = modal({ title: 'Add showtime for ' + movie.title, body: body, confirmLabel: 'Create showtime' });
+            m.confirmBtn.addEventListener('click', function () {
+              submitModal(m, async function () {
+                var raw = readForm(m.body);
+                await API.post('/admin/showtimes', {
+                  movieId: movie.id, screenId: raw.screenId, date: raw.date, time: raw.time,
+                  basePrice: Number(raw.basePrice), language: raw.language || undefined,
+                });
+                toast('Showtime created', 'success');
+                loadShowtimes();
+              });
+            });
           });
-          toast('Showtime updated', 'success');
-          if (movieId) expandedMovieId = movieId;
-          load();
         });
+
+        // Handle Edit
+        groupsContainer.querySelectorAll('[data-edit-show]').forEach(function(btn) {
+          btn.addEventListener('click', async function() {
+            var showtimeId = btn.getAttribute('data-edit-show');
+            var qs = 'date=' + currentDate + (cinemaSelect.value ? '&cinemaId=' + cinemaSelect.value : '') + '&limit=400';
+            var data = await API.get('/showtimes?' + qs);
+            var showtime = data.showtimes.find(function(s) { return s.id === showtimeId; });
+            
+            if (showtime) {
+              var body = h('<div class="form-grid">' +
+                field('Screen', 'screenId', showtime.screenId, { span: true, options: screens.map(function (s) { return { value: s.id, label: s.cinemaName + ' — ' + s.name + ' (' + s.format + ')' }; }) }) +
+                field('Date', 'date', showtime.date, { type: 'date' }) +
+                field('Time (HH:MM)', 'time', showtime.time, { placeholder: '19:00' }) +
+                field('Base ticket price', 'basePrice', showtime.prices.regular, { type: 'number', hint: 'Premium = 1.5×, VIP = 2.2×' }) +
+                field('Language', 'language', showtime.language, { placeholder: "Defaults to the movie's first language" }) +
+                '</div>');
+              var m = modal({ title: 'Edit showtime', body: body, confirmLabel: 'Save changes' });
+              m.confirmBtn.addEventListener('click', function () {
+                submitModal(m, async function () {
+                  var raw = readForm(m.body);
+                  await API.put('/admin/showtimes/' + showtimeId, {
+                    screenId: raw.screenId, date: raw.date, time: raw.time,
+                    basePrice: Number(raw.basePrice), language: raw.language || undefined,
+                  });
+                  toast('Showtime updated', 'success');
+                  loadShowtimes();
+                });
+              });
+            }
+          });
+        });
+
+        // Handle Delete
+        groupsContainer.querySelectorAll('[data-del-show]').forEach(function(btn) {
+          btn.addEventListener('click', async function() {
+            var ok = await confirmDialog('Delete this showtime?', 'Showtimes with confirmed bookings are marked cancelled instead of deleted.', 'Delete');
+            if (!ok) return;
+            try {
+              var res = await API.del('/admin/showtimes/' + btn.getAttribute('data-del-show'));
+              toast(res.cancelled ? res.reason : 'Showtime deleted', res.cancelled ? undefined : 'success');
+              loadShowtimes();
+            } catch (err) { toast(err.message, 'error'); }
+          });
+        });
+      }
+
+      dateInput.addEventListener('change', function() {
+        currentDate = dateInput.value;
+        loadShowtimes();
       });
+      cinemaSelect.addEventListener('change', loadShowtimes);
+
+      await loadShowtimes();
     }
 
-    movieTbody.addEventListener('click', async function (event) {
-      var addBtn = event.target.closest('[data-add-for]');
-      var editBtn = event.target.closest('[data-edit-showtime]');
-      var delBtn = event.target.closest('[data-del]');
-      var movieRow = event.target.closest('[data-movie-row]');
-
-      if (addBtn) { event.stopPropagation(); openAddShowtime(addBtn.getAttribute('data-add-for')); return; }
-
-      if (editBtn) {
-        event.stopPropagation();
-        openEditShowtime(editBtn.getAttribute('data-edit-showtime'), editBtn.getAttribute('data-movie-id'));
-        return;
-      }
-
-      if (delBtn) {
-        event.stopPropagation();
-        var ok = await confirmDialog('Delete this showtime?', 'Showtimes with confirmed bookings are marked cancelled instead of deleted.', 'Delete');
-        if (!ok) return;
-        try {
-          var res = await API.del('/admin/showtimes/' + delBtn.getAttribute('data-del'));
-          toast(res.cancelled ? res.reason : 'Showtime deleted', res.cancelled ? undefined : 'success');
-          load();
-        } catch (err) { toast(err.message, 'error'); }
-        return;
-      }
-
-      if (movieRow && !addBtn && !editBtn && !delBtn) {
-        var mid = movieRow.getAttribute('data-movie-row');
-        expandedMovieId = expandedMovieId === mid ? null : mid;
-        renderMovieRows();
-      }
-    });
-
-    topActions.querySelector('[data-action="generate"]').addEventListener('click', async function () {
+    topActions.querySelector('[data-action="generate"]').addEventListener('click', async function (btn) {
+      btn.disabled = true;
+      var oldText = btn.textContent;
+      btn.textContent = 'Scheduling…';
       try {
         var res = await API.post('/admin/showtimes/generate');
         toast(res.created ? 'Scheduled ' + res.created + ' new showtimes' : 'Schedule already complete', 'success');
-        load();
-      } catch (err) { toast(err.message, 'error'); }
+        navigate('showtimes');
+      } catch (err) { 
+        toast(err.message, 'error'); 
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
     });
 
-    topActions.querySelector('[data-action="clear-showtimes"]').addEventListener('click', async function () {
-      var ok = await confirmDialog('Clear all showtimes?', 'This removes every showtime and seat hold. Existing bookings are kept. This cannot be undone.', 'Clear all showtimes');
-      if (!ok) return;
-      try {
-        var res = await API.post('/admin/clear-showtimes');
-        toast('Cleared ' + res.cleared.showtimes + ' showtimes and ' + res.cleared.seatHolds + ' seat holds', 'success');
-        load();
-      } catch (err) { toast(err.message, 'error'); }
-    });
-
-    topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
-      openAddShowtime(null);
-    });
-
-    await load();
+    await render();
   }
 
   // ── Bookings ─────────────────────────────────────────────────────────────
@@ -1333,10 +1173,12 @@
   async function pageOffers(content, topActions) {
     topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add offer</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
-    var data = await API.offers();
+    // Use the admin endpoint (not the public /offers coupon list) so showcase-
+    // only offers such as the wedding packages remain editable here.
+    var data = await API.get('/admin/offers');
 
     content.innerHTML =
-      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.offers.length + ' active offers</h2></div>' +
+      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.offers.length + ' offers</h2></div>' +
       '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
         '<thead><tr><th>Offer</th><th>Code</th><th>Discount</th><th>Applies to</th><th class="num">Min spend</th><th class="num">Max off</th><th></th></tr></thead>' +
         '<tbody>' + (data.offers.length ? data.offers.map(function (o) {
@@ -1366,17 +1208,22 @@
         field('Discount value', 'discountValue', o.discountValue || 10, { type: 'number' }) +
         field('Max discount', 'maxDiscount', o.maxDiscount || 0, { type: 'number' }) +
         field('Minimum order', 'minAmount', o.minAmount || 0, { type: 'number' }) +
+        field('Sort order', 'order', (o.order === 0 || o.order) ? o.order : '', { type: 'number', placeholder: 'Lower shows first' }) +
+        field('Showcase only (Home, not a coupon)', 'showcase', o.showcase ? 'true' : 'false', { options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] }) +
         field('Banner URL', 'bannerUrl', o.bannerUrl || '/img/banners/best-ticket-offers.svg', { span: true }) +
         '</div>');
     }
 
     function payloadFrom(body) {
       var raw = readForm(body);
-      return {
+      var out = {
         title: raw.title, subtitle: raw.subtitle, code: raw.code, appliesTo: raw.appliesTo,
         discountType: raw.discountType, discountValue: Number(raw.discountValue),
         maxDiscount: Number(raw.maxDiscount), minAmount: Number(raw.minAmount), bannerUrl: raw.bannerUrl,
+        showcase: raw.showcase === 'true',
       };
+      if (raw.order !== '' && raw.order !== undefined && raw.order !== null) out.order = Number(raw.order);
+      return out;
     }
 
     topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
@@ -1416,53 +1263,62 @@
     });
   }
 
-  // ── Experiences (pool party, water park, wedding, etc.) ────────────────────
+  // ── Experiences ────────────────────────────────────────────────────────────
   async function pageExperiences(content, topActions) {
     topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add experience</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
+    // Admin listing includes inactive experiences that /experiences hides.
     var data = await API.get('/admin/experiences');
+    var items = data.experiences;
 
     content.innerHTML =
-      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.experiences.length + ' experiences</h2></div>' +
+      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + items.length + ' experiences</h2>' +
+        '<span class="hint">Inactive experiences are hidden from the customer app.</span></div>' +
       '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Package</th><th>Category</th><th>Price</th><th>Badge</th><th class="num">Order</th><th>Status</th><th></th></tr></thead>' +
-        '<tbody>' + (data.experiences.length ? data.experiences.map(function (e) {
-          return '<tr><td><div class="cell-strong">' + esc(e.title) + '</div><div class="cell-sub">' + esc(e.subtitle || '') + '</div></td>' +
-            '<td><span class="pill pill--purple">' + esc(e.category) + '</span></td>' +
-            '<td>' + esc(e.priceLabel || '\u2014') + '</td>' +
-            '<td>' + esc(e.badge || '\u2014') + '</td>' +
-            '<td class="num">' + esc(e.order || 0) + '</td>' +
-            '<td>' + (e.active !== false ? '<span class="pill pill--green">Active</span>' : '<span class="pill">Hidden</span>') + '</td>' +
+        '<thead><tr><th>Experience</th><th>Category</th><th>Price</th><th>Order</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + (items.length ? items.map(function (e) {
+          return '<tr><td><div style="display:flex;align-items:center;gap:11px">' +
+              '<img src="' + esc(e.imageUrl) + '" alt="" style="width:38px;height:38px;border-radius:7px;object-fit:cover">' +
+              '<div class="cell-strong">' + esc(e.title) + '</div></div></td>' +
+            '<td>' + esc(e.category || '—') + '</td>' +
+            '<td>' + esc(e.priceLabel || '—') + '</td>' +
+            '<td>' + esc((e.order === 0 || e.order) ? e.order : '—') + '</td>' +
+            '<td><span class="pill ' + (e.active === false ? 'pill--amber' : 'pill--green') + '">' + (e.active === false ? 'Inactive' : 'Active') + '</span></td>' +
             '<td style="white-space:nowrap">' +
               '<button class="btn btn--ghost btn--sm" data-edit="' + esc(e.id) + '">Edit</button> ' +
               '<button class="btn btn--line btn--sm" data-del="' + esc(e.id) + '">Delete</button></td></tr>';
-        }).join('') : '<tr><td colspan="7" class="empty-state">No experiences yet.</td></tr>') +
+        }).join('') : '<tr><td colspan="6" class="empty-state">No experiences yet.</td></tr>') +
       '</tbody></table></div></div></div>';
 
-    function form(exp) {
-      var e = exp || {};
+    var categories = ['Weddings', 'Celebrations', 'Get Togethers', 'Family'];
+
+    function form(item) {
+      var f = item || {};
       return h('<div class="form-grid">' +
-        field('Title', 'title', e.title, { span: true, placeholder: 'Private Pool Party' }) +
-        field('Category', 'category', e.category, { placeholder: 'Pool Party' }) +
-        field('Badge (optional)', 'badge', e.badge, { placeholder: 'Popular' }) +
-        field('Subtitle', 'subtitle', e.subtitle, { type: 'textarea', span: true, placeholder: 'One line describing the package' }) +
-        field('Price label', 'priceLabel', e.priceLabel, { placeholder: '\u20B94,999' }) +
-        field('Price note', 'priceNote', e.priceNote, { placeholder: 'up to 20 people' }) +
-        field('Icon', 'icon', e.icon || 'sparkle', { options: ['sparkle', 'waves', 'users', 'cake', 'music', 'heart', 'gift', 'star', 'tag'] }) +
-        field('Card color', 'color', e.color || '#7C3AED', { type: 'color' }) +
-        field('Features (comma separated)', 'features', (e.features || []).join(', '), { type: 'textarea', span: true, placeholder: 'Unlimited tea, Music system, Free parking' }) +
-        field('Display order', 'order', e.order || 1, { type: 'number' }) +
-        field('Status', 'active', e.active === false ? 'false' : 'true', { options: [{ value: 'true', label: 'Active (visible to customers)' }, { value: 'false', label: 'Hidden' }] }) +
+        field('Title', 'title', f.title, { span: true }) +
+        field('Category', 'category', f.category || 'Celebrations', { options: categories }) +
+        field('Image URL', 'imageUrl', f.imageUrl || '/img/experiences/_placeholder.svg', { span: true }) +
+        field('Price label', 'priceLabel', f.priceLabel || 'Custom packages') +
+        field('Price note', 'priceNote', f.priceNote) +
+        field('Badge', 'badge', f.badge || '', { placeholder: 'e.g. Popular (optional)' }) +
+        field('Sort order', 'order', (f.order === 0 || f.order) ? f.order : '', { type: 'number', placeholder: 'Lower shows first' }) +
+        field('Active', 'active', f.active === false ? 'false' : 'true', { options: [{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }] }) +
+        field('Subtitle', 'subtitle', f.subtitle, { type: 'textarea', span: true }) +
+        field('Features (comma separated)', 'features', (f.features || []).join(', '), { type: 'textarea', span: true }) +
         '</div>');
     }
 
     function payloadFrom(body) {
       var raw = readForm(body);
-      return {
-        title: raw.title, category: raw.category, badge: raw.badge, subtitle: raw.subtitle,
-        priceLabel: raw.priceLabel, priceNote: raw.priceNote, icon: raw.icon, color: raw.color,
-        features: csvList(raw.features), order: Number(raw.order) || 0, active: raw.active === 'true',
+      var out = {
+        title: raw.title, category: raw.category, imageUrl: raw.imageUrl,
+        priceLabel: raw.priceLabel, priceNote: raw.priceNote,
+        badge: raw.badge ? raw.badge : null,
+        subtitle: raw.subtitle, features: csvList(raw.features),
+        active: raw.active === 'true',
       };
+      if (raw.order !== '' && raw.order !== undefined && raw.order !== null) out.order = Number(raw.order);
+      return out;
     }
 
     topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
@@ -1480,21 +1336,22 @@
       var edit = event.target.closest('[data-edit]');
       var del = event.target.closest('[data-del]');
       if (edit) {
-        var exp = data.experiences.find(function (e) { return e.id === edit.getAttribute('data-edit'); });
-        var m = modal({ title: 'Edit ' + exp.title, body: form(exp), confirmLabel: 'Save changes' });
+        var item = items.find(function (e) { return e.id === edit.getAttribute('data-edit'); });
+        var m = modal({ title: 'Edit ' + item.title, body: form(item), confirmLabel: 'Save changes' });
         m.confirmBtn.addEventListener('click', function () {
           submitModal(m, async function () {
-            await API.put('/admin/experiences/' + exp.id, payloadFrom(m.body));
+            await API.put('/admin/experiences/' + item.id, payloadFrom(m.body));
             toast('Experience updated', 'success');
             navigate('experiences');
           });
         });
       }
       if (del) {
-        var ok = await confirmDialog('Delete this experience?', 'It will no longer be shown in the Experiences tab.', 'Delete experience');
+        var target = items.find(function (e) { return e.id === del.getAttribute('data-del'); });
+        var ok = await confirmDialog('Delete ' + target.title + '?', 'It will disappear from the Experiences tab immediately.', 'Delete experience');
         if (!ok) return;
         try {
-          await API.del('/admin/experiences/' + del.getAttribute('data-del'));
+          await API.del('/admin/experiences/' + target.id);
           toast('Experience deleted', 'success');
           navigate('experiences');
         } catch (err) { toast(err.message, 'error'); }

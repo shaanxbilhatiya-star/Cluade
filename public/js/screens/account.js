@@ -168,7 +168,7 @@
       UI.actions(view, {
         browse: function () { App.navigate('/home'); },
         movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
+        book: function (el) { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); },
       });
 
       return view;
