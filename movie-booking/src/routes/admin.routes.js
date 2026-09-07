@@ -15,7 +15,8 @@ const MOVIE_FIELDS = [
 ];
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
-const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'active'];
+const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'order', 'active'];
+const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'priceLabel', 'priceNote', 'features', 'badge', 'icon', 'imageUrl', 'order', 'active'];
 
 function pick(body, fields) {
   const out = {};
@@ -362,6 +363,57 @@ router.put('/admin/offers/:id', auth.requireAdmin, (ctx) => {
 router.delete('/admin/offers/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('offers', ctx.params.id)) throw new HttpError(404, 'Offer not found');
   db.remove('offers', ctx.params.id);
+  return { deleted: true, id: ctx.params.id };
+});
+
+// ── Experiences ──────────────────────────────────────────────────────────────
+// Admin listing returns ALL experiences (including inactive ones the public
+// /experiences endpoint hides), sorted by order like the customer view.
+router.get('/admin/experiences', auth.requireAdmin, () => {
+  const experiences = [...db.get('experiences')]
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => {
+      const ao = typeof a.e.order === 'number' ? a.e.order : Infinity;
+      const bo = typeof b.e.order === 'number' ? b.e.order : Infinity;
+      return ao - bo || a.i - b.i;
+    })
+    .map(({ e }) => e);
+  return { experiences };
+});
+
+router.post('/admin/experiences', auth.requireAdmin, (ctx) => {
+  requireFields(ctx.body, ['title']);
+  const slug = slugify(ctx.body.slug || ctx.body.title);
+  if (db.findOne('experiences', (e) => e.slug === slug)) throw new HttpError(409, 'An experience with that name already exists');
+  const experience = db.insert('experiences', Object.assign(
+    {
+      id: db.id('exp'),
+      slug,
+      category: 'Celebrations',
+      subtitle: '',
+      priceLabel: 'Custom packages',
+      priceNote: '',
+      features: [],
+      badge: null,
+      icon: 'sparkle',
+      order: null,
+      imageUrl: '/img/experiences/_placeholder.svg',
+      active: true,
+    },
+    pick(ctx.body, EXPERIENCE_FIELDS)
+  ));
+  ctx.state.status = 201;
+  return { experience };
+});
+
+router.put('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
+  if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
+  return { experience: db.update('experiences', ctx.params.id, pick(ctx.body, EXPERIENCE_FIELDS)) };
+});
+
+router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
+  if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
+  db.remove('experiences', ctx.params.id);
   return { deleted: true, id: ctx.params.id };
 });
 

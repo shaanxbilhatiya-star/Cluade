@@ -620,7 +620,12 @@ function run() {
   write('food', '_placeholder.svg', foodTile({
     slug: 'placeholder', name: 'Food item', category: 'Snacks', size: '', art: 'combo', colors: ['#334155', '#94A3B8'],
   }));
-  count += 2;
+  // Generic experience fallback for admin-created experiences without artwork.
+  write('experiences', '_placeholder.svg', experienceTile({
+    slug: 'placeholder', title: 'New Experience', category: 'Celebrations', priceLabel: 'Custom packages',
+    icon: 'sparkle', colors: ['#4C1D95', '#C4B5FD'],
+  }));
+  count += 3;
 
   console.log(`[assets] wrote ${count} SVG files into public/img/`);
 }
