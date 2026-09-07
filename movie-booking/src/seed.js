@@ -157,16 +157,27 @@ function syncOffersFromCatalog() {
   for (const o of OFFERS) {
     const existing = db.find('offers', (row) => row.slug === o.slug);
     if (existing.length > 0) {
-      // Backfill the `showcase` flag on rows seeded before it existed (e.g.
-      // wedding packages from an earlier build) so they stay off the coupon
-      // list. `showcase` is a system-managed field, not an admin-edited one,
-      // so only touch rows where it is missing - admin edits are preserved.
-      if (o.showcase === true) {
-        for (const row of existing) {
-          if (typeof row.showcase !== 'boolean') {
-            db.update('offers', row.id, { showcase: true });
-            patched += 1;
-          }
+      // Backfill system-managed presentation fields on rows seeded before those
+      // fields existed (e.g. wedding packages from an earlier build). These are
+      // system-managed, not admin-edited, so only fill values that are MISSING
+      // - never overwrite an edit an admin may have made.
+      for (const row of existing) {
+        const patch = {};
+        // `showcase` keeps wedding packages off the coupon list.
+        if (o.showcase === true && typeof row.showcase !== 'boolean') {
+          patch.showcase = true;
+        }
+        // `bannerUrl` surfaces the banner art on Home.
+        if (!row.bannerUrl) {
+          patch.bannerUrl = `/img/banners/${o.slug}.svg`;
+        }
+        // `order` restores the catalog ordering on stale rows.
+        if (typeof row.order !== 'number' && typeof o.order === 'number') {
+          patch.order = o.order;
+        }
+        if (Object.keys(patch).length > 0) {
+          db.update('offers', row.id, patch);
+          patched += 1;
         }
       }
       continue;
@@ -192,7 +203,7 @@ function syncOffersFromCatalog() {
   if (added > 0 || patched > 0) {
     db.flushNow();
     if (added > 0) console.log(`[seed] synced ${added} new catalog offer(s).`);
-    if (patched > 0) console.log(`[seed] backfilled showcase flag on ${patched} offer(s).`);
+    if (patched > 0) console.log(`[seed] backfilled missing fields on ${patched} offer(s).`);
   }
 }
 
@@ -228,14 +239,36 @@ function seedExperiences() {
  */
 function syncExperiencesFromCatalog() {
   let added = 0;
+  let patched = 0;
   for (const e of EXPERIENCES) {
-    if (db.find('experiences', (row) => row.slug === e.slug).length > 0) continue;
+    const existing = db.find('experiences', (row) => row.slug === e.slug);
+    if (existing.length > 0) {
+      // Backfill system-managed presentation fields on rows seeded before those
+      // fields existed (e.g. experiences from an earlier build that predate the
+      // image + ordering work). Only fill values that are MISSING so an admin
+      // edit is never overwritten - mirrors syncOffersFromCatalog.
+      for (const row of existing) {
+        const patch = {};
+        if (!row.imageUrl) {
+          patch.imageUrl = `/img/experiences/${e.slug}.svg`;
+        }
+        if (typeof row.order !== 'number' && typeof e.order === 'number') {
+          patch.order = e.order;
+        }
+        if (Object.keys(patch).length > 0) {
+          db.update('experiences', row.id, patch);
+          patched += 1;
+        }
+      }
+      continue;
+    }
     db.insert('experiences', experienceRecord(e));
     added += 1;
   }
-  if (added > 0) {
+  if (added > 0 || patched > 0) {
     db.flushNow();
-    console.log(`[seed] synced ${added} new catalog experience(s).`);
+    if (added > 0) console.log(`[seed] synced ${added} new catalog experience(s).`);
+    if (patched > 0) console.log(`[seed] backfilled missing fields on ${patched} experience(s).`);
   }
 }
 
