@@ -216,6 +216,63 @@
       (o.hint ? '<div class="hint">' + esc(o.hint) + '</div>' : '') + '</div>';
   }
 
+  /** Instagram-square (1:1) cover photo picker: crops/resizes client-side to 1080x1080 JPEG. */
+  function imageField(label, name, value, opts) {
+    var o = opts || {};
+    var hasImg = !!value;
+    return '<div class="form-row col-span">' +
+      '<label class="label">' + esc(label) + '</label>' +
+      '<div class="img-field" data-imgfield="' + name + '">' +
+        '<div class="img-field__preview' + (hasImg ? '' : ' img-field__preview--empty') + '">' +
+          (hasImg ? '<img src="' + esc(value) + '" alt="">' : icon('sparkle', 22)) +
+        '</div>' +
+        '<div class="img-field__controls">' +
+          '<input type="file" accept="image/png,image/jpeg,image/webp" data-imgfield-input>' +
+          '<button type="button" class="btn btn--ghost btn--sm" data-imgfield-pick>Choose photo</button>' +
+          '<div class="hint">Square (1:1), Instagram post size \u2014 auto-cropped to 1080\u00d71080.</div>' +
+        '</div>' +
+      '</div>' +
+      '<input type="hidden" name="' + name + '" value="' + esc(value || '') + '">' +
+      '</div>';
+  }
+
+  /** Wires up an imageField() block: pick button, file read, square-crop via canvas. */
+  function bindImageField(body, name) {
+    var wrap = body.querySelector('[data-imgfield="' + name + '"]');
+    if (!wrap) return;
+    var input = wrap.querySelector('[data-imgfield-input]');
+    var pickBtn = wrap.querySelector('[data-imgfield-pick]');
+    var preview = wrap.querySelector('.img-field__preview');
+    var hidden = body.querySelector('input[type="hidden"][name="' + name + '"]');
+
+    pickBtn.addEventListener('click', function () { input.click(); });
+
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var SIZE = 1080; // Instagram square post
+          var side = Math.min(img.width, img.height);
+          var sx = (img.width - side) / 2;
+          var sy = (img.height - side) / 2;
+          var canvas = document.createElement('canvas');
+          canvas.width = SIZE; canvas.height = SIZE;
+          var ctx2d = canvas.getContext('2d');
+          ctx2d.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          hidden.value = dataUrl;
+          preview.classList.remove('img-field__preview--empty');
+          preview.innerHTML = '<img src="' + dataUrl + '" alt="">';
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   function readForm(body) {
     var out = {};
     body.querySelectorAll('[name]').forEach(function (el) {
@@ -1442,6 +1499,7 @@
     function form(exp) {
       var e = exp || {};
       return h('<div class="form-grid">' +
+        imageField('Cover photo', 'image', e.image) +
         field('Title', 'title', e.title, { span: true, placeholder: 'Private Pool Party' }) +
         field('Category', 'category', e.category, { placeholder: 'Pool Party' }) +
         field('Badge (optional)', 'badge', e.badge, { placeholder: 'Popular' }) +
@@ -1462,11 +1520,13 @@
         title: raw.title, category: raw.category, badge: raw.badge, subtitle: raw.subtitle,
         priceLabel: raw.priceLabel, priceNote: raw.priceNote, icon: raw.icon, color: raw.color,
         features: csvList(raw.features), order: Number(raw.order) || 0, active: raw.active === 'true',
+        image: raw.image || '',
       };
     }
 
     topActions.querySelector('[data-action="new"]').addEventListener('click', function () {
       var m = modal({ title: 'Add experience', body: form(null), confirmLabel: 'Create experience' });
+      bindImageField(m.body, 'image');
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
           await API.post('/admin/experiences', payloadFrom(m.body));
@@ -1482,6 +1542,7 @@
       if (edit) {
         var exp = data.experiences.find(function (e) { return e.id === edit.getAttribute('data-edit'); });
         var m = modal({ title: 'Edit ' + exp.title, body: form(exp), confirmLabel: 'Save changes' });
+        bindImageField(m.body, 'image');
         m.confirmBtn.addEventListener('click', function () {
           submitModal(m, async function () {
             await API.put('/admin/experiences/' + exp.id, payloadFrom(m.body));

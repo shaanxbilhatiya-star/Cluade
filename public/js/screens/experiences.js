@@ -23,10 +23,15 @@
   function experienceCard(exp, phone) {
     var msg = 'Hi Kingfisher, I am interested in the ' + exp.title + '. Please share more details.';
     return '<article class="card exp-card">' +
-      '<div class="exp-card__head" style="background:' + UI.esc(exp.color || '#7C3AED') + '">' +
-        (exp.badge ? '<span class="exp-card__badge">' + UI.esc(exp.badge) + '</span>' : '') +
-        '<span class="exp-card__icon">' + UI.icon(exp.icon || 'sparkle', 30) + '</span>' +
-      '</div>' +
+      (exp.image
+        ? '<div class="exp-card__head exp-card__head--photo">' +
+            '<img class="exp-card__photo" src="' + UI.esc(exp.image) + '" alt="' + UI.esc(exp.title) + '">' +
+            (exp.badge ? '<span class="exp-card__badge">' + UI.esc(exp.badge) + '</span>' : '') +
+          '</div>'
+        : '<div class="exp-card__head" style="background:' + UI.esc(exp.color || '#7C3AED') + '">' +
+            (exp.badge ? '<span class="exp-card__badge">' + UI.esc(exp.badge) + '</span>' : '') +
+            '<span class="exp-card__icon">' + UI.icon(exp.icon || 'sparkle', 30) + '</span>' +
+          '</div>') +
       '<div class="exp-card__body">' +
         '<span class="exp-card__category">' + UI.esc(exp.category) + '</span>' +
         '<h3 class="exp-card__title">' + UI.esc(exp.title) + '</h3>' +

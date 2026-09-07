@@ -1,4 +1,6 @@
 'use strict';
+const fs = require('fs');
+const path = require('path');
 const db = require('../db');
 const auth = require('../auth');
 const { LAYOUTS } = require('../catalog');
@@ -16,7 +18,32 @@ const MOVIE_FIELDS = [
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
 const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'active'];
-const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active'];
+const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active', 'image'];
+
+// Experience cover photos (Instagram-square 1080x1080 crop, done client-side) are
+// sent up as a data: URL and saved to disk here so the JSON db only stores a path.
+const EXPERIENCE_IMG_DIR = path.join(__dirname, '..', '..', 'public', 'img', 'experiences');
+const DATA_URL_RE = /^data:image\/(png|jpe?g|webp);base64,/i;
+
+function saveExperienceImage(slug, dataUrl) {
+  const match = DATA_URL_RE.exec(dataUrl);
+  if (!match) throw new HttpError(400, 'Image must be a PNG, JPEG or WEBP file');
+  const ext = match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase();
+  const base64 = dataUrl.slice(match[0].length);
+  const buffer = Buffer.from(base64, 'base64');
+  if (buffer.length > 6 * 1024 * 1024) throw new HttpError(400, 'Image is too large (max 6 MB)');
+  if (!fs.existsSync(EXPERIENCE_IMG_DIR)) fs.mkdirSync(EXPERIENCE_IMG_DIR, { recursive: true });
+  const filename = `${slug}-${Date.now().toString(36)}.${ext}`;
+  fs.writeFileSync(path.join(EXPERIENCE_IMG_DIR, filename), buffer);
+  return `/img/experiences/${filename}`;
+}
+
+/** Mutates body.image in place: a data: URL becomes a saved file path, anything else passes through untouched. */
+function resolveExperienceImage(body, slug) {
+  if (typeof body.image === 'string' && DATA_URL_RE.test(body.image)) {
+    body.image = saveExperienceImage(slug, body.image);
+  }
+}
 
 function pick(body, fields) {
   const out = {};
@@ -500,8 +527,10 @@ router.post('/admin/experiences', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['title', 'category']);
   const body = Object.assign({}, ctx.body);
   if (typeof body.features === 'string') body.features = body.features.split(',').map((s) => s.trim()).filter(Boolean);
+  const slug = slugify(ctx.body.title);
+  resolveExperienceImage(body, slug);
   const experience = db.insert('experiences', Object.assign(
-    { id: db.id('exp'), slug: slugify(ctx.body.title), subtitle: '', icon: 'sparkle', color: '#7C3AED', priceLabel: '', priceNote: '', features: [], badge: '', order: db.get('experiences').length + 1, active: true },
+    { id: db.id('exp'), slug, subtitle: '', icon: 'sparkle', color: '#7C3AED', priceLabel: '', priceNote: '', features: [], badge: '', order: db.get('experiences').length + 1, active: true, image: '' },
     pick(body, EXPERIENCE_FIELDS)
   ));
   ctx.state.status = 201;
@@ -509,9 +538,11 @@ router.post('/admin/experiences', auth.requireAdmin, (ctx) => {
 });
 
 router.put('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
-  if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
+  const existing = db.byId('experiences', ctx.params.id);
+  if (!existing) throw new HttpError(404, 'Experience not found');
   const body = Object.assign({}, ctx.body);
   if (typeof body.features === 'string') body.features = body.features.split(',').map((s) => s.trim()).filter(Boolean);
+  resolveExperienceImage(body, existing.slug || slugify(existing.title));
   return { experience: db.update('experiences', ctx.params.id, pick(body, EXPERIENCE_FIELDS)) };
 });
 
