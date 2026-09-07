@@ -253,11 +253,24 @@
   }
 
   function foodCard(item) {
+    var saving = item.mrp && item.mrp > item.price
+      ? Math.round((1 - item.price / item.mrp) * 100)
+      : 0;
+    var priceHtml = item.mrp && item.mrp > item.price
+      ? '<span style="color:var(--primary-500);font-weight:700">' + money(item.price) + '</span>' +
+        ' <span style="text-decoration:line-through;color:var(--neutral-400);font-size:12px">' + money(item.mrp) + '</span>'
+      : money(item.price);
+    var badge = saving
+      ? '<span style="position:absolute;top:8px;left:8px;background:var(--primary-600);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;letter-spacing:.4px">' + saving + '% OFF</span>'
+      : '';
     return '<article class="food-card">' +
       '<button data-action="food-item" data-id="' + esc(item.id) + '" style="width:100%;text-align:left">' +
-        '<img class="food-card__img" src="' + esc(item.imageUrl) + '" alt="' + esc(item.name) + '" loading="lazy" data-fallback="/img/food/_placeholder.svg">' +
+        '<div style="position:relative">' +
+          '<img class="food-card__img" src="' + esc(item.imageUrl) + '" alt="' + esc(item.name) + '" loading="lazy" data-fallback="/img/food/_placeholder.svg">' +
+          badge +
+        '</div>' +
         '<h3 class="food-card__name">' + esc(item.name) + '</h3>' +
-        '<p class="food-card__price">' + money(item.price) + '</p>' +
+        '<p class="food-card__price">' + priceHtml + '</p>' +
       '</button>' +
       '</article>';
   }

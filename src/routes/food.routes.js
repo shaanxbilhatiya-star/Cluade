@@ -34,11 +34,12 @@ router.get('/food/home', () => {
       .map((o) => ({ id: o.id, title: o.title, subtitle: o.subtitle, code: o.code, bannerUrl: o.bannerUrl })),
     categories: ['All', ...new Set(items.map((f) => f.category))],
     rails: [
-      { key: 'popular', title: 'Most Popular', items: items.filter((f) => f.popular) },
-      { key: 'beverages', title: 'New Beverages', items: byCategory('Beverages') },
-      { key: 'combos', title: 'Value Combos', items: byCategory('Combos') },
-      { key: 'snacks', title: 'Quick Snacks', items: [...byCategory('Snacks'), ...byCategory('Popcorn')] },
-      { key: 'desserts', title: 'Sweet Endings', items: [...byCategory('Desserts'), ...byCategory('Meals')] },
+      { key: 'popular',   title: '🔥 Most Popular',    items: items.filter((f) => f.popular) },
+      { key: 'combos',    title: '🎉 Value Combos',     items: byCategory('Combos') },
+      { key: 'popcorn',   title: '🍿 Popcorn',          items: byCategory('Popcorn') },
+      { key: 'snacks',    title: '🍟 Snacks',            items: byCategory('Snacks') },
+      { key: 'cold-bev',  title: '🥤 Cold Beverages',   items: byCategory('Cold Beverages') },
+      { key: 'hot-bev',   title: '☕ Hot Beverages',    items: byCategory('Hot Beverages') },
     ].filter((rail) => rail.items.length > 0),
   };
 });

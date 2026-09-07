@@ -530,6 +530,7 @@ function reseedFood() {
       name: f.name,
       category: f.category,
       price: f.price,
+      mrp: f.mrp || null,
       description: f.description,
       size: f.size,
       veg: f.veg,
