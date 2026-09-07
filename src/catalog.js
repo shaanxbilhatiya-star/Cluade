@@ -288,9 +288,9 @@ const CINEMAS = [
     slug: 'kingfisher-multiplex',
     name: 'Kingfisher Multiplex',
     brand: 'Kingfisher',
-    city: 'Ahmedabad',
+    city: 'Mandla',
     area: 'Satellite',
-    address: 'Kingfisher Multiplex, Satellite Road, Ahmedabad',
+    address: 'Kingfisher Multiplex, Satellite Road, Mandla',
     lat: 23.0300,
     lng: 72.5100,
     distanceKm: 3.5,
@@ -307,9 +307,9 @@ const CINEMAS = [
     slug: 'pvr-icon-phoenix',
     name: 'PVR ICON: Phoenix Mall',
     brand: 'PVR',
-    city: 'Ahmedabad',
+    city: 'Mandla',
     area: 'Bopal',
-    address: '3rd Floor, Phoenix Marketcity, Bopal Road, Ahmedabad 380058',
+    address: '3rd Floor, Phoenix Marketcity, Bopal Road, Mandla 380058',
     lat: 23.0225,
     lng: 72.5714,
     distanceKm: 2.4,
@@ -320,9 +320,9 @@ const CINEMAS = [
     slug: 'inox-cg-road',
     name: 'INOX: CG Road',
     brand: 'INOX',
-    city: 'Ahmedabad',
+    city: 'Mandla',
     area: 'Navrangpura',
-    address: 'City Gold Complex, CG Road, Navrangpura, Ahmedabad 380009',
+    address: 'City Gold Complex, CG Road, Navrangpura, Mandla 380009',
     lat: 23.0333,
     lng: 72.5601,
     distanceKm: 5.1,
@@ -333,9 +333,9 @@ const CINEMAS = [
     slug: 'cinepolis-alpha-one',
     name: 'Cinepolis: Alpha One',
     brand: 'Cinepolis',
-    city: 'Ahmedabad',
+    city: 'Mandla',
     area: 'Vastrapur',
-    address: 'Alpha One Mall, Vastrapur, Ahmedabad 380015',
+    address: 'Alpha One Mall, Vastrapur, Mandla 380015',
     lat: 23.0395,
     lng: 72.53,
     distanceKm: 7.8,
@@ -346,9 +346,9 @@ const CINEMAS = [
     slug: 'rajhans-cinemas',
     name: 'Rajhans Cinemas: Iscon',
     brand: 'Rajhans',
-    city: 'Ahmedabad',
+    city: 'Mandla',
     area: 'Satellite',
-    address: 'Iscon Mega Mall, Satellite Road, Ahmedabad 380015',
+    address: 'Iscon Mega Mall, Satellite Road, Mandla 380015',
     lat: 23.0225,
     lng: 72.5,
     distanceKm: 9.2,
@@ -779,7 +779,7 @@ const GENRES = [
 
 const LANGUAGES = ['Hindi', 'English', 'Gujarati', 'Tamil', 'Telugu', 'Kannada', 'Marathi', 'Malayalam'];
 
-const CITIES = ['Ahmedabad', 'Mumbai', 'Delhi NCR', 'Bengaluru', 'Pune', 'Surat', 'Hyderabad', 'Chennai'];
+const CITIES = ['Mandla'];
 
 /** Daily show slots (24h) used to generate the rolling schedule. */
 const SHOW_SLOTS = ['09:15', '12:30', '15:45', '17:30', '19:00', '22:15'];

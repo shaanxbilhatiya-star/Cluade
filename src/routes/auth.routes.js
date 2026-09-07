@@ -39,7 +39,7 @@ router.post('/auth/register', (ctx) => {
     password: auth.hashPassword(password),
     role: 'customer',
     avatarUrl: '/img/avatars/guest.svg',
-    city: city || 'Ahmedabad',
+    city: city || 'Mandla',
     memberId: `CF-${new Date().getFullYear()}-${String(seq).padStart(6, '0')}`,
     loyaltyPoints: 0,
     watchlist: [],

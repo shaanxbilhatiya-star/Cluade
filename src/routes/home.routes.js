@@ -33,7 +33,7 @@ function todayKey() {
 
 /** One call that fills the entire Home screen. */
 router.get('/home', (ctx) => {
-  const city = ctx.query.city || (ctx.user && ctx.user.city) || 'Ahmedabad';
+  const city = 'Mandla'; // Single-city deployment — always Mandla
   const movies = db.get('movies').filter((m) => m.active !== false);
   const today = todayKey();
 
