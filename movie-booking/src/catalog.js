@@ -373,6 +373,11 @@ const FOOD_ITEMS = [
   { slug: 'ice-tea', name: 'Peach Iced Tea', category: 'Beverages', price: 200, art: 'glass', colors: ['#9A3412', '#FDBA74'], popular: false, veg: true, description: 'Iced black tea with peach and a squeeze of lime.', size: '400 ml' },
 ];
 
+// Offers marked `showcase: true` are display-only promo banners (e.g. the
+// Kingfisher wedding packages). They lead the Home "Offers for you" carousel
+// but are deliberately kept OUT of the applicable-coupon list (`GET /offers`,
+// which feeds the movie-checkout and food coupon pickers) so they never appear
+// as selectable ticket/food coupons.
 const OFFERS = [
   {
     slug: 'wedding-economy',
@@ -385,6 +390,7 @@ const OFFERS = [
     minAmount: 250000,
     appliesTo: 'all',
     order: 1,
+    showcase: true,
     art: { style: 'reel', colors: ['#7C1D3A', '#F5D6BA'] },
   },
   {
@@ -398,6 +404,7 @@ const OFFERS = [
     minAmount: 400000,
     appliesTo: 'all',
     order: 2,
+    showcase: true,
     art: { style: 'pop', colors: ['#4A148C', '#F9C74F'] },
   },
   {
@@ -411,6 +418,7 @@ const OFFERS = [
     minAmount: 500000,
     appliesTo: 'all',
     order: 3,
+    showcase: true,
     art: { style: 'dawn', colors: ['#0F5257', '#F2CD5C'] },
   },
   {
@@ -424,6 +432,7 @@ const OFFERS = [
     minAmount: 800000,
     appliesTo: 'all',
     order: 4,
+    showcase: true,
     art: { style: 'dawn', colors: ['#B8860B', '#FFF3C4'] },
   },
   {

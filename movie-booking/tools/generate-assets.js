@@ -501,6 +501,9 @@ function experienceTile(exp) {
     return `<circle cx="${(rand() * W).toFixed(0)}" cy="${(rand() * H).toFixed(0)}" r="${r.toFixed(0)}" fill="#ffffff" opacity="${(0.03 + rand() * 0.08).toFixed(2)}"/>`;
   }).join('\n  ');
 
+  if (exp.icon && !EXP_ICONS[exp.icon]) {
+    console.warn(`[assets] experience "${exp.slug}" uses icon "${exp.icon}" not in EXP_ICONS; falling back to sparkle. Add it to EXP_ICONS to match the UI glyph.`);
+  }
   const glyph = EXP_ICONS[exp.icon] || EXP_ICONS.sparkle;
   const glyphSize = 150;
   const gx = (W - glyphSize) / 2;

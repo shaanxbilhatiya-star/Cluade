@@ -1173,10 +1173,12 @@
   async function pageOffers(content, topActions) {
     topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add offer</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
-    var data = await API.offers();
+    // Use the admin endpoint (not the public /offers coupon list) so showcase-
+    // only offers such as the wedding packages remain editable here.
+    var data = await API.get('/admin/offers');
 
     content.innerHTML =
-      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.offers.length + ' active offers</h2></div>' +
+      '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">' + data.offers.length + ' offers</h2></div>' +
       '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
         '<thead><tr><th>Offer</th><th>Code</th><th>Discount</th><th>Applies to</th><th class="num">Min spend</th><th class="num">Max off</th><th></th></tr></thead>' +
         '<tbody>' + (data.offers.length ? data.offers.map(function (o) {
@@ -1207,6 +1209,7 @@
         field('Max discount', 'maxDiscount', o.maxDiscount || 0, { type: 'number' }) +
         field('Minimum order', 'minAmount', o.minAmount || 0, { type: 'number' }) +
         field('Sort order', 'order', (o.order === 0 || o.order) ? o.order : '', { type: 'number', placeholder: 'Lower shows first' }) +
+        field('Showcase only (Home, not a coupon)', 'showcase', o.showcase ? 'true' : 'false', { options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] }) +
         field('Banner URL', 'bannerUrl', o.bannerUrl || '/img/banners/best-ticket-offers.svg', { span: true }) +
         '</div>');
     }
@@ -1217,6 +1220,7 @@
         title: raw.title, subtitle: raw.subtitle, code: raw.code, appliesTo: raw.appliesTo,
         discountType: raw.discountType, discountValue: Number(raw.discountValue),
         maxDiscount: Number(raw.maxDiscount), minAmount: Number(raw.minAmount), bannerUrl: raw.bannerUrl,
+        showcase: raw.showcase === 'true',
       };
       if (raw.order !== '' && raw.order !== undefined && raw.order !== null) out.order = Number(raw.order);
       return out;

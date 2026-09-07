@@ -15,7 +15,7 @@ const MOVIE_FIELDS = [
 ];
 const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
-const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'order', 'active'];
+const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'order', 'showcase', 'active'];
 const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'priceLabel', 'priceNote', 'features', 'badge', 'icon', 'imageUrl', 'order', 'active'];
 
 function pick(body, fields) {
@@ -338,6 +338,20 @@ router.delete('/admin/food/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('foodItems', ctx.params.id)) throw new HttpError(404, 'Food item not found');
   db.remove('foodItems', ctx.params.id);
   return { deleted: true, id: ctx.params.id };
+});
+
+// Admin listing returns ALL offers (including showcase-only wedding packages
+// that the public /offers coupon list hides), sorted by order like Home.
+router.get('/admin/offers', auth.requireAdmin, () => {
+  const offers = [...db.get('offers')]
+    .map((o, i) => ({ o, i }))
+    .sort((a, b) => {
+      const ao = typeof a.o.order === 'number' ? a.o.order : Infinity;
+      const bo = typeof b.o.order === 'number' ? b.o.order : Infinity;
+      return ao - bo || a.i - b.i;
+    })
+    .map(({ o }) => o);
+  return { offers };
 });
 
 router.post('/admin/offers', auth.requireAdmin, (ctx) => {

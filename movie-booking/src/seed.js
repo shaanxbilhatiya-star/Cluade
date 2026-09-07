@@ -138,6 +138,7 @@ function seedOffers() {
       minAmount: o.minAmount,
       appliesTo: o.appliesTo,
       order: typeof o.order === 'number' ? o.order : null,
+      showcase: o.showcase === true,
       bannerUrl: `/img/banners/${o.slug}.svg`,
       active: true,
     });
@@ -152,8 +153,24 @@ function seedOffers() {
  */
 function syncOffersFromCatalog() {
   let added = 0;
+  let patched = 0;
   for (const o of OFFERS) {
-    if (db.find('offers', (row) => row.slug === o.slug).length > 0) continue;
+    const existing = db.find('offers', (row) => row.slug === o.slug);
+    if (existing.length > 0) {
+      // Backfill the `showcase` flag on rows seeded before it existed (e.g.
+      // wedding packages from an earlier build) so they stay off the coupon
+      // list. `showcase` is a system-managed field, not an admin-edited one,
+      // so only touch rows where it is missing - admin edits are preserved.
+      if (o.showcase === true) {
+        for (const row of existing) {
+          if (typeof row.showcase !== 'boolean') {
+            db.update('offers', row.id, { showcase: true });
+            patched += 1;
+          }
+        }
+      }
+      continue;
+    }
     db.insert('offers', {
       id: `off_${o.slug}`,
       slug: o.slug,
@@ -166,14 +183,16 @@ function syncOffersFromCatalog() {
       minAmount: o.minAmount,
       appliesTo: o.appliesTo,
       order: typeof o.order === 'number' ? o.order : null,
+      showcase: o.showcase === true,
       bannerUrl: `/img/banners/${o.slug}.svg`,
       active: true,
     });
     added += 1;
   }
-  if (added > 0) {
+  if (added > 0 || patched > 0) {
     db.flushNow();
-    console.log(`[seed] synced ${added} new catalog offer(s).`);
+    if (added > 0) console.log(`[seed] synced ${added} new catalog offer(s).`);
+    if (patched > 0) console.log(`[seed] backfilled showcase flag on ${patched} offer(s).`);
   }
 }
 

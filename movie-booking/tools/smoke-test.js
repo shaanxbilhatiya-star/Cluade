@@ -99,6 +99,17 @@ async function run() {
     check('wedding offers carry a banner image', weddingOffers.every((o) => Boolean(o.bannerUrl)));
     check('wedding offers sort to the front of the carousel', home.body.offers.slice(0, weddingOffers.length).every(isWeddingOffer));
 
+    // Showcase wedding packages must lead Home but never appear in the coupon
+    // picker (GET /offers, consumed by movie checkout + food coupon sheets).
+    const couponOffers = await api('GET', '/api/offers');
+    check('GET /api/offers returns coupons', couponOffers.status === 200 && couponOffers.body.offers.length > 0);
+    // Wedding package codes are WED299/451/551/851 (distinct from CINEWED, a
+    // Wednesday ticket coupon), so match the numbered WED code / "Dream Wedding" title.
+    const isWeddingPackage = (o) => /^WED\d/i.test(o.code || '') || /dream wedding/i.test(o.title || '');
+    check('wedding packages do NOT leak into the coupon list', !couponOffers.body.offers.some(isWeddingPackage));
+    const couponOrders = couponOffers.body.offers.map((o) => (typeof o.order === 'number' ? o.order : Infinity));
+    check('GET /api/offers is sorted by order', couponOrders.every((v, i) => i === 0 || couponOrders[i - 1] <= v));
+
     const experiences = await api('GET', '/api/experiences');
     check('GET /api/experiences returns items', experiences.status === 200 && experiences.body.experiences.length > 0, `got ${experiences.body?.experiences?.length}`);
     check('every experience has an image', experiences.body.experiences.every((e) => Boolean(e.imageUrl)));
@@ -401,6 +412,8 @@ async function run() {
     check('admin can create an offer (code upper-cased)', newOffer.status === 201 && newOffer.body.offer.code === 'TESTCODE');
     const dupeOffer = await api('POST', '/api/admin/offers', { token: adminToken, body: { title: 'Dupe', code: 'TESTCODE', discountType: 'flat', discountValue: 10 } });
     check('duplicate offer code is rejected', dupeOffer.status === 409);
+    const adminOffers = await api('GET', '/api/admin/offers', { token: adminToken });
+    check('admin offers listing includes showcase wedding packages', adminOffers.status === 200 && adminOffers.body.offers.some((o) => o.showcase === true && /wed/i.test(o.code || '')));
 
     const adminExps = await api('GET', '/api/admin/experiences', { token: adminToken });
     check('admin can list all experiences', adminExps.status === 200 && adminExps.body.experiences.length > 0);
