@@ -112,6 +112,9 @@
     foodItem: function (id) { return request('GET', '/food/' + id); },
     offers: function (appliesTo) { return request('GET', '/offers' + (appliesTo ? '?appliesTo=' + appliesTo : '')); },
 
+    // ── Experiences ──
+    experiences: function () { return request('GET', '/experiences'); },
+
     // ── Account ──
     updateProfile: function (patch) { return request('PATCH', '/me', patch); },
     updateSettings: function (patch) { return request('PATCH', '/me/settings', patch); },

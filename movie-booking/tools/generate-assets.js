@@ -11,7 +11,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { MOVIES, FOOD_ITEMS, OFFERS } = require('../src/catalog');
+const { MOVIES, FOOD_ITEMS, OFFERS, EXPERIENCES } = require('../src/catalog');
 
 const IMG_DIR = path.join(__dirname, '..', 'public', 'img');
 const SANS = "'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif";
@@ -474,6 +474,69 @@ function offerBanner(offer) {
 </svg>`;
 }
 
+// ── Experience tile (~16:10) ─────────────────────────────────────────────────
+/**
+ * Stroke-based icon bodies (0 0 24 24) mirrored from public/js/icons.js so the
+ * generated experience image carries the same glyph the UI would show. Kept in
+ * sync manually - if an EXPERIENCES item uses an icon not listed here it falls
+ * back to the generic 'sparkle' glyph.
+ */
+const EXP_ICONS = {
+  heart: '<path d="M12 20s-7.5-4.4-7.5-9.3A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.7C19.5 15.6 12 20 12 20Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2"/><path d="M12 19v2"/><path d="M3 12h2"/><path d="M19 12h2"/><path d="m5.6 5.6 1.4 1.4"/><path d="m17 17 1.4 1.4"/><path d="m18.4 5.6-1.4 1.4"/><path d="m7 17-1.4 1.4"/>',
+  sparkle: '<path d="m12 4 1.7 4.6 4.6 1.7-4.6 1.7L12 16.6l-1.7-4.6L5.7 10.3l4.6-1.7L12 4Z"/><path d="M18.5 16.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z"/>',
+  cake: '<path d="M5 20.5h14"/><path d="M5.5 15.5c1.5 1.5 3 0 4.3 0s2.7 1.5 4.3 0 2.4 0 3.9 0"/><path d="M5 20.5v-6.2A2.3 2.3 0 0 1 7.3 12h9.4a2.3 2.3 0 0 1 2.3 2.3v6.2"/><path d="M12 12V8.5"/><circle cx="12" cy="6.5" r="1.1"/>',
+  users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3 19c.7-3 2.9-4.6 6-4.6s5.3 1.6 6 4.6"/><path d="M16 6.2a3.2 3.2 0 0 1 0 6.1"/><path d="M17.5 14.8c2 .6 3.2 2 3.6 4.2"/>',
+  gift: '<rect x="4" y="9" width="16" height="11" rx="1.8"/><path d="M4 13h16"/><path d="M12 9v11"/><path d="M12 9c-2.5 0-4-1-4-2.4A2 2 0 0 1 12 6a2 2 0 0 1 4 .6C16 8 14.5 9 12 9Z"/>',
+};
+
+function experienceTile(exp) {
+  const W = 800;
+  const H = 500;
+  const [deep, accent] = exp.colors;
+  const rand = rng(exp.slug + 'exp');
+
+  const bubbles = Array.from({ length: 12 }, () => {
+    const r = 24 + rand() * 120;
+    return `<circle cx="${(rand() * W).toFixed(0)}" cy="${(rand() * H).toFixed(0)}" r="${r.toFixed(0)}" fill="#ffffff" opacity="${(0.03 + rand() * 0.08).toFixed(2)}"/>`;
+  }).join('\n  ');
+
+  const glyph = EXP_ICONS[exp.icon] || EXP_ICONS.sparkle;
+  const glyphSize = 150;
+  const gx = (W - glyphSize) / 2;
+  const gy = H * 0.16;
+
+  const titleLines = wrap(exp.title, 20);
+  const ty = H - 150 + (2 - titleLines.length) * 20;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(exp.title)}">
+  <defs>
+    <linearGradient id="eg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${shade(deep, 34)}"/>
+      <stop offset="1" stop-color="${shade(deep, -16)}"/>
+    </linearGradient>
+    <radialGradient id="ehalo" cx="0.5" cy="0.32" r="0.5">
+      <stop offset="0" stop-color="${accent}" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="${accent}" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="escrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="url(#eg)"/>
+  ${bubbles}
+  <ellipse cx="${W / 2}" cy="${H * 0.3}" rx="${W * 0.42}" ry="${H * 0.36}" fill="url(#ehalo)"/>
+  <g transform="translate(${gx.toFixed(1)} ${gy.toFixed(1)}) scale(${(glyphSize / 24).toFixed(3)})" fill="none" stroke="${accent}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
+  <rect width="${W}" height="${H}" fill="url(#escrim)"/>
+  <text x="${W / 2}" y="${(ty - 46).toFixed(0)}" text-anchor="middle" font-family="${SANS}" font-size="24" font-weight="700" fill="${shade(accent, 90)}" letter-spacing="3">${esc((exp.category || '').toUpperCase())}</text>
+  <text text-anchor="middle" font-family="${SANS}" font-size="${titleLines.length > 1 ? 46 : 54}" font-weight="800" fill="#ffffff">
+    ${titleLines.map((l, i) => `<tspan x="${W / 2}" y="${(ty + i * 52).toFixed(0)}">${esc(l)}</tspan>`).join('\n    ')}
+  </text>
+  <text x="${W / 2}" y="${(ty + titleLines.length * 52 + 8).toFixed(0)}" text-anchor="middle" font-family="${SANS}" font-size="30" font-weight="700" fill="${shade(accent, 100)}">${esc(exp.priceLabel || '')}</text>
+</svg>`;
+}
+
 // ── Avatar ───────────────────────────────────────────────────────────────────
 function avatar(name, colors) {
   const S = 200;
@@ -523,6 +586,10 @@ function run() {
     write('banners', `${offer.slug}.svg`, offerBanner(offer));
     count += 1;
   }
+  for (const exp of EXPERIENCES) {
+    write('experiences', `${exp.slug}.svg`, experienceTile(exp));
+    count += 1;
+  }
 
   const avatars = [
     ['andrew', 'Andrew Ainsely', ['#F59E0B', '#B45309']],
@@ -559,4 +626,4 @@ function run() {
 }
 
 if (require.main === module) run();
-module.exports = { run, poster, backdrop, foodTile, offerBanner, avatar };
+module.exports = { run, poster, backdrop, foodTile, offerBanner, experienceTile, avatar };

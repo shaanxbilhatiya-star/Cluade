@@ -6,7 +6,7 @@
  */
 const db = require('./db');
 const auth = require('./auth');
-const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, SHOW_SLOTS } = require('./catalog');
+const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, SHOW_SLOTS } = require('./catalog');
 const { computeTotals } = require('./pricing');
 
 const DAYS_BACK = 3;
@@ -174,6 +174,49 @@ function syncOffersFromCatalog() {
   if (added > 0) {
     db.flushNow();
     console.log(`[seed] synced ${added} new catalog offer(s).`);
+  }
+}
+
+function experienceRecord(e) {
+  return {
+    id: `exp_${e.slug}`,
+    slug: e.slug,
+    title: e.title,
+    category: e.category,
+    subtitle: e.subtitle,
+    priceLabel: e.priceLabel,
+    priceNote: e.priceNote,
+    features: e.features || [],
+    badge: e.badge || null,
+    icon: e.icon,
+    order: typeof e.order === 'number' ? e.order : null,
+    imageUrl: `/img/experiences/${e.slug}.svg`,
+    active: true,
+  };
+}
+
+function seedExperiences() {
+  for (const e of EXPERIENCES) {
+    db.insert('experiences', experienceRecord(e));
+  }
+}
+
+/**
+ * Idempotently insert any catalog EXPERIENCES that are missing from the
+ * experiences collection, matched by slug. Existing/admin-edited experiences
+ * are left untouched. Mirrors syncOffersFromCatalog so new catalog items
+ * surface on an already-seeded database without overwriting edits.
+ */
+function syncExperiencesFromCatalog() {
+  let added = 0;
+  for (const e of EXPERIENCES) {
+    if (db.find('experiences', (row) => row.slug === e.slug).length > 0) continue;
+    db.insert('experiences', experienceRecord(e));
+    added += 1;
+  }
+  if (added > 0) {
+    db.flushNow();
+    console.log(`[seed] synced ${added} new catalog experience(s).`);
   }
 }
 
@@ -487,6 +530,7 @@ function run() {
   seedCinemas();
   seedFood();
   seedOffers();
+  seedExperiences();
   seedReviews();
   ensureRollingShowtimes();
   seedBookings();
@@ -507,4 +551,4 @@ function run() {
   );
 }
 
-module.exports = { run, ensureRollingShowtimes, syncOffersFromCatalog, dateKey, addDays };
+module.exports = { run, ensureRollingShowtimes, syncOffersFromCatalog, seedExperiences, syncExperiencesFromCatalog, dateKey, addDays };

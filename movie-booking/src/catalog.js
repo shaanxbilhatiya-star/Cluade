@@ -488,6 +488,96 @@ const OFFERS = [
   },
 ];
 
+const EXPERIENCES = [
+  {
+    slug: 'wedding',
+    title: 'Dream Wedding at Kingfisher',
+    category: 'Weddings',
+    subtitle: 'Grand venue, cottages, halls and catering for 500 guests. Packages fully customizable for your big day.',
+    priceLabel: 'From \u20B9 2,99,000',
+    priceNote: 'Economy to Premium 2-day packages available.',
+    features: ['Halls + cottages', 'Catering for 500', 'Lunch & dinner', 'Grand decoration', 'Fully customizable'],
+    badge: 'Signature',
+    icon: 'heart',
+    colors: ['#7C1D3A', '#F5D6BA'],
+    order: 1,
+  },
+  {
+    slug: 'private-pool-party',
+    title: 'Private Pool Party',
+    category: 'Celebrations',
+    subtitle: 'Book the pool for your crew. Splash, music and good vibes all evening.',
+    priceLabel: '\u20B9 3,000 up to 10 guests',
+    priceNote: '\u20B9 4,999 for 15-20 guests.',
+    features: ['Private pool access', 'Up to 20 guests', 'Music system', 'Changing rooms'],
+    badge: 'Popular',
+    icon: 'sun',
+    colors: ['#0F5257', '#5EEAD4'],
+    order: 2,
+  },
+  {
+    slug: 'kitty-party',
+    title: 'Kitty Party',
+    category: 'Get Togethers',
+    subtitle: 'A perfect afternoon out for the ladies with games, snacks and lots of fun.',
+    priceLabel: '\u20B9 499 per lady',
+    priceNote: 'Snacks and venue included.',
+    features: ['Per-lady pricing', 'Games & activities', 'Snacks included', 'Cosy venue'],
+    icon: 'sparkle',
+    colors: ['#9D174D', '#FBCFE8'],
+    order: 3,
+  },
+  {
+    slug: 'family-fun-day',
+    title: 'Family Fun Day / Water Park',
+    category: 'Family',
+    subtitle: 'A splashing day out for the whole family at the water park.',
+    priceLabel: '\u20B9 1,499 family of 3',
+    priceNote: '\u20B9 1,799 for a family of 4.',
+    features: ['Water park access', 'Family packages', 'Rides & slides', 'All-day fun'],
+    badge: 'Family favourite',
+    icon: 'sun',
+    colors: ['#1E3A8A', '#93C5FD'],
+    order: 4,
+  },
+  {
+    slug: 'birthday-party',
+    title: 'Birthday Party',
+    category: 'Celebrations',
+    subtitle: 'Make their day unforgettable with a themed birthday bash at Kingfisher.',
+    priceLabel: 'Custom packages',
+    priceNote: 'Cake, decoration and catering on request.',
+    features: ['Themed decoration', 'Cake & catering', 'Indoor / outdoor', 'Fully customizable'],
+    icon: 'cake',
+    colors: ['#4A148C', '#F9C74F'],
+    order: 5,
+  },
+  {
+    slug: 'get-together',
+    title: 'Get Together',
+    category: 'Get Togethers',
+    subtitle: 'Reunions, meet-ups and celebrations with friends and family under one roof.',
+    priceLabel: 'Custom packages',
+    priceNote: 'Tailored to your group size.',
+    features: ['Flexible seating', 'Food & beverages', 'Indoor / outdoor', 'Group discounts'],
+    icon: 'users',
+    colors: ['#065F46', '#6EE7B7'],
+    order: 6,
+  },
+  {
+    slug: 'farewell-party',
+    title: 'Farewell Party',
+    category: 'Celebrations',
+    subtitle: 'Send them off in style with a memorable farewell celebration.',
+    priceLabel: 'Custom packages',
+    priceNote: 'Decoration, catering and music included.',
+    features: ['Decoration', 'Catering', 'Music & DJ', 'Photo corner'],
+    icon: 'gift',
+    colors: ['#B8860B', '#FFF3C4'],
+    order: 7,
+  },
+];
+
 const GENRES = [
   'Action', 'Comedy', 'Drama', 'Horror', 'Thriller', 'Romance', 'Sci-Fi',
   'Fantasy', 'Mystery', 'Family', 'Crime', 'History', 'Superhero', 'Mythology',
@@ -500,4 +590,4 @@ const CITIES = ['Ahmedabad', 'Mumbai', 'Delhi NCR', 'Bengaluru', 'Pune', 'Surat'
 /** Daily show slots (24h) used to generate the rolling schedule. */
 const SHOW_SLOTS = ['09:15', '12:30', '15:45', '17:30', '19:00', '22:15'];
 
-module.exports = { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, GENRES, LANGUAGES, CITIES, SHOW_SLOTS };
+module.exports = { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, GENRES, LANGUAGES, CITIES, SHOW_SLOTS };
