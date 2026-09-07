@@ -2,6 +2,9 @@
 (function () {
   'use strict';
 
+  // Clear any previously cached city — this is a single-city (Mandla) deployment.
+  try { localStorage.removeItem('cineflex.city'); } catch (_e) {}
+
   var THEME_KEY = 'cineflex.theme';
   var appEl = document.getElementById('app');
 
