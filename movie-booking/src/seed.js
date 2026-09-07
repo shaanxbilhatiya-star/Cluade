@@ -137,9 +137,43 @@ function seedOffers() {
       maxDiscount: o.maxDiscount,
       minAmount: o.minAmount,
       appliesTo: o.appliesTo,
+      order: typeof o.order === 'number' ? o.order : null,
       bannerUrl: `/img/banners/${o.slug}.svg`,
       active: true,
     });
+  }
+}
+
+/**
+ * Idempotently insert any catalog OFFERS that are missing from the offers
+ * collection, matched by slug. Existing/admin-edited offers are left untouched.
+ * Runs on every boot so newly-added catalog offers (e.g. wedding packages)
+ * surface on an already-seeded database without overwriting edits.
+ */
+function syncOffersFromCatalog() {
+  let added = 0;
+  for (const o of OFFERS) {
+    if (db.find('offers', (row) => row.slug === o.slug).length > 0) continue;
+    db.insert('offers', {
+      id: `off_${o.slug}`,
+      slug: o.slug,
+      title: o.title,
+      subtitle: o.subtitle,
+      code: o.code,
+      discountType: o.discountType,
+      discountValue: o.discountValue,
+      maxDiscount: o.maxDiscount,
+      minAmount: o.minAmount,
+      appliesTo: o.appliesTo,
+      order: typeof o.order === 'number' ? o.order : null,
+      bannerUrl: `/img/banners/${o.slug}.svg`,
+      active: true,
+    });
+    added += 1;
+  }
+  if (added > 0) {
+    db.flushNow();
+    console.log(`[seed] synced ${added} new catalog offer(s).`);
   }
 }
 
@@ -473,4 +507,4 @@ function run() {
   );
 }
 
-module.exports = { run, ensureRollingShowtimes, dateKey, addDays };
+module.exports = { run, ensureRollingShowtimes, syncOffersFromCatalog, dateKey, addDays };

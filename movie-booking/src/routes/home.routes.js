@@ -95,7 +95,13 @@ router.get('/home', (ctx) => {
     offers: db
       .get('offers')
       .filter((o) => o.active !== false)
-      .map((o) => ({ id: o.id, title: o.title, subtitle: o.subtitle, code: o.code, bannerUrl: o.bannerUrl, appliesTo: o.appliesTo })),
+      .map((o, i) => ({ id: o.id, title: o.title, subtitle: o.subtitle, code: o.code, bannerUrl: o.bannerUrl, appliesTo: o.appliesTo, order: o.order, _i: i }))
+      .sort((a, b) => {
+        const ao = typeof a.order === 'number' ? a.order : Infinity;
+        const bo = typeof b.order === 'number' ? b.order : Infinity;
+        return ao - bo || a._i - b._i;
+      })
+      .map(({ _i, ...o }) => o),
     unreadNotifications,
     nextBooking: nextBooking && {
       id: nextBooking.id,

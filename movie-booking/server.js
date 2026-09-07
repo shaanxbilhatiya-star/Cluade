@@ -28,6 +28,7 @@ if (db.isEmpty()) {
   seed.run();
 }
 seed.ensureRollingShowtimes();
+seed.syncOffersFromCatalog();
 
 // ── Router ───────────────────────────────────────────────────────────────────
 const api = new Router();
