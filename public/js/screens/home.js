@@ -80,7 +80,7 @@
             '<img class="locbar__avatar" src="' + UI.esc((user && user.avatarUrl) || '/img/avatars/guest.svg') + '" alt="" data-fallback="/img/avatars/guest.svg">' +
             '<div class="locbar__text">' +
               '<div class="locbar__label">Your location</div>' +
-              '<button class="locbar__city" data-action="city">' + UI.esc(data.city) + UI.icon('chevron-down', 17) + '</button>' +
+              '<div class="locbar__city" style="cursor:default">Mandla</div>' +
             '</div>' +
             '<button class="icon-btn icon-btn--ring icon-btn--badge" data-action="notifications" data-count="' + (data.unreadNotifications || 0) + '" aria-label="Notifications">' +
               UI.icon('bell', 21) +
