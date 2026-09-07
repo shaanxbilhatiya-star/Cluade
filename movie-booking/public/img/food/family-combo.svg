@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" role="img" aria-label="Family Feast Combo">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a13f3f"/>
+      <stop offset="1" stop-color="#7F1D1D"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.44" r="0.5">
+      <stop offset="0" stop-color="#FCA5A5" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#FCA5A5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="420" height="420" fill="url(#fg)"/>
+  <circle cx="239" cy="147" r="49" fill="#ffffff" opacity="0.10"/>
+  <circle cx="410" cy="377" r="48" fill="#ffffff" opacity="0.11"/>
+  <circle cx="213" cy="226" r="72" fill="#ffffff" opacity="0.11"/>
+  <circle cx="405" cy="377" r="38" fill="#ffffff" opacity="0.10"/>
+  <circle cx="36" cy="410" r="49" fill="#ffffff" opacity="0.08"/>
+  <circle cx="277" cy="315" r="56" fill="#ffffff" opacity="0.05"/>
+  <circle cx="301" cy="144" r="59" fill="#ffffff" opacity="0.11"/>
+  <circle cx="269" cy="9" r="49" fill="#ffffff" opacity="0.09"/>
+  <circle cx="154" cy="276" r="26" fill="#ffffff" opacity="0.08"/>
+  <circle cx="210" cy="184.8" r="126" fill="url(#halo)"/>
+  <g transform="translate(92.4 67.2) scale(2.3520)">
+    <g>
+      <path d="M14 44 h26 l-3.5 44 a4 4 0 0 1 -4 3.5 H21.5 a4 4 0 0 1 -4 -3.5 Z" fill="#F4F1EA"/>
+      <path d="M16 54 h22 l-3 34 H19 Z" fill="#FCA5A5"/>
+      <circle cx="21" cy="36" r="7" fill="#FFF8E7"/><circle cx="32" cy="32" r="8" fill="#FFFDF5"/>
+      <circle cx="27" cy="42" r="6" fill="#FFF3D6"/>
+      <rect x="50" y="30" width="9" height="8" rx="4" fill="#FFFFFF" opacity="0.9"/>
+      <path d="M46 38 h20 l-3 52 a4 4 0 0 1 -4 3.5 H53 a4 4 0 0 1 -4 -3.5 Z" fill="#F6F4F0"/>
+      <path d="M48 48 h16 l-2.4 40 H50.4 Z" fill="#FCA5A5"/>
+      <rect x="74" y="30" width="9" height="8" rx="4" fill="#FFFFFF" opacity="0.9"/>
+      <path d="M70 38 h20 l-3 52 a4 4 0 0 1 -4 3.5 H77 a4 4 0 0 1 -4 -3.5 Z" fill="#F6F4F0"/>
+      <path d="M72 48 h16 l-2.4 40 H74.4 Z" fill="#FCA5A5"/>
+    </g></g>
+  <text x="210" y="382" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.95">COMBOS</text>
+  <text x="210" y="406" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffff" fill-opacity="0.6">Combo for 4</text>
+</svg>

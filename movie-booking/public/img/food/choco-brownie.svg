@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" role="img" aria-label="Molten Choco Brownie">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#673c25"/>
+      <stop offset="1" stop-color="#451A03"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.44" r="0.5">
+      <stop offset="0" stop-color="#D97706" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#D97706" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="420" height="420" fill="url(#fg)"/>
+  <circle cx="399" cy="274" r="82" fill="#ffffff" opacity="0.10"/>
+  <circle cx="214" cy="388" r="63" fill="#ffffff" opacity="0.08"/>
+  <circle cx="343" cy="241" r="85" fill="#ffffff" opacity="0.07"/>
+  <circle cx="46" cy="406" r="53" fill="#ffffff" opacity="0.07"/>
+  <circle cx="169" cy="369" r="75" fill="#ffffff" opacity="0.11"/>
+  <circle cx="164" cy="14" r="72" fill="#ffffff" opacity="0.09"/>
+  <circle cx="191" cy="233" r="41" fill="#ffffff" opacity="0.10"/>
+  <circle cx="93" cy="354" r="29" fill="#ffffff" opacity="0.04"/>
+  <circle cx="319" cy="409" r="92" fill="#ffffff" opacity="0.11"/>
+  <circle cx="210" cy="184.8" r="126" fill="url(#halo)"/>
+  <g transform="translate(92.4 67.2) scale(2.3520)">
+    <g>
+      <circle cx="62" cy="30" r="15" fill="#FFFBF2"/>
+      <path d="M22 46 h56 l-4 34 a6 6 0 0 1 -6 5 H32 a6 6 0 0 1 -6 -5 Z" fill="#4A2410"/>
+      <path d="M22 46 h56 l-1.4 12 H23.4 Z" fill="#D97706" opacity="0.9"/>
+      <circle cx="38" cy="66" r="3.5" fill="#D97706"/><circle cx="52" cy="72" r="3" fill="#D97706"/>
+      <circle cx="64" cy="64" r="3.2" fill="#D97706"/>
+      <path d="M30 46 q10 10 20 0 q10 10 20 0" fill="none" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="3"/>
+    </g></g>
+  <text x="210" y="382" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.95">DESSERTS</text>
+  <text x="210" y="406" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffff" fill-opacity="0.6">Single</text>
+</svg>

@@ -16,6 +16,7 @@ const { Router } = require('./src/router');
 const { serveStatic, sendError, sendJSON } = require('./src/http');
 const seed = require('./src/seed');
 const { releaseExpiredHolds } = require('./src/seats');
+const { generateComboImages } = require('./tools/generate-combo-images');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -28,8 +29,9 @@ if (db.isEmpty()) {
   seed.run();
 }
 seed.ensureRollingShowtimes();
-seed.syncOffersFromCatalog();
-seed.syncExperiencesFromCatalog();
+seed.reseedFood(); // Always sync food catalog from catalog.js
+seed.ensureExperiences(); // Seed the Experiences tab once; admin edits persist after that
+generateComboImages().catch(err => console.warn("[combo-images] Failed:", err.message));
 
 // ── Router ───────────────────────────────────────────────────────────────────
 const api = new Router();

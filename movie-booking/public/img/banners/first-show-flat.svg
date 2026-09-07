@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="400" viewBox="0 0 960 400" role="img" aria-label="First Show, Flat ₹99">
+  <defs>
+    <linearGradient id="ob" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3c58a8"/>
+      <stop offset="1" stop-color="#1E3A8A"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="400" fill="url(#ob)"/>
+  <circle cx="787.1999999999999" cy="288" r="168" fill="#FDE68A" opacity="0.9"/>
+  <line x1="0" y1="0" x2="960" y2="40" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="40" x2="960" y2="80" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="80" x2="960" y2="120" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="120" x2="960" y2="160" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="160" x2="960" y2="200" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="200" x2="960" y2="240" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="240" x2="960" y2="280" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="280" x2="960" y2="320" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="320" x2="960" y2="360" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <line x1="0" y1="360" x2="960" y2="400" stroke="#FDE68A" stroke-width="2" opacity="0.14"/>
+  <text text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="66" font-weight="800" fill="#ffffff">
+    <tspan x="480" y="192">First Show, Flat ₹99</tspan>
+  </text>
+  <text x="480" y="260" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="30" fill="#ffffff" fill-opacity="0.9">Any show before 11 AM</text>
+  <text x="480" y="354" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="24" font-weight="700" fill="#ffffff" fill-opacity="0.8" letter-spacing="3">CODE: EARLY99</text>
+</svg>

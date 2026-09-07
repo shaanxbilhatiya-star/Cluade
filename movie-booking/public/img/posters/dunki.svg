@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750" role="img" aria-label="Dunki poster">
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#256986"/>
+      <stop offset="0.55" stop-color="#0B4F6C"/>
+      <stop offset="1" stop-color="#004360"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#F2A65A" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#F2A65A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blazeGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ffeca0" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#F2A65A" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#F2A65A" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.93"/>
+    </linearGradient>
+    <filter id="clouds">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="5" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+    <feColorMatrix in="n" type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+  </filter>
+  </defs>
+  <rect width="500" height="750" fill="url(#bg)"/>
+  <circle cx="370" cy="150" r="100" fill="#F2A65A" opacity="0.95"/>
+  <line x1="370" y1="150" x2="540.0" y2="150.0" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="523.2" y2="223.8" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="476.0" y2="282.9" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="407.8" y2="315.7" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="332.2" y2="315.7" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="264.0" y2="282.9" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="216.8" y2="223.8" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="200.0" y2="150.0" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="216.8" y2="76.2" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="264.0" y2="17.1" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="332.2" y2="-15.7" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="407.8" y2="-15.7" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="476.0" y2="17.1" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="370" y1="150" x2="523.2" y2="76.2" stroke="#F2A65A" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <ellipse cx="345.8" cy="412.5" rx="185.6" ry="26.3" fill="#ffffff" opacity="0.13"/>
+  <ellipse cx="179.4" cy="480.0" rx="180.3" ry="26.3" fill="#ffffff" opacity="0.11"/>
+  <ellipse cx="287.9" cy="547.5" rx="133.5" ry="26.3" fill="#ffffff" opacity="0.09"/>
+  <ellipse cx="277.1" cy="615.0" rx="165.1" ry="26.3" fill="#ffffff" opacity="0.19"/>
+  <ellipse cx="414.3" cy="682.5" rx="179.3" ry="26.3" fill="#ffffff" opacity="0.19"/>
+  <rect width="500" height="750" fill="url(#scrim)"/>
+  <rect width="500" height="750" filter="url(#grain)" opacity="0.5"/>
+  <text text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="74" font-weight="800" fill="#ffffff" letter-spacing="1.5" style="paint-order:stroke" stroke="#000000" stroke-opacity="0.35" stroke-width="1.2"><tspan x="250" y="600">DUNKI</tspan></text>
+  <text x="250" y="646" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffb4" letter-spacing="1.4">Four friends. One border.</text>
+  <line x1="140" y1="666" x2="360" y2="666" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="250" y="696" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="18" fill="#ffffff" fill-opacity="0.82" letter-spacing="2.6">COMEDY  •  DRAMA</text>
+  <text x="250" y="726" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="15" fill="#ffffff" fill-opacity="0.55" letter-spacing="1.6">UA  |  Hindi  |  161m</text>
+</svg>

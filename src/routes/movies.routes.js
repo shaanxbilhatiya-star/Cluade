@@ -18,6 +18,224 @@ function decorate(movie) {
   return Object.assign({}, movie, { reviews: reviewSummary(movie.id), showtimeCount });
 }
 
+// ── Generated reviews (no external API) ─────────────────────────────────────
+// Every movie (existing or newly added via admin) gets 30 deterministic,
+// template-based Hinglish reviews so the section is never empty. "Deterministic"
+// means the same movie always produces the same 30 reviews on every request —
+// they're seeded from the movie's own id, not re-rolled randomly each time.
+const REVIEWER_NAMES = [
+  'Aarav Mehta', 'Priya Nair', 'Rohan Kulkarni', 'Sneha Reddy', 'Vikram Chauhan',
+  'Ananya Iyer', 'Kartik Joshi', 'Isha Malhotra', 'Aditya Verma', 'Meera Pillai',
+  'Rahul Bhatt', 'Divya Menon', 'Sanjay Rao', 'Pooja Agarwal', 'Nikhil Shetty',
+  'Kavya Krishnan', 'Arjun Desai', 'Riya Kapoor', 'Manish Tiwari', 'Neha Saxena',
+  'Suresh Pillai', 'Anjali Gupta', 'Varun Choudhary', 'Tanvi Rane', 'Deepak Yadav',
+  'Shreya Bhattacharya', 'Amit Trivedi', 'Nandini Suri', 'Yash Oberoi', 'Ritika Sharma',
+];
+
+const POSITIVE_TEMPLATES = [
+  'Kya zabardast film hai yaar! {cast} ne apna best diya hai, {genreLower} lovers ke liye must watch. 🔥',
+  'Paisa vasool entertainment 🎬. Direction top-notch hai aur second half me pura theatre whistle maar raha tha.',
+  'Story thodi predictable hai but presentation itni mast hai ki pata hi nahi chalta time kaise nikal gaya. 👌',
+  '{cast} ka performance is career-best 👏. BGM aur cinematography ne poore experience ko next level bana diya.',
+  'First day first show dekha, bilkul disappoint nahi hui. {genreLower} genre me itna fresh feel bahut dino baad aaya. 😍',
+  'Full paisa vasool! Family ke saath enjoy kiya, sabko pasand aayi. Highly recommended for the weekend. 🍿',
+  'Direction aur screenplay dono solid hain. {director} ne kamaal ka kaam kiya hai is film me. 💯',
+  'Interval tak thoda slow tha but second half ekdum blockbuster mode me chala gaya. Worth the ticket price. 🎟️',
+  'Ekdum mass entertainer! Dialogue-baazi aur action sequences dono top class the, hall me talent milega. 🙌',
+  'Genuinely surprised, expectations se zyada acchi nikli. {cast} carried the film beautifully. ⭐',
+  'Watched it in a packed theatre and the energy was unmatched — genuinely one of the better {genreLower} films this year. 🔥',
+  'Music aur background score bahut hi effective hai, mood set karne me full support karta hai poori film ka. 🎶',
+];
+
+const MIXED_TEMPLATES = [
+  'Decent hai, ek baar dekh sakte ho. Story me kuch naya nahi tha but acting carry kar leti hai. 🤔',
+  'First half thoda dragged laga lekin climax ne sab compensate kar diya. Overall theek-thaak experience. 😐',
+  'Visuals aur action sequences achhe hain, but writing thodi weak feel hui beech beech me.',
+  '{cast} ne apna role nibhaya hai theek se, but overall film thodi lambi lagi mujhe. ⏳',
+  'Ek baar dekh sakte hain, but bahut zyada hype mat rakhna. Average entertainer hai. 🙂',
+  'Kuch scenes bahut acche bane hain, kuch unnecessary lage. Mixed bag overall, still watchable.',
+  'Not bad for a one-time watch. {genreLower} fans ko shayad thoda zyada pasand aaye compared to others.',
+];
+
+const NEGATIVE_TEMPLATES = [
+  'Expected zyada tha, but screenplay kaafi loose lagi. Editing thodi tight ho sakti thi. 😑',
+  'Story bikhri hui lagi, character development bhi kam tha. Could have been much better honestly. 👎',
+  'Thoda underwhelming raha experience, especially second half me pacing bahut slow ho gayi.',
+  'Not really my type, but agar aap {genreLower} ke big fan ho tabhi try karo, warna skip kar sakte ho.',
+];
+
+const EN_POSITIVE_TEMPLATES = [
+  'What a ride! {cast} absolutely owns the screen, hands down one of the best {genreLower} films in a while. 🔥',
+  'Loved every bit of it. The direction by {director} is sharp and the pacing never drags. 👏',
+  'Packed theatre, thunderous applause — this is exactly what a big-screen {genreLower} experience should feel like. 🍿',
+  '{cast} delivers a career-defining performance here. The background score alone gives you goosebumps. 🎶',
+  'Went in with low expectations, walked out grinning. Total paisa-vasool watch for the whole family. 💯',
+  'Cinematography and action choreography are top notch. Worth watching this on the biggest screen possible. 🎬',
+  'A genuinely fun theatre experience — whistles, claps, the works. Highly recommend catching this one. ⭐',
+];
+
+const EN_MIXED_TEMPLATES = [
+  'Decent watch overall. Nothing groundbreaking in the story, but the performances hold it together. 🤔',
+  'Slow first half, but the climax mostly makes up for it. An okay one-time watch. 😐',
+  '{cast} does a solid job, though the film feels a touch too long in places. ⏳',
+  'Some scenes really land, others feel unnecessary. A mixed bag but still watchable.',
+  'Not bad, but temper your expectations. Fine for a lazy weekend watch.',
+];
+
+const EN_NEGATIVE_TEMPLATES = [
+  'Expected more honestly, the screenplay feels loose and could have used tighter editing. 😑',
+  'The story felt scattered and character arcs were underdeveloped. Could have been so much better. 👎',
+  'A bit underwhelming, especially the second half where the pacing really drags.',
+  'Only recommend this if you are a die-hard {genreLower} fan, otherwise you can skip it.',
+];
+
+const HI_POSITIVE_TEMPLATES = [
+  'बहुत ज़बरदस्त फिल्म है! {cast} का काम देखकर मज़ा आ गया, {genreLower} पसंद करने वालों के लिए बिल्कुल must watch है। 🔥',
+  'पूरा पैसा वसूल एंटरटेनमेंट! डायरेक्शन इतना कमाल का है कि थिएटर में लोग सीटी बजाते रह गए। 🙌',
+  'कहानी थोड़ी सीधी है लेकिन प्रेजेंटेशन इतनी अच्छी है कि पूरा टाइम पता ही नहीं चलता। 👌',
+  '{cast} का परफॉरमेंस बेहतरीन है, बैकग्राउंड म्यूज़िक ने पूरे अनुभव को और शानदार बना दिया। 🎶',
+  'फर्स्ट डे फर्स्ट शो देखी, बिल्कुल निराश नहीं हुई। बहुत दिनों बाद इतनी ताज़गी भरी फिल्म आई है। 😍',
+  'परिवार के साथ देखी, सबको बहुत पसंद आई। वीकेंड के लिए बढ़िया चॉइस है। 🍿',
+  'डायरेक्शन और स्क्रीनप्ले दोनों कमाल के हैं। {director} ने सच में बहुत अच्छा काम किया है। 💯',
+];
+
+const HI_MIXED_TEMPLATES = [
+  'ठीक-ठाक है, एक बार देख सकते हैं। कहानी में कुछ नया नहीं था लेकिन एक्टिंग संभाल लेती है। 🤔',
+  'पहला हाफ थोड़ा खिंचा हुआ लगा, लेकिन क्लाइमेक्स ने भरपाई कर दी। ओवरऑल ठीक अनुभव रहा। 😐',
+  '{cast} ने अपना रोल ठीक से निभाया है, लेकिन फिल्म थोड़ी लंबी लगी। ⏳',
+  'कुछ सीन बहुत अच्छे बने हैं, कुछ ज़रूरत से ज़्यादा लंबे लगे। मिला-जुला अनुभव रहा।',
+];
+
+const HI_NEGATIVE_TEMPLATES = [
+  'उम्मीद ज़्यादा थी, लेकिन स्क्रीनप्ले थोड़ी ढीली लगी। एडिटिंग और टाइट हो सकती थी। 😑',
+  'कहानी बिखरी हुई लगी, किरदारों पर भी ज़्यादा मेहनत नहीं दिखी। और बेहतर हो सकती थी ये फिल्म। 👎',
+  'थोड़ा उम्मीद से कम रहा अनुभव, खासकर दूसरे हाफ में गति काफी धीमी हो गई।',
+];
+
+// Each language has its own positive/mixed/negative pools so the tone mix
+// (below) stays realistic no matter which language a given review lands in.
+const LANGUAGE_POOLS = [
+  { weight: 0.45, positive: POSITIVE_TEMPLATES, mixed: MIXED_TEMPLATES, negative: NEGATIVE_TEMPLATES },
+  { weight: 0.30, positive: EN_POSITIVE_TEMPLATES, mixed: EN_MIXED_TEMPLATES, negative: EN_NEGATIVE_TEMPLATES },
+  { weight: 0.25, positive: HI_POSITIVE_TEMPLATES, mixed: HI_MIXED_TEMPLATES, negative: HI_NEGATIVE_TEMPLATES },
+];
+
+function pickLanguagePool(rng) {
+  const roll = rng();
+  let acc = 0;
+  for (const pool of LANGUAGE_POOLS) {
+    acc += pool.weight;
+    if (roll < acc) return pool;
+  }
+  return LANGUAGE_POOLS[0];
+}
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seedFromString(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function pick(rng, arr) {
+  return arr[Math.floor(rng() * arr.length)];
+}
+
+function fillTemplate(tpl, movie, rng) {
+  const cast = (movie.cast && movie.cast.length) ? pick(rng, movie.cast) : 'the cast';
+  const genre = (movie.genres && movie.genres.length) ? movie.genres[0] : 'is';
+  return tpl
+    .replace(/\{cast\}/g, cast)
+    .replace(/\{director\}/g, movie.director || 'the director')
+    .replace(/\{genreLower\}/g, genre.toLowerCase());
+}
+
+function generateReviews(movie, count) {
+  const rng = mulberry32(seedFromString(movie.id));
+  const names = [...REVIEWER_NAMES];
+  // deterministic shuffle so name order differs per movie but stays stable across requests
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [names[i], names[j]] = [names[j], names[i]];
+  }
+
+  // Reviews can never be dated before the movie's own release date. If the
+  // movie hasn't released yet (coming_soon / future releaseDate), nobody has
+  // actually watched it yet, so generated reviews get no date at all instead
+  // of a fabricated one.
+  const releaseMs = movie.releaseDate ? new Date(movie.releaseDate).getTime() : NaN;
+  const daysSinceRelease = Number.isFinite(releaseMs) ? Math.floor((Date.now() - releaseMs) / 86400000) : -1;
+  const hasReleased = daysSinceRelease >= 1;
+  const maxDaysAgo = Math.max(1, Math.min(45, daysSinceRelease));
+
+  const reviews = [];
+  for (let i = 0; i < count; i++) {
+    const pool = pickLanguagePool(rng);
+    const roll = rng();
+    // ~65% positive, ~25% mixed, ~10% negative — keeps it realistic, not all 10/10
+    const bucket = roll < 0.65 ? pool.positive : roll < 0.9 ? pool.mixed : pool.negative;
+    const rating = roll < 0.65 ? 8 + Math.floor(rng() * 3) : roll < 0.9 ? 6 + Math.floor(rng() * 2) : 3 + Math.floor(rng() * 3);
+    const text = fillTemplate(pick(rng, bucket), movie, rng);
+    const name = names[i % names.length];
+    const daysAgo = 1 + Math.floor(rng() * maxDaysAgo);
+
+    reviews.push({
+      id: `gen_${movie.id}_${i}`,
+      rating,
+      text,
+      createdAt: hasReleased ? new Date(Date.now() - daysAgo * 86400000).toISOString() : null,
+      author: { name, avatarUrl: '/img/avatars/guest.svg' },
+      source: 'generated',
+    });
+  }
+  return reviews;
+}
+
+async function getReviewsFor(movie) {
+  const localReviews = db
+    .find('reviews', (r) => r.movieId === movie.id)
+    .map((r) => {
+      const u = db.byId('users', r.userId);
+      return {
+        id: r.id,
+        rating: r.rating,
+        text: r.text,
+        createdAt: r.createdAt,
+        author: u ? { name: u.name, avatarUrl: u.avatarUrl } : { name: 'CineFlex user', avatarUrl: '/img/avatars/guest.svg' },
+        source: 'local',
+      };
+    })
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+  const needed = Math.max(0, 30 - localReviews.length);
+  const generated = needed ? generateReviews(movie, needed) : [];
+  const reviewList = [...localReviews, ...generated].sort((a, b) => {
+    if (!a.createdAt && !b.createdAt) return 0;
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    return String(b.createdAt).localeCompare(String(a.createdAt));
+  });
+
+  const rated = reviewList.filter((r) => Number.isFinite(r.rating));
+  const summary = rated.length
+    ? { count: reviewList.length, average: Math.round((rated.reduce((s, r) => s + r.rating, 0) / rated.length) * 10) / 10 }
+    : { count: reviewList.length, average: 0 };
+
+  return { reviewList, summary };
+}
+
 router.get('/movies', (ctx) => {
   const { status, genre, language, q, city, limit, sort } = ctx.query;
   let list = db.get('movies').filter((m) => m.active !== false);
@@ -55,69 +273,17 @@ router.get('/movies', (ctx) => {
   return { count: capped.length, movies: capped.map(decorate) };
 });
 
-// TMDB review cache: tmdbId -> { at, reviews }
-const tmdbReviewCache = new Map();
-const TMDB_CACHE_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-async function fetchTmdbReviews(tmdbId) {
-  if (!tmdbId) return [];
-  const cached = tmdbReviewCache.get(tmdbId);
-  if (cached && Date.now() - cached.at < TMDB_CACHE_MS) return cached.reviews;
-  const token = process.env.TMDB_API_TOKEN;
-  if (!token) return [];
-  try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/movie/${encodeURIComponent(tmdbId)}/reviews?language=en-US&page=1`,
-      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }
-    );
-    if (!res.ok) return cached ? cached.reviews : [];
-    const data = await res.json();
-    const reviews = (data.results || []).slice(0, 6).map((r) => ({
-      id: r.id,
-      author: { name: r.author || 'Anonymous', avatarUrl: '/img/avatars/guest.svg' },
-      rating: r.author_details && r.author_details.rating ? Math.round(r.author_details.rating) : null,
-      text: (r.content || '').replace(/\s+/g, ' ').trim().slice(0, 400),
-      createdAt: r.created_at,
-    }));
-    tmdbReviewCache.set(tmdbId, { at: Date.now(), reviews });
-    return reviews;
-  } catch (_e) {
-    return cached ? cached.reviews : [];
-  }
-}
-
 router.get('/movies/:id', async (ctx) => {
   const movie =
     db.byId('movies', ctx.params.id) || db.findOne('movies', (m) => m.slug === ctx.params.id);
   if (!movie) throw new HttpError(404, 'Movie not found');
 
-  // Local user reviews
-  const localReviews = db
-    .find('reviews', (r) => r.movieId === movie.id)
-    .map((r) => {
-      const u = db.byId('users', r.userId);
-      return {
-        id: r.id,
-        rating: r.rating,
-        text: r.text,
-        createdAt: r.createdAt,
-        author: u ? { name: u.name, avatarUrl: u.avatarUrl } : { name: 'CineFlex user', avatarUrl: '/img/avatars/guest.svg' },
-      };
-    })
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-
-  // TMDB reviews (if movie was linked to TMDB)
-  const tmdbReviews = await fetchTmdbReviews(movie.tmdbId);
-
-  // Merge: local first, then TMDB (no duplicates)
-  const reviewList = localReviews.length ? localReviews : tmdbReviews;
-
+  const { reviewList, summary } = await getReviewsFor(movie);
   const cinemaIds = [...new Set(db.get('showtimes').filter((s) => s.movieId === movie.id).map((s) => s.cinemaId))];
 
   return Object.assign(decorate(movie), {
+    reviews: summary,
     reviewList,
-    castPhotos: movie.castPhotos || {},
-    tmdbId: movie.tmdbId || null,
     playingAt: cinemaIds.map((id) => db.byId('cinemas', id)).filter(Boolean).map((c) => ({ id: c.id, name: c.name, city: c.city, area: c.area })),
   });
 });

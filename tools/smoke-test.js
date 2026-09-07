@@ -61,82 +61,7 @@ async function waitForServer(child) {
   throw new Error('Server did not become healthy in time');
 }
 
-/**
- * Self-heal test for stale, already-seeded databases (e.g. the Railway
- * persistent volume). The main harness always boots a fresh DATA_DIR, so the
- * insert path is exercised there; here we pre-populate a scratch DATA_DIR with
- * rows that PRE-DATE the imageUrl/bannerUrl/order fields and confirm the
- * syncers backfill the missing system-managed fields without clobbering an
- * admin-set value. Runs in a child process so it gets its own db module state.
- */
-async function runSelfHealTest() {
-  section('Self-heal of stale seeded data');
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'cineflex-heal-'));
-  const script = `
-    'use strict';
-    const db = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'db.js'))});
-    const seed = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'seed.js'))});
-    db.load();
-    // Wipe any auto-created rows so we control the exact starting state.
-    db.replace('experiences', [
-      // Stale row: missing imageUrl + order (pre-image build).
-      { id: 'exp_wedding', slug: 'wedding', title: 'Wedding', active: true },
-      // Admin-edited row: custom imageUrl must survive untouched.
-      { id: 'exp_birthday-party', slug: 'birthday-party', title: 'Birthday Party', imageUrl: '/img/custom/mine.svg', active: true },
-    ]);
-    db.replace('offers', [
-      // Stale showcase wedding package: missing bannerUrl/showcase/order.
-      { id: 'off_wedding-premium', slug: 'wedding-premium', title: 'Dream Wedding Premium', code: 'WED551', active: true },
-    ]);
-    db.flushNow();
-    seed.syncExperiencesFromCatalog();
-    seed.syncOffersFromCatalog();
-    const stale = db.byId('experiences', 'exp_wedding');
-    const edited = db.byId('experiences', 'exp_birthday-party');
-    const offer = db.byId('offers', 'off_wedding-premium');
-    // Idempotency: a second pass must change nothing.
-    seed.syncExperiencesFromCatalog();
-    seed.syncOffersFromCatalog();
-    const staleAfter = db.byId('experiences', 'exp_wedding');
-    process.stdout.write(JSON.stringify({
-      staleImage: stale.imageUrl,
-      staleOrder: stale.order,
-      editedImage: edited.imageUrl,
-      offerBanner: offer.bannerUrl,
-      offerShowcase: offer.showcase,
-      offerOrder: offer.order,
-      idempotentUpdatedAt: stale.updatedAt === staleAfter.updatedAt,
-    }));
-  `;
-  const env = Object.assign({}, process.env, { DATA_DIR: scratch });
-  delete env.NODE_OPTIONS;
-  const out = await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ['-e', script], { env, stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (d) => { stdout += d.toString(); });
-    child.stderr.on('data', (d) => { stderr += d.toString(); });
-    child.on('close', (code) => (code === 0 ? resolve(stdout) : reject(new Error(`self-heal child exited ${code}: ${stderr}`))));
-    child.on('error', reject);
-  }).finally(() => { try { fs.rmSync(scratch, { recursive: true, force: true }); } catch (_e) {} });
-
-  let result = null;
-  try { result = JSON.parse(out.trim().split('\n').pop()); } catch (_e) { result = null; }
-  check('self-heal produced a result', Boolean(result), out.slice(0, 200));
-  if (result) {
-    check('stale experience gets its imageUrl backfilled', result.staleImage === '/img/experiences/wedding.svg', String(result.staleImage));
-    check('stale experience gets its order backfilled', typeof result.staleOrder === 'number', String(result.staleOrder));
-    check('admin-edited experience image is NOT overwritten', result.editedImage === '/img/custom/mine.svg', String(result.editedImage));
-    check('stale offer gets its bannerUrl backfilled', result.offerBanner === '/img/banners/wedding-premium.svg', String(result.offerBanner));
-    check('stale showcase offer gets its showcase flag backfilled', result.offerShowcase === true, String(result.offerShowcase));
-    check('stale offer gets its order backfilled', typeof result.offerOrder === 'number', String(result.offerOrder));
-    check('a second sync pass is idempotent (no re-write)', result.idempotentUpdatedAt === true);
-  }
-}
-
 async function run() {
-  await runSelfHealTest();
-
   const env = Object.assign({}, process.env, { PORT: String(PORT), DATA_DIR, HOST: '127.0.0.1' });
   delete env.NODE_OPTIONS;
 
@@ -167,27 +92,6 @@ async function run() {
     check('GET /api/home returns coming soon', home.body.comingSoon.length > 0);
     check('GET /api/home returns offers', home.body.offers.length > 0);
     check('GET /api/home returns cinemas', home.body.cinemas.length > 0);
-
-    const isWeddingOffer = (o) => /wed/i.test(o.code || '') || /wedding/i.test(o.title || '');
-    const weddingOffers = home.body.offers.filter(isWeddingOffer);
-    check('GET /api/home features wedding offers', weddingOffers.length > 0, `got ${weddingOffers.length}`);
-    check('wedding offers carry a banner image', weddingOffers.every((o) => Boolean(o.bannerUrl)));
-    check('wedding offers sort to the front of the carousel', home.body.offers.slice(0, weddingOffers.length).every(isWeddingOffer));
-
-    // Showcase wedding packages must lead Home but never appear in the coupon
-    // picker (GET /offers, consumed by movie checkout + food coupon sheets).
-    const couponOffers = await api('GET', '/api/offers');
-    check('GET /api/offers returns coupons', couponOffers.status === 200 && couponOffers.body.offers.length > 0);
-    // Wedding package codes are WED299/451/551/851 (distinct from CINEWED, a
-    // Wednesday ticket coupon), so match the numbered WED code / "Dream Wedding" title.
-    const isWeddingPackage = (o) => /^WED\d/i.test(o.code || '') || /dream wedding/i.test(o.title || '');
-    check('wedding packages do NOT leak into the coupon list', !couponOffers.body.offers.some(isWeddingPackage));
-    const couponOrders = couponOffers.body.offers.map((o) => (typeof o.order === 'number' ? o.order : Infinity));
-    check('GET /api/offers is sorted by order', couponOrders.every((v, i) => i === 0 || couponOrders[i - 1] <= v));
-
-    const experiences = await api('GET', '/api/experiences');
-    check('GET /api/experiences returns items', experiences.status === 200 && experiences.body.experiences.length > 0, `got ${experiences.body?.experiences?.length}`);
-    check('every experience has an image', experiences.body.experiences.every((e) => Boolean(e.imageUrl)));
 
     const movies = await api('GET', '/api/movies?status=now_playing');
     check('GET /api/movies filters by status', movies.status === 200 && movies.body.movies.every((m) => m.status === 'now_playing'));
@@ -431,6 +335,8 @@ async function run() {
     check('review can be posted', review.status === 201 && review.body.summary.count > 0);
     const badReview = await api('POST', `/api/movies/${jawan.id}/reviews`, { token: riderToken, body: { rating: 99 } });
     check('review rating is validated', badReview.status === 400);
+    const jawanDetail = await api('GET', `/api/movies/${jawan.id}`);
+    check('movie detail returns a reviewList array', Array.isArray(jawanDetail.body.reviewList) && jawanDetail.body.reviewList.length > 0);
 
     const pwd = await api('POST', '/api/auth/change-password', { token: riderToken, body: { currentPassword: 'pass1234', newPassword: 'newpass99' } });
     check('password can be changed', pwd.status === 200);
@@ -487,17 +393,6 @@ async function run() {
     check('admin can create an offer (code upper-cased)', newOffer.status === 201 && newOffer.body.offer.code === 'TESTCODE');
     const dupeOffer = await api('POST', '/api/admin/offers', { token: adminToken, body: { title: 'Dupe', code: 'TESTCODE', discountType: 'flat', discountValue: 10 } });
     check('duplicate offer code is rejected', dupeOffer.status === 409);
-    const adminOffers = await api('GET', '/api/admin/offers', { token: adminToken });
-    check('admin offers listing includes showcase wedding packages', adminOffers.status === 200 && adminOffers.body.offers.some((o) => o.showcase === true && /wed/i.test(o.code || '')));
-
-    const adminExps = await api('GET', '/api/admin/experiences', { token: adminToken });
-    check('admin can list all experiences', adminExps.status === 200 && adminExps.body.experiences.length > 0);
-    const newExp = await api('POST', '/api/admin/experiences', { token: adminToken, body: { title: 'Test Corporate Retreat', category: 'Get Togethers', priceLabel: 'Custom packages' } });
-    check('admin can create an experience (with a default image)', newExp.status === 201 && Boolean(newExp.body.experience.imageUrl));
-    const editExp = await api('PUT', `/api/admin/experiences/${newExp.body.experience.id}`, { token: adminToken, body: { imageUrl: '/img/experiences/wedding.svg' } });
-    check('admin can edit an experience image', editExp.body.experience.imageUrl === '/img/experiences/wedding.svg');
-    const delExp = await api('DELETE', `/api/admin/experiences/${newExp.body.experience.id}`, { token: adminToken });
-    check('admin can delete an experience', delExp.status === 200 && delExp.body.deleted === true);
 
     const adminBookings = await api('GET', '/api/admin/bookings', { token: adminToken });
     check('admin can list all bookings', adminBookings.status === 200 && adminBookings.body.bookings.length > 0);

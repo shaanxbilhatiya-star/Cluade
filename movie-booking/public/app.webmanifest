@@ -1,0 +1,14 @@
+{
+  "name": "CineFlex — Movie Tickets",
+  "short_name": "CineFlex",
+  "description": "Book movie tickets, choose your seats and pre-order snacks.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#5B21B6",
+  "icons": [
+    { "src": "/img/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -2,13 +2,15 @@
 (function () {
   'use strict';
 
+  // Clear any previously cached city — this is a single-city (Mandla) deployment.
+  try { localStorage.removeItem('cineflex.city'); } catch (_e) {}
+
   var THEME_KEY = 'cineflex.theme';
   var appEl = document.getElementById('app');
 
   var TABS = [
     { id: 'home', label: 'Home', icon: 'home', path: '/home' },
-    { id: 'experiences', label: 'Events', icon: 'sparkle', path: '/experiences' },
-    { id: 'cinemas', label: 'Cinemas', icon: 'grid', path: '/cinemas' },
+    { id: 'experiences', label: 'Experiences', icon: 'sparkle', path: '/experiences' },
     { id: 'food', label: 'Food Order', icon: 'food', path: '/food' },
     { id: 'tickets', label: 'My Tickets', icon: 'ticket', path: '/tickets' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },

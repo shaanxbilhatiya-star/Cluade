@@ -111,8 +111,6 @@
     food: function (query) { return request('GET', '/food' + (query ? '?' + query : '')); },
     foodItem: function (id) { return request('GET', '/food/' + id); },
     offers: function (appliesTo) { return request('GET', '/offers' + (appliesTo ? '?appliesTo=' + appliesTo : '')); },
-
-    // ── Experiences ──
     experiences: function () { return request('GET', '/experiences'); },
 
     // ── Account ──
@@ -131,23 +129,19 @@
     changePassword: function (currentPassword, newPassword) {
       return request('POST', '/auth/change-password', { currentPassword: currentPassword, newPassword: newPassword });
     },
-    review: function (movieId, payload) { return request('POST', '/movies/' + movieId + '/reviews', payload); },
   };
 
   /* ── App store: signed-in user, chosen city, food cart, transient flow state ── */
   var Store = {
     user: null,
-    city: (function () { try { return localStorage.getItem(CITY_KEY) || 'Ahmedabad'; } catch (_e) { return 'Ahmedabad'; } })(),
+    city: 'Mandla',
     cart: (function () {
       try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch (_e) { return []; }
     })(),
     // Seat-selection flow state, kept in memory only (never resumed after reload).
     flow: null,
 
-    setCity: function (city) {
-      Store.city = city;
-      try { localStorage.setItem(CITY_KEY, city); } catch (_e) {}
-    },
+    setCity: function () { Store.city = 'Mandla'; },
 
     saveCart: function () {
       try { localStorage.setItem(CART_KEY, JSON.stringify(Store.cart)); } catch (_e) {}

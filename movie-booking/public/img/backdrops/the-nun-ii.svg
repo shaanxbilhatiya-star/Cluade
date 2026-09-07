@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="The Nun II backdrop">
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#1f1e1f"/>
+      <stop offset="0.55" stop-color="#050405"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#C8A96B" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#C8A96B" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blazeGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ffefb1" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#C8A96B" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#C8A96B" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.93"/>
+    </linearGradient>
+    <filter id="clouds">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="5" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+    <feColorMatrix in="n" type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+  </filter>
+  </defs>
+  <linearGradient id="sideScrim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#000000" stop-opacity="0.85"/>
+    <stop offset="0.62" stop-color="#000000" stop-opacity="0.15"/>
+    <stop offset="1" stop-color="#000000" stop-opacity="0.45"/>
+  </linearGradient>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <circle cx="640" cy="288" r="921.6" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.10"/>
+  <circle cx="640" cy="288" r="806.4" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.13"/>
+  <circle cx="640" cy="288" r="691.2" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.16"/>
+  <circle cx="640" cy="288" r="576.0" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.19"/>
+  <circle cx="640" cy="288" r="460.8" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.22"/>
+  <circle cx="640" cy="288" r="345.6" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.25"/>
+  <circle cx="640" cy="288" r="230.4" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.28"/>
+  <circle cx="640" cy="288" r="115.2" fill="none" stroke="#C8A96B" stroke-width="1.1" opacity="0.31"/>
+  <line x1="640" y1="288" x2="1561.6" y2="288.0" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1524.3" y2="547.6" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1415.3" y2="786.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1243.5" y2="984.5" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1022.8" y2="1126.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="771.2" y2="1200.2" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="508.8" y2="1200.2" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="257.2" y2="1126.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="36.5" y2="984.5" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="-135.3" y2="786.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="-244.3" y2="547.6" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="-281.6" y2="288.0" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="-244.3" y2="28.4" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="-135.3" y2="-210.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="36.5" y2="-408.5" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="257.2" y2="-550.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="508.8" y2="-624.2" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="771.2" y2="-624.2" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1022.8" y2="-550.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1243.5" y2="-408.5" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1415.3" y2="-210.3" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <line x1="640" y1="288" x2="1524.3" y2="28.4" stroke="#C8A96B" stroke-width="0.8" opacity="0.14"/>
+  <ellipse cx="640" cy="288" rx="256" ry="256" fill="url(#glow)" opacity="0.75"/>
+  <rect width="1280" height="720" fill="url(#sideScrim)"/>
+  <rect width="1280" height="720" fill="url(#scrim)" opacity="0.75"/>
+  <rect width="1280" height="720" filter="url(#grain)" opacity="0.45"/>
+  <text font-family="Georgia,'Times New Roman',serif" font-size="118" font-weight="800" fill="#ffffff" letter-spacing="8"><tspan x="72" y="540">THE NUN II</tspan></text>
+  <text x="74" y="602" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="30" fill="#ffffcf" letter-spacing="1.6">Sister Irene faces the demon again.</text>
+  <text x="74" y="648" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="24" fill="#ffffff" fill-opacity="0.78" letter-spacing="3">HORROR   •   MYSTERY</text>
+</svg>

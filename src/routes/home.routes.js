@@ -33,7 +33,7 @@ function todayKey() {
 
 /** One call that fills the entire Home screen. */
 router.get('/home', (ctx) => {
-  const city = ctx.query.city || (ctx.user && ctx.user.city) || 'Ahmedabad';
+  const city = 'Mandla'; // Single-city deployment — always Mandla
   const movies = db.get('movies').filter((m) => m.active !== false);
   const today = todayKey();
 
@@ -43,10 +43,11 @@ router.get('/home', (ctx) => {
   const playingInCity = new Set(
     db.get('showtimes').filter((s) => s.date >= today && cityCinemaIds.has(s.cinemaId)).map((s) => s.movieId)
   );
+  const moviesWithAnyShowtime = new Set(db.get('showtimes').map((s) => s.movieId));
 
   const nowPlaying = movies
-    .filter((m) => m.status === 'now_playing' && (playingInCity.size === 0 || playingInCity.has(m.id)))
-    .sort((a, b) => b.rating - a.rating);
+    .filter((m) => m.status === 'now_playing' && (playingInCity.has(m.id) || !moviesWithAnyShowtime.has(m.id)))
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 
   const comingSoon = movies
     .filter((m) => m.status === 'coming_soon')
@@ -95,13 +96,7 @@ router.get('/home', (ctx) => {
     offers: db
       .get('offers')
       .filter((o) => o.active !== false)
-      .map((o, i) => ({ id: o.id, title: o.title, subtitle: o.subtitle, code: o.code, bannerUrl: o.bannerUrl, appliesTo: o.appliesTo, order: o.order, _i: i }))
-      .sort((a, b) => {
-        const ao = typeof a.order === 'number' ? a.order : Infinity;
-        const bo = typeof b.order === 'number' ? b.order : Infinity;
-        return ao - bo || a._i - b._i;
-      })
-      .map(({ _i, ...o }) => o),
+      .map((o) => ({ id: o.id, title: o.title, subtitle: o.subtitle, code: o.code, bannerUrl: o.bannerUrl, appliesTo: o.appliesTo })),
     unreadNotifications,
     nextBooking: nextBooking && {
       id: nextBooking.id,

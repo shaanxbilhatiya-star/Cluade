@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" role="img" aria-label="Peach Iced Tea">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#bc5634"/>
+      <stop offset="1" stop-color="#9A3412"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.44" r="0.5">
+      <stop offset="0" stop-color="#FDBA74" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#FDBA74" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="420" height="420" fill="url(#fg)"/>
+  <circle cx="37" cy="123" r="87" fill="#ffffff" opacity="0.08"/>
+  <circle cx="22" cy="319" r="75" fill="#ffffff" opacity="0.04"/>
+  <circle cx="264" cy="49" r="55" fill="#ffffff" opacity="0.12"/>
+  <circle cx="203" cy="388" r="60" fill="#ffffff" opacity="0.08"/>
+  <circle cx="200" cy="109" r="71" fill="#ffffff" opacity="0.05"/>
+  <circle cx="403" cy="265" r="36" fill="#ffffff" opacity="0.10"/>
+  <circle cx="333" cy="308" r="33" fill="#ffffff" opacity="0.09"/>
+  <circle cx="384" cy="221" r="22" fill="#ffffff" opacity="0.06"/>
+  <circle cx="0" cy="19" r="26" fill="#ffffff" opacity="0.04"/>
+  <circle cx="210" cy="184.8" r="126" fill="url(#halo)"/>
+  <g transform="translate(92.4 67.2) scale(2.3520)">
+    <g>
+      <path d="M30 26 h40 l-5 66 a5 5 0 0 1 -5 4.5 H40 a5 5 0 0 1 -5 -4.5 Z" fill="#F6F4F0" opacity="0.55"/>
+      <path d="M33 42 h34 l-4 50 a4 4 0 0 1 -4 3.5 H41 a4 4 0 0 1 -4 -3.5 Z" fill="#FDBA74"/>
+      <rect x="38" y="48" width="13" height="13" rx="3" fill="#FFFFFF" opacity="0.45" transform="rotate(-12 44 54)"/>
+      <rect x="52" y="62" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.35" transform="rotate(16 58 68)"/>
+      <path d="M56 20 a13 13 0 0 1 0 20 Z" fill="#FFB86B"/>
+      <circle cx="56" cy="30" r="3" fill="#FFFFFF" opacity="0.6"/>
+      <rect x="64" y="14" width="4.5" height="34" rx="2.2" fill="#FFFFFF" opacity="0.85" transform="rotate(16 66 30)"/>
+    </g></g>
+  <text x="210" y="382" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.95">BEVERAGES</text>
+  <text x="210" y="406" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffff" fill-opacity="0.6">400 ml</text>
+</svg>

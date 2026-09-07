@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750" role="img" aria-label="Hanu-Man poster">
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#2a2448"/>
+      <stop offset="0.55" stop-color="#100A2E"/>
+      <stop offset="1" stop-color="#040022"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFB300" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#FFB300" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blazeGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#fff946" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#FFB300" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#FFB300" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.93"/>
+    </linearGradient>
+    <filter id="clouds">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="5" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+    <feColorMatrix in="n" type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+  </filter>
+  </defs>
+  <rect width="500" height="750" fill="url(#bg)"/>
+  <circle cx="33.1" cy="92.3" r="2.0" fill="#ffffff" opacity="0.22"/>
+  <circle cx="480.9" cy="161.0" r="1.2" fill="#ffffff" opacity="0.33"/>
+  <circle cx="384.3" cy="187.6" r="2.3" fill="#ffffff" opacity="0.75"/>
+  <circle cx="328.9" cy="587.6" r="1.1" fill="#ffffff" opacity="0.44"/>
+  <circle cx="363.0" cy="683.0" r="1.4" fill="#ffffff" opacity="0.23"/>
+  <circle cx="409.1" cy="125.5" r="0.7" fill="#ffffff" opacity="0.57"/>
+  <circle cx="12.1" cy="454.1" r="1.9" fill="#ffffff" opacity="0.89"/>
+  <circle cx="150.7" cy="546.5" r="1.6" fill="#ffffff" opacity="0.26"/>
+  <circle cx="361.1" cy="40.4" r="1.8" fill="#ffffff" opacity="0.70"/>
+  <circle cx="211.3" cy="20.8" r="2.2" fill="#ffffff" opacity="0.22"/>
+  <circle cx="240.4" cy="377.2" r="1.6" fill="#ffffff" opacity="0.71"/>
+  <circle cx="474.8" cy="232.8" r="2.2" fill="#ffffff" opacity="0.60"/>
+  <circle cx="140.6" cy="393.1" r="0.6" fill="#ffffff" opacity="0.80"/>
+  <circle cx="455.8" cy="697.1" r="1.9" fill="#ffffff" opacity="0.43"/>
+  <circle cx="162.5" cy="610.6" r="2.5" fill="#ffffff" opacity="0.16"/>
+  <circle cx="489.4" cy="692.0" r="1.9" fill="#ffffff" opacity="0.83"/>
+  <circle cx="131.0" cy="219.6" r="1.2" fill="#ffffff" opacity="0.86"/>
+  <circle cx="323.2" cy="411.6" r="1.4" fill="#ffffff" opacity="0.70"/>
+  <circle cx="320.7" cy="528.2" r="1.5" fill="#ffffff" opacity="0.49"/>
+  <circle cx="218.6" cy="205.8" r="2.4" fill="#ffffff" opacity="0.55"/>
+  <circle cx="289.1" cy="312.3" r="1.3" fill="#ffffff" opacity="0.82"/>
+  <circle cx="243.6" cy="699.9" r="1.1" fill="#ffffff" opacity="0.83"/>
+  <circle cx="285.6" cy="212.0" r="1.6" fill="#ffffff" opacity="0.90"/>
+  <circle cx="278.4" cy="628.2" r="2.0" fill="#ffffff" opacity="0.54"/>
+  <circle cx="26.5" cy="739.1" r="1.5" fill="#ffffff" opacity="0.43"/>
+  <circle cx="474.5" cy="184.1" r="1.1" fill="#ffffff" opacity="0.79"/>
+  <circle cx="241.7" cy="595.4" r="2.2" fill="#ffffff" opacity="0.86"/>
+  <circle cx="240.6" cy="151.6" r="1.7" fill="#ffffff" opacity="0.84"/>
+  <circle cx="372.1" cy="491.8" r="1.1" fill="#ffffff" opacity="0.75"/>
+  <circle cx="154.2" cy="65.6" r="1.1" fill="#ffffff" opacity="0.55"/>
+  <circle cx="77.9" cy="344.8" r="1.6" fill="#ffffff" opacity="0.48"/>
+  <circle cx="35.1" cy="267.7" r="0.8" fill="#ffffff" opacity="0.37"/>
+  <circle cx="301.4" cy="62.1" r="1.8" fill="#ffffff" opacity="0.20"/>
+  <circle cx="106.1" cy="467.3" r="1.4" fill="#ffffff" opacity="0.43"/>
+  <circle cx="246.6" cy="183.4" r="2.5" fill="#ffffff" opacity="0.54"/>
+  <circle cx="165.8" cy="324.7" r="2.4" fill="#ffffff" opacity="0.55"/>
+  <circle cx="155.9" cy="512.2" r="1.6" fill="#ffffff" opacity="0.33"/>
+  <circle cx="90.8" cy="214.2" r="1.4" fill="#ffffff" opacity="0.64"/>
+  <circle cx="144.0" cy="186.6" r="0.9" fill="#ffffff" opacity="0.44"/>
+  <circle cx="315.2" cy="42.2" r="2.3" fill="#ffffff" opacity="0.31"/>
+  <circle cx="205.7" cy="656.4" r="1.7" fill="#ffffff" opacity="0.31"/>
+  <circle cx="189.6" cy="636.2" r="1.8" fill="#ffffff" opacity="0.22"/>
+  <circle cx="372.8" cy="136.8" r="2.2" fill="#ffffff" opacity="0.67"/>
+  <circle cx="92.1" cy="667.6" r="1.1" fill="#ffffff" opacity="0.71"/>
+  <circle cx="224.2" cy="729.4" r="2.2" fill="#ffffff" opacity="0.71"/>
+  <circle cx="84.1" cy="306.8" r="1.6" fill="#ffffff" opacity="0.27"/>
+  <circle cx="238.1" cy="48.5" r="0.8" fill="#ffffff" opacity="0.89"/>
+  <circle cx="16.0" cy="17.5" r="1.7" fill="#ffffff" opacity="0.28"/>
+  <circle cx="456.2" cy="598.7" r="1.4" fill="#ffffff" opacity="0.74"/>
+  <circle cx="92.3" cy="63.3" r="1.3" fill="#ffffff" opacity="0.52"/>
+  <circle cx="372.8" cy="338.8" r="1.6" fill="#ffffff" opacity="0.22"/>
+  <circle cx="349.3" cy="640.1" r="0.9" fill="#ffffff" opacity="0.59"/>
+  <circle cx="453.7" cy="94.4" r="1.3" fill="#ffffff" opacity="0.22"/>
+  <circle cx="421.2" cy="41.6" r="2.5" fill="#ffffff" opacity="0.53"/>
+  <circle cx="356.0" cy="373.9" r="1.5" fill="#ffffff" opacity="0.86"/>
+  <circle cx="388.6" cy="343.2" r="1.7" fill="#ffffff" opacity="0.56"/>
+  <circle cx="28.7" cy="323.9" r="2.4" fill="#ffffff" opacity="0.64"/>
+  <circle cx="124.7" cy="429.9" r="2.3" fill="#ffffff" opacity="0.61"/>
+  <circle cx="113.8" cy="404.0" r="1.5" fill="#ffffff" opacity="0.34"/>
+  <circle cx="39.2" cy="478.5" r="2.4" fill="#ffffff" opacity="0.31"/>
+  <circle cx="353.9" cy="311.8" r="2.0" fill="#ffffff" opacity="0.78"/>
+  <circle cx="99.5" cy="343.2" r="1.0" fill="#ffffff" opacity="0.67"/>
+  <circle cx="22.7" cy="183.4" r="2.1" fill="#ffffff" opacity="0.80"/>
+  <circle cx="349.9" cy="537.3" r="0.7" fill="#ffffff" opacity="0.35"/>
+  <circle cx="16.2" cy="708.8" r="1.2" fill="#ffffff" opacity="0.67"/>
+  <circle cx="91.1" cy="499.1" r="2.1" fill="#ffffff" opacity="0.33"/>
+  <circle cx="353.7" cy="21.5" r="1.1" fill="#ffffff" opacity="0.19"/>
+  <circle cx="9.3" cy="451.0" r="1.5" fill="#ffffff" opacity="0.81"/>
+  <circle cx="245.0" cy="394.4" r="1.1" fill="#ffffff" opacity="0.51"/>
+  <circle cx="308.3" cy="73.1" r="2.0" fill="#ffffff" opacity="0.29"/>
+  <circle cx="98.7" cy="428.7" r="1.7" fill="#ffffff" opacity="0.47"/>
+  <circle cx="336.2" cy="249.3" r="2.4" fill="#ffffff" opacity="0.34"/>
+  <circle cx="21.4" cy="30.6" r="0.9" fill="#ffffff" opacity="0.60"/>
+  <circle cx="395.8" cy="117.6" r="1.1" fill="#ffffff" opacity="0.38"/>
+  <circle cx="20.6" cy="695.8" r="0.9" fill="#ffffff" opacity="0.63"/>
+  <circle cx="220.7" cy="121.1" r="1.7" fill="#ffffff" opacity="0.68"/>
+  <circle cx="225.5" cy="538.6" r="1.3" fill="#ffffff" opacity="0.82"/>
+  <circle cx="198.4" cy="539.3" r="2.4" fill="#ffffff" opacity="0.50"/>
+  <circle cx="369.6" cy="332.7" r="2.1" fill="#ffffff" opacity="0.30"/>
+  <circle cx="253.8" cy="705.9" r="2.1" fill="#ffffff" opacity="0.26"/>
+  <circle cx="385.9" cy="485.7" r="0.9" fill="#ffffff" opacity="0.63"/>
+  <circle cx="89.0" cy="196.1" r="1.1" fill="#ffffff" opacity="0.44"/>
+  <circle cx="166.0" cy="535.3" r="2.4" fill="#ffffff" opacity="0.27"/>
+  <circle cx="285.4" cy="278.9" r="1.0" fill="#ffffff" opacity="0.15"/>
+  <circle cx="84.8" cy="376.6" r="0.8" fill="#ffffff" opacity="0.18"/>
+  <circle cx="20.9" cy="306.5" r="1.0" fill="#ffffff" opacity="0.60"/>
+  <circle cx="107.0" cy="593.6" r="2.1" fill="#ffffff" opacity="0.50"/>
+  <circle cx="410.5" cy="171.2" r="0.9" fill="#ffffff" opacity="0.74"/>
+  <circle cx="247.2" cy="368.3" r="2.0" fill="#ffffff" opacity="0.65"/>
+  <circle cx="246.0" cy="62.1" r="2.2" fill="#ffffff" opacity="0.85"/>
+  <circle cx="250" cy="300" r="135" fill="none" stroke="#FFB300" stroke-width="7" opacity="0.85"/>
+  <circle cx="250" cy="300" r="170" fill="none" stroke="#FFB300" stroke-width="1.6" opacity="0.4"/>
+  <ellipse cx="250" cy="300" rx="130" ry="130" fill="url(#glow)" opacity="0.6"/>
+  <rect width="500" height="750" fill="url(#scrim)"/>
+  <rect width="500" height="750" filter="url(#grain)" opacity="0.5"/>
+  <text text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="74" font-weight="800" fill="#ffffff" letter-spacing="1.5" style="paint-order:stroke" stroke="#000000" stroke-opacity="0.35" stroke-width="1.2"><tspan x="250" y="600">HANU-MAN</tspan></text>
+  <text x="250" y="646" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffff5a" letter-spacing="1.4">A hero rises in Anjanadri.</text>
+  <line x1="140" y1="666" x2="360" y2="666" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="250" y="696" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="18" fill="#ffffff" fill-opacity="0.82" letter-spacing="2.6">SUPERHERO  •  FANTASY  •  ACTION</text>
+  <text x="250" y="726" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="15" fill="#ffffff" fill-opacity="0.55" letter-spacing="1.6">UA  |  Telugu  |  158m</text>
+</svg>

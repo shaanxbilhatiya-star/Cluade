@@ -30,15 +30,16 @@ router.get('/food/home', () => {
   return {
     banners: db
       .get('offers')
-      .filter((o) => o.active !== false && o.showcase !== true && (o.appliesTo === 'food' || o.appliesTo === 'all'))
+      .filter((o) => o.active !== false && (o.appliesTo === 'food' || o.appliesTo === 'all'))
       .map((o) => ({ id: o.id, title: o.title, subtitle: o.subtitle, code: o.code, bannerUrl: o.bannerUrl })),
     categories: ['All', ...new Set(items.map((f) => f.category))],
     rails: [
-      { key: 'popular', title: 'Most Popular', items: items.filter((f) => f.popular) },
-      { key: 'beverages', title: 'New Beverages', items: byCategory('Beverages') },
-      { key: 'combos', title: 'Value Combos', items: byCategory('Combos') },
-      { key: 'snacks', title: 'Quick Snacks', items: [...byCategory('Snacks'), ...byCategory('Popcorn')] },
-      { key: 'desserts', title: 'Sweet Endings', items: [...byCategory('Desserts'), ...byCategory('Meals')] },
+      { key: 'popular',   title: '🔥 Most Popular',    items: items.filter((f) => f.popular) },
+      { key: 'combos',    title: '🎉 Value Combos',     items: byCategory('Combos') },
+      { key: 'popcorn',   title: '🍿 Popcorn',          items: byCategory('Popcorn') },
+      { key: 'snacks',    title: '🍟 Snacks',            items: byCategory('Snacks') },
+      { key: 'cold-bev',  title: '🥤 Cold Beverages',   items: byCategory('Cold Beverages') },
+      { key: 'hot-bev',   title: '☕ Hot Beverages',    items: byCategory('Hot Beverages') },
     ].filter((rail) => rail.items.length > 0),
   };
 });
@@ -59,21 +60,8 @@ router.get('/food/:id', (ctx) => {
 
 router.get('/offers', (ctx) => {
   const { appliesTo } = ctx.query;
-  // Showcase offers (e.g. wedding packages) are Home-only promo banners, not
-  // applicable coupons, so they are excluded from this list which feeds the
-  // movie-checkout and food coupon pickers.
-  let list = db.get('offers').filter((o) => o.active !== false && o.showcase !== true);
+  let list = db.get('offers').filter((o) => o.active !== false);
   if (appliesTo) list = list.filter((o) => o.appliesTo === appliesTo || o.appliesTo === 'all');
-  // Sort by `order` ascending (offers without an order sort last, preserving
-  // their insertion order) so the coupon list stays consistent with Home.
-  list = list
-    .map((o, i) => ({ o, i }))
-    .sort((a, b) => {
-      const ao = typeof a.o.order === 'number' ? a.o.order : Infinity;
-      const bo = typeof b.o.order === 'number' ? b.o.order : Infinity;
-      return ao - bo || a.i - b.i;
-    })
-    .map(({ o }) => o);
   return { count: list.length, offers: list };
 });
 

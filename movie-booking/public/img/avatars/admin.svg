@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="Cine Admin">
+  <defs><linearGradient id="av" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/>
+  </linearGradient></defs>
+  <rect width="200" height="200" rx="100" fill="url(#av)"/>
+  <text x="100" y="126" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="80" font-weight="700" fill="#ffffff">CA</text>
+</svg>

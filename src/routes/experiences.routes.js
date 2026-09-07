@@ -4,37 +4,18 @@ const { Router } = require('../router');
 
 const router = new Router();
 
-function slim(e) {
-  return {
-    id: e.id,
-    slug: e.slug,
-    title: e.title,
-    category: e.category,
-    subtitle: e.subtitle,
-    priceLabel: e.priceLabel,
-    priceNote: e.priceNote,
-    features: e.features || [],
-    badge: e.badge || null,
-    icon: e.icon,
-    order: e.order,
-    imageUrl: e.imageUrl,
-  };
-}
-
-/** All active experiences, sorted by order (lower first), then insertion order. */
+/** Everything the Experiences tab needs, sorted for display. */
 router.get('/experiences', () => {
-  const experiences = db
+  const list = db
     .get('experiences')
     .filter((e) => e.active !== false)
-    .map((e, i) => ({ e, i }))
-    .sort((a, b) => {
-      const ao = typeof a.e.order === 'number' ? a.e.order : Infinity;
-      const bo = typeof b.e.order === 'number' ? b.e.order : Infinity;
-      return ao - bo || a.i - b.i;
-    })
-    .map(({ e }) => slim(e));
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  return { experiences };
+  return {
+    count: list.length,
+    phone: '7648913272',
+    experiences: list,
+  };
 });
 
 module.exports = router;

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" role="img" aria-label="Blueberry Thick Shake">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5350a3"/>
+      <stop offset="1" stop-color="#312E81"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.44" r="0.5">
+      <stop offset="0" stop-color="#818CF8" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#818CF8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="420" height="420" fill="url(#fg)"/>
+  <circle cx="90" cy="61" r="89" fill="#ffffff" opacity="0.05"/>
+  <circle cx="27" cy="268" r="92" fill="#ffffff" opacity="0.06"/>
+  <circle cx="44" cy="188" r="45" fill="#ffffff" opacity="0.10"/>
+  <circle cx="336" cy="63" r="86" fill="#ffffff" opacity="0.10"/>
+  <circle cx="173" cy="380" r="61" fill="#ffffff" opacity="0.05"/>
+  <circle cx="118" cy="117" r="53" fill="#ffffff" opacity="0.08"/>
+  <circle cx="85" cy="11" r="71" fill="#ffffff" opacity="0.08"/>
+  <circle cx="377" cy="143" r="30" fill="#ffffff" opacity="0.04"/>
+  <circle cx="11" cy="224" r="41" fill="#ffffff" opacity="0.08"/>
+  <circle cx="210" cy="184.8" r="126" fill="url(#halo)"/>
+  <g transform="translate(92.4 67.2) scale(2.3520)">
+    <g>
+      <rect x="56" y="6" width="5" height="30" rx="2.5" fill="#FFFFFF" opacity="0.9" transform="rotate(12 58 20)"/>
+      <circle cx="42" cy="28" r="11" fill="#FFFFFF" opacity="0.95"/>
+      <circle cx="56" cy="24" r="9" fill="#FFFFFF" opacity="0.9"/>
+      <circle cx="50" cy="34" r="10" fill="#FFFDFB" opacity="0.95"/>
+      <path d="M32 40 h36 l-6 52 a5 5 0 0 1 -5 4.5 H43 a5 5 0 0 1 -5 -4.5 Z" fill="#F5F3F8"/>
+      <path d="M34 50 h32 l-4.6 42 a4 4 0 0 1 -4 3.5 H42.6 a4 4 0 0 1 -4 -3.5 Z" fill="#818CF8"/>
+      <circle cx="45" cy="66" r="3" fill="#FFFFFF" opacity="0.5"/>
+      <circle cx="56" cy="76" r="2.4" fill="#FFFFFF" opacity="0.4"/>
+    </g></g>
+  <text x="210" y="382" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.95">BEVERAGES</text>
+  <text x="210" y="406" text-anchor="middle" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" fill="#ffffff" fill-opacity="0.6">400 ml</text>
+</svg>
