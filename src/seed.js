@@ -176,42 +176,40 @@ function seedExperiences() {
 }
 
 /**
- * Seeds the Experiences (pool party / water park / wedding etc.) catalogue
- * once, the first time this collection is empty - then leaves it alone so
- * admin edits, additions and deletions persist across restarts.
+ * Always resync the experiences collection with the current EXPERIENCES
+ * catalog on boot, mirroring reseedFood(). This keeps title/order/pricing/etc
+ * in sync whenever the catalog is updated, instead of only inserting slugs
+ * that are missing. Admin-only entries (not present in the catalog) and any
+ * admin active/inactive toggle are preserved.
  */
 function ensureExperiences() {
-  if (db.get('experiences').length === 0) {
-    seedExperiences();
-    db.flushNow();
-    console.log(`[seed] added ${db.get('experiences').length} experiences (Pool Party, Water Park, Wedding, etc.)`);
-  } else {
-    // Upsert any new experiences added to the catalogue that are missing from the DB
-    const existingSlugs = new Set(db.get('experiences').map((e) => e.slug));
-    let added = 0;
-    for (const e of EXPERIENCES) {
-      if (!existingSlugs.has(e.slug)) {
-        db.insert('experiences', {
-          id: `exp_${e.slug}`,
-          slug: e.slug,
-          title: e.title,
-          category: e.category,
-          subtitle: e.subtitle,
-          icon: e.icon,
-          color: e.color,
-          priceLabel: e.priceLabel,
-          priceNote: e.priceNote,
-          features: e.features,
-          badge: e.badge || '',
-          order: e.order || 0,
-          active: true,
-        });
-        added++;
-        console.log(`[seed] upserted new experience: ${e.slug}`);
-      }
-    }
-    if (added > 0) db.flushNow();
-  }
+  const catalogIds = new Set(EXPERIENCES.map((e) => `exp_${e.slug}`));
+  const existing = db.get('experiences');
+  const existingMap = new Map(existing.map((e) => [e.id, e]));
+
+  const catalogRecords = EXPERIENCES.map((e) => {
+    const prev = existingMap.get(`exp_${e.slug}`);
+    return {
+      id: `exp_${e.slug}`,
+      slug: e.slug,
+      title: e.title,
+      category: e.category,
+      subtitle: e.subtitle,
+      icon: e.icon,
+      color: e.color,
+      priceLabel: e.priceLabel,
+      priceNote: e.priceNote,
+      features: e.features,
+      badge: e.badge || '',
+      order: e.order || 0,
+      active: prev ? prev.active : true,
+    };
+  });
+
+  const adminItems = existing.filter((e) => !catalogIds.has(e.id));
+  db.replace('experiences', [...catalogRecords, ...adminItems]);
+  db.flushNow();
+  console.log(`[seed] experiences synced — ${catalogRecords.length} catalog items, ${adminItems.length} admin item(s) preserved.`);
 }
 
 function seedUsers() {
