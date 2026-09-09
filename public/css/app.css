@@ -1075,3 +1075,18 @@ ul { margin: 0; padding: 0; list-style: none; }
 .exp-card__actions { display: flex; gap: 10px; margin-top: 14px; }
 .exp-card__actions .btn { min-height: 44px; font-size: 14.5px; }
 .exp-card__actions .btn-outline { min-height: 44px; font-size: 14.5px; }
+.exp-card__callstrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  min-height: 44px;
+  background: #E11D2E;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .3px;
+  border-radius: 10px;
+  text-decoration: none;
+}
+.exp-card__callstrip:active { opacity: .9; }

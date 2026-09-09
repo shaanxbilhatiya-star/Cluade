@@ -45,10 +45,9 @@
               return '<li>' + UI.icon('check', 14) + '<span>' + UI.esc(f) + '</span></li>';
             }).join('') + '</ul>'
           : '') +
-        '<div class="exp-card__actions">' +
-          '<a class="btn" href="' + telHref(phone) + '">' + UI.icon('phone', 16) + ' Call to book</a>' +
-          '<a class="btn-outline" href="' + waHref(phone, msg) + '" target="_blank" rel="noopener">WhatsApp</a>' +
-        '</div>' +
+        '<a class="exp-card__callstrip" href="' + telHref(phone) + '">' +
+          'CALL@' + UI.esc(phone) +
+        '</a>' +
       '</div>' +
       '</article>';
   }
