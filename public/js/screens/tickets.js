@@ -10,14 +10,31 @@
   ];
   var TYPES = [
     { id: 'movie', label: 'Movie' },
+    { id: 'hotel', label: 'Stay' },
     { id: 'food', label: 'Food' },
     { id: 'event', label: 'Event' },
   ];
 
+  /** "Thu, 1 Oct" for a 'YYYY-MM-DD' key. */
+  function stayDay(key) {
+    var parts = String(key || '').split('-').map(Number);
+    if (parts.length !== 3) return '—';
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    return UI.DOW[d.getDay()] + ', ' + d.getDate() + ' ' + UI.MONTHS[d.getMonth()];
+  }
+
+  function stayLine(stay) {
+    if (!stay) return '';
+    return stayDay(stay.checkIn) + ' → ' + stayDay(stay.checkOut) +
+      ' · ' + stay.nights + ' night' + (stay.nights === 1 ? '' : 's');
+  }
+
   function ticketCard(booking) {
-    var subtitle = booking.type === 'food'
-      ? (booking.pickup ? UI.shortDate(booking.pickup.date) + ' · Pickup ' + booking.pickup.slot : UI.showLine(booking.startsAt))
-      : UI.showLine(booking.startsAt, booking.endsAt);
+    var subtitle = booking.type === 'hotel'
+      ? stayLine(booking.stay)
+      : booking.type === 'food'
+        ? (booking.pickup ? UI.shortDate(booking.pickup.date) + ' · Pickup ' + booking.pickup.slot : UI.showLine(booking.startsAt))
+        : UI.showLine(booking.startsAt, booking.endsAt);
 
     var showReminder = booking.bucket === 'upcoming' && booking.status === 'confirmed';
 
@@ -29,9 +46,12 @@
           '<p class="ticket__sub">' + UI.esc(subtitle) + '</p>' +
           (booking.seatLabel
             ? '<p class="ticket__seats">Seats ' + UI.esc(booking.seatLabel) + '</p>'
-            : booking.food && booking.food.length
-              ? '<p class="ticket__seats">' + UI.esc(booking.food.length) + ' item' + (booking.food.length === 1 ? '' : 's') + ' · ' + UI.money(booking.amounts.total) + '</p>'
-              : '') +
+            : booking.type === 'hotel' && booking.stay
+              ? '<p class="ticket__seats">' + booking.stay.rooms + ' room' + (booking.stay.rooms === 1 ? '' : 's') +
+                ' · ' + UI.money(booking.amounts.total) + '</p>'
+              : booking.food && booking.food.length
+                ? '<p class="ticket__seats">' + UI.esc(booking.food.length) + ' item' + (booking.food.length === 1 ? '' : 's') + ' · ' + UI.money(booking.amounts.total) + '</p>'
+                : '') +
           (booking.bucket !== 'upcoming' ? '<div style="margin-top:7px">' + UI.statusPill(booking) + '</div>' : '') +
         '</div>' +
         '<span class="row__chevron">' + UI.icon('chevron-right', 20) + '</span>' +
@@ -39,7 +59,7 @@
       (showReminder
         ? '<div class="card__divider"></div>' +
           '<div class="ticket__reminder">' +
-            '<span>Remind me 30 minutes earlier</span>' +
+            '<span>' + (booking.type === 'hotel' ? 'Remind me a day before check-in' : 'Remind me 30 minutes earlier') + '</span>' +
             '<button class="switch" role="switch" aria-checked="' + (booking.reminder && booking.reminder.enabled ? 'true' : 'false') + '" ' +
               'data-action="reminder" data-id="' + UI.esc(booking.id) + '" aria-label="Reminder for ' + UI.esc(booking.title) + '"></button>' +
           '</div>'
@@ -88,6 +108,18 @@
       function emptyFor() {
         if (state.type === 'event') {
           return UI.empty({ icon: 'sparkle', title: 'No event tickets', text: 'Fan shows, premieres and live events will appear here once you book one.' });
+        }
+        if (state.type === 'hotel') {
+          if (state.bucket === 'upcoming') {
+            return UI.empty({
+              icon: 'bed',
+              title: 'No upcoming stays',
+              text: 'Book a room and your stay confirmation will live here.',
+              action: 'browse-hotels',
+              actionLabel: 'Browse rooms',
+            });
+          }
+          return UI.empty({ icon: 'bed', title: 'No stays here', text: 'Past and cancelled stays will be listed here.' });
         }
         if (state.bucket === 'cancelled') {
           return UI.empty({ icon: 'ticket-check', title: 'Nothing cancelled', text: 'Cancelled bookings and their refunds show up here.' });
@@ -160,6 +192,7 @@
         open: function (el) { App.navigate('/ticket/' + el.getAttribute('data-id')); },
         browse: function () { App.navigate('/home'); },
         'browse-food': function () { App.navigate('/food'); },
+        'browse-hotels': function () { App.navigate('/hotels'); },
         reminder: async function (el) {
           var next = el.getAttribute('aria-checked') !== 'true';
           el.setAttribute('aria-checked', next ? 'true' : 'false');
@@ -186,6 +219,8 @@
       var res = await API.booking(params.id);
       var b = res.booking;
       var isMovie = b.type === 'movie';
+      var isStay = b.type === 'hotel';
+      var stay = b.stay || {};
 
       function cell(label, value) {
         return '<div><div class="stub__cell-label">' + UI.esc(label) + '</div>' +
@@ -195,7 +230,7 @@
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({
-            title: isMovie ? 'Your ticket' : 'Your order',
+            title: isMovie ? 'Your ticket' : isStay ? 'Your stay' : 'Your order',
             back: true,
             right: '<button class="icon-btn" data-action="share" aria-label="Share">' + UI.icon('share', 21) + '</button>',
           }) +
@@ -207,8 +242,9 @@
                   '<div style="flex:1;min-width:0">' +
                     '<h2 style="margin:0;font-size:19px;font-weight:800;line-height:1.25">' + UI.esc(b.title) + '</h2>' +
                     '<p style="margin:6px 0 0;font-size:13px;color:var(--muted);line-height:1.45">' +
-                      UI.esc(b.cinema ? b.cinema.name : (b.pickup ? b.pickup.cinemaName : '')) +
+                      UI.esc(b.cinema ? b.cinema.name : b.hotel ? b.hotel.name : (b.pickup ? b.pickup.cinemaName : '')) +
                       (b.screenName ? '<br>' + UI.esc(b.screenName) + (b.format ? ' · ' + UI.esc(b.format) : '') : '') +
+                      (isStay && b.hotel && b.hotel.address ? '<br>' + UI.esc(b.hotel.address) : '') +
                     '</p>' +
                     '<div style="margin-top:9px">' + UI.statusPill(b) + '</div>' +
                   '</div>' +
@@ -219,15 +255,25 @@
                       cell('Time', UI.hhmm(b.startsAt) + ' - ' + UI.hhmm(b.endsAt)) +
                       cell('Seats', b.seatLabel || '—') +
                       cell('Language', b.language || '—')
-                    : cell('Pickup date', b.pickup ? UI.shortDate(b.pickup.date) : '—') +
-                      cell('Pickup time', b.pickup ? b.pickup.slot : '—') +
-                      cell('Counter', b.pickup ? b.pickup.counter : '—') +
-                      cell('Items', String((b.food || []).reduce(function (n, f) { return n + f.qty; }, 0)))) +
+                    : isStay
+                      ? cell('Check-in', stayDay(stay.checkIn) + ' · ' + (stay.checkInTime || '12:00')) +
+                        cell('Check-out', stayDay(stay.checkOut) + ' · ' + (stay.checkOutTime || '11:00')) +
+                        cell('Rooms', (stay.rooms || 1) + ' × ' + (stay.nights || 1) + ' night' + ((stay.nights || 1) === 1 ? '' : 's')) +
+                        cell('Guests', stay.guests
+                          ? stay.guests.adults + ' adult' + (stay.guests.adults === 1 ? '' : 's') +
+                            (stay.guests.children ? ' · ' + stay.guests.children + ' child' + (stay.guests.children === 1 ? '' : 'ren') : '')
+                          : '—')
+                      : cell('Pickup date', b.pickup ? UI.shortDate(b.pickup.date) : '—') +
+                        cell('Pickup time', b.pickup ? b.pickup.slot : '—') +
+                        cell('Counter', b.pickup ? b.pickup.counter : '—') +
+                        cell('Items', String((b.food || []).reduce(function (n, f) { return n + f.qty; }, 0)))) +
                 '</div>' +
                 '<div class="stub__perf"><div class="stub__perf-line"></div></div>' +
                 '<div class="stub__code">' +
                   '<img src="' + UI.esc(b.barcodeUrl) + '" alt="Barcode for booking ' + UI.esc(b.reference) + '">' +
-                  '<p class="stub__code-hint">Show this at the ' + (isMovie ? 'entry gate' : 'food counter') + ' · Booking ' + UI.esc(b.reference) + '</p>' +
+                  '<p class="stub__code-hint">Show this at the ' +
+                    (isMovie ? 'entry gate' : isStay ? 'front desk' : 'food counter') +
+                    ' · Booking ' + UI.esc(b.reference) + '</p>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -240,12 +286,31 @@
                 }).join('') + '</div>'
               : '') +
 
+            (isStay && b.guest && b.guest.name
+              ? '<h2 class="subhead">Guest</h2><div class="list">' +
+                '<div class="row"><span class="row__icon">' + UI.icon('user', 23) + '</span>' +
+                  '<span class="row__label">' + UI.esc(b.guest.name) + '</span>' +
+                  '<span class="row__value">' + UI.esc(b.guest.phone || '') + '</span></div>' +
+                (b.guest.specialRequests
+                  ? '<div class="row"><span class="row__icon">' + UI.icon('info', 23) + '</span>' +
+                    '<span class="row__label">Requests</span>' +
+                    '<span class="row__value">' + UI.esc(b.guest.specialRequests) + '</span></div>'
+                  : '') +
+                '</div>'
+              : '') +
+
             '<h2 class="subhead">Payment</h2>' +
             '<div style="padding:0 16px">' +
               (isMovie ? '<div class="kv"><span class="kv__key">Tickets (' + (b.seats || []).length + ')</span><span class="kv__val">' + UI.money(b.amounts.tickets) + '</span></div>' : '') +
+              (isStay
+                ? '<div class="kv"><span class="kv__key">' + (stay.rooms || 1) + ' room' + ((stay.rooms || 1) === 1 ? '' : 's') +
+                  ' × ' + (stay.nights || 1) + ' night' + ((stay.nights || 1) === 1 ? '' : 's') +
+                  (b.amounts.ratePerNight ? ' @ ' + UI.money(b.amounts.ratePerNight) : '') +
+                  '</span><span class="kv__val">' + UI.money(b.amounts.roomCharge || 0) + '</span></div>'
+                : '') +
               (b.amounts.food ? '<div class="kv"><span class="kv__key">Food & beverages</span><span class="kv__val">' + UI.money(b.amounts.food) + '</span></div>' : '') +
               (b.amounts.convenienceFee ? '<div class="kv"><span class="kv__key">Convenience fee</span><span class="kv__val">' + UI.money(b.amounts.convenienceFee) + '</span></div>' : '') +
-              (b.amounts.gst ? '<div class="kv"><span class="kv__key">GST</span><span class="kv__val">' + UI.money(b.amounts.gst) + '</span></div>' : '') +
+              (b.amounts.gst ? '<div class="kv"><span class="kv__key">' + (isStay ? 'Taxes & fees' : 'GST') + '</span><span class="kv__val">' + UI.money(b.amounts.gst) + '</span></div>' : '') +
               (b.amounts.discount ? '<div class="kv kv--discount"><span class="kv__key">Offer ' + UI.esc(b.offerCode || '') + '</span><span class="kv__val">- ' + UI.money(b.amounts.discount) + '</span></div>' : '') +
               '<div class="kv kv--total"><span class="kv__key">Paid via ' + UI.esc(b.payment.methodLabel) + '</span><span class="kv__val">' + UI.money(b.amounts.total) + '</span></div>' +
               (b.status === 'cancelled' && b.refundAmount
@@ -255,10 +320,15 @@
             '</div>' +
 
             (b.canCancel
-              ? '<div style="padding:24px 16px 0"><button class="btn-outline btn-outline--lg" data-action="cancel" style="border-color:var(--danger);color:var(--danger)">Cancel booking</button>' +
-                '<p style="margin:10px 0 0;font-size:11.5px;color:var(--muted);text-align:center">75% of the amount is refunded when you cancel more than 2 hours before showtime.</p></div>'
-              : b.bucket === 'upcoming' && b.status === 'confirmed' && isMovie
-                ? '<div class="notice notice--warn" style="margin-top:24px">Cancellation window has closed — tickets can only be cancelled up to 2 hours before showtime.</div>'
+              ? '<div style="padding:24px 16px 0"><button class="btn-outline btn-outline--lg" data-action="cancel" style="border-color:var(--danger);color:var(--danger)">' +
+                  (isStay ? 'Cancel stay' : 'Cancel booking') + '</button>' +
+                '<p style="margin:10px 0 0;font-size:11.5px;color:var(--muted);text-align:center">75% of the amount is refunded when you cancel more than ' +
+                  (isStay ? '24 hours before check-in' : '2 hours before showtime') + '.</p></div>'
+              : b.bucket === 'upcoming' && b.status === 'confirmed' && (isMovie || isStay)
+                ? '<div class="notice notice--warn" style="margin-top:24px">Cancellation window has closed — ' +
+                  (isStay
+                    ? 'stays can only be cancelled up to 24 hours before check-in.'
+                    : 'tickets can only be cancelled up to 2 hours before showtime.') + '</div>'
                 : '') +
 
             '<div class="spacer-24"></div>' +
@@ -268,8 +338,12 @@
 
       UI.actions(view, {
         share: async function () {
-          var text = b.title + ' — ' + (isMovie ? UI.showLine(b.startsAt, b.endsAt) + ', seats ' + b.seatLabel : 'pickup ' + (b.pickup ? b.pickup.slot : '')) +
-            ' (booking ' + b.reference + ')';
+          var detail = isMovie
+            ? UI.showLine(b.startsAt, b.endsAt) + ', seats ' + b.seatLabel
+            : isStay
+              ? stayLine(stay)
+              : 'pickup ' + (b.pickup ? b.pickup.slot : '');
+          var text = b.title + ' — ' + detail + ' (booking ' + b.reference + ')';
           if (navigator.share) {
             try { await navigator.share({ title: 'CineFlex booking', text: text }); return; } catch (_e) { /* cancelled */ }
           }
@@ -280,12 +354,15 @@
         },
 
         cancel: async function () {
+          var what = isStay
+            ? (stay.rooms || 1) + ' room' + ((stay.rooms || 1) === 1 ? '' : 's') + ' at ' + b.title + ' will be released.'
+            : 'Seats ' + b.seatLabel + ' for ' + b.title + ' will be released.';
           var ok = await UI.confirm({
-            title: 'Cancel this booking?',
-            message: 'Seats ' + b.seatLabel + ' for ' + b.title + ' will be released. ' +
+            title: isStay ? 'Cancel this stay?' : 'Cancel this booking?',
+            message: what + ' ' +
               UI.money(Math.round(b.amounts.total * 0.75)) + ' of ' + UI.money(b.amounts.total) + ' will be refunded to ' + b.payment.methodLabel + '.',
-            confirmLabel: 'Yes, cancel booking',
-            cancelLabel: 'Keep my seats',
+            confirmLabel: isStay ? 'Yes, cancel stay' : 'Yes, cancel booking',
+            cancelLabel: isStay ? 'Keep my room' : 'Keep my seats',
             danger: true,
           });
           if (!ok) return;

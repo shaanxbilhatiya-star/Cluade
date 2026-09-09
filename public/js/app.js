@@ -10,9 +10,10 @@
 
   var TABS = [
     { id: 'home', label: 'Home', icon: 'home', path: '/home' },
+    { id: 'hotels', label: 'Stay', icon: 'bed', path: '/hotels' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle', path: '/experiences' },
-    { id: 'food', label: 'Food Order', icon: 'food', path: '/food' },
-    { id: 'tickets', label: 'My Tickets', icon: 'ticket', path: '/tickets' },
+    { id: 'food', label: 'Food', icon: 'food', path: '/food' },
+    { id: 'tickets', label: 'Tickets', icon: 'ticket', path: '/tickets' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },
   ];
 
@@ -22,6 +23,11 @@
     ['/register', 'register'],
     ['/home', 'home'],
     ['/experiences', 'experiences'],
+    // Specific hotel paths must come before /hotel/room/:id-style patterns.
+    ['/hotels', 'hotels'],
+    ['/hotel/checkout', 'hotelCheckout'],
+    ['/hotel/confirmed/:bookingId', 'hotelConfirmation'],
+    ['/hotel/room/:id', 'hotelRoom'],
     ['/search', 'search'],
     ['/notifications', 'notifications'],
     ['/movies/:status', 'movieList'],

@@ -239,3 +239,44 @@ textarea.input { resize: vertical; min-height: 84px; }
 .tmdb-result__text { font-size: 13.5px; }
 .tmdb-result__year { color: var(--ink-soft); font-weight: 400; }
 .tmdb-results__empty { padding: 12px; font-size: 13px; color: var(--ink-soft); }
+
+
+/* ── Multi-photo gallery picker (hotel / room photos) ────────────────────── */
+.gal-field input[type="file"] { display: none; }
+.gal-field__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.gal-item {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--bg-sunken);
+}
+.gal-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-item__cover {
+  position: absolute; top: 5px; left: 5px;
+  background: var(--primary); color: #fff;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 4px;
+}
+.gal-item__tools {
+  position: absolute; inset: auto 0 0 0;
+  display: flex; justify-content: flex-end; gap: 3px;
+  padding: 4px;
+  background: linear-gradient(to top, rgba(0, 0, 0, .62), transparent);
+}
+.gal-item__tools button {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 5px;
+  background: rgba(255, 255, 255, .92);
+  color: #111; font-size: 13px; font-weight: 700;
+  cursor: pointer;
+}
+.gal-item__tools button:hover { background: #fff; }

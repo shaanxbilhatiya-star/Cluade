@@ -109,6 +109,7 @@
     { id: 'showtimes', label: 'Showtimes', icon: 'clock' },
     { id: 'bookings', label: 'Bookings', icon: 'ticket' },
     { id: 'verify', label: 'Verify Ticket', icon: 'qr' },
+    { id: 'hotel', label: 'Hotel & Rooms', icon: 'bed' },
     { id: 'food', label: 'Food & Drinks', icon: 'food' },
     { id: 'offers', label: 'Offers', icon: 'tag' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle' },
@@ -156,6 +157,10 @@
         card('Customers', String(t.users), t.cancelled + ' cancelled bookings') +
         card('Now playing', String(t.nowPlaying), t.comingSoon + ' coming soon') +
         card('Showtimes', String(t.showtimes), t.cinemas + ' cinemas · ' + t.screens + ' screens') +
+        (stats.stays
+          ? card('Stay revenue', money(stats.stays.revenue),
+              stats.stays.roomNights + ' room nights · ' + stats.stays.upcoming + ' upcoming')
+          : '') +
       '</div>' +
 
       '<div class="grid-2" style="margin-top:22px">' +
@@ -282,6 +287,102 @@
       };
       reader.readAsDataURL(file);
     });
+  }
+
+  /**
+   * Multi-photo gallery picker (room galleries, hotel photos).
+   * Values live in a hidden input as a newline-separated list of paths and/or
+   * freshly-picked data: URLs; the server persists the data: URLs to disk.
+   */
+  function galleryField(label, name, photos, opts) {
+    var o = opts || {};
+    return '<div class="form-row col-span">' +
+      '<label class="label">' + esc(label) + '</label>' +
+      '<div class="gal-field" data-galfield="' + name + '">' +
+        '<div class="gal-field__grid" data-gal-grid></div>' +
+        '<input type="file" accept="image/png,image/jpeg,image/webp" multiple data-gal-input>' +
+        '<button type="button" class="btn btn--ghost btn--sm" data-gal-pick>' + icon('plus', 15) + ' Add photos</button>' +
+        '<div class="hint">' + esc(o.hint || 'First photo is used as the cover. Drag-free reordering: use the arrows.') + '</div>' +
+      '</div>' +
+      '<input type="hidden" name="' + name + '" value="' + esc((photos || []).join('\n')) + '">' +
+      '</div>';
+  }
+
+  /** Wires a galleryField(): add, remove and reorder. */
+  function bindGalleryField(body, name) {
+    var wrap = body.querySelector('[data-galfield="' + name + '"]');
+    if (!wrap) return;
+
+    var grid = wrap.querySelector('[data-gal-grid]');
+    var input = wrap.querySelector('[data-gal-input]');
+    var hidden = body.querySelector('input[type="hidden"][name="' + name + '"]');
+    var list = hidden.value ? hidden.value.split('\n').filter(Boolean) : [];
+
+    function sync() {
+      hidden.value = list.join('\n');
+      grid.innerHTML = list.length
+        ? list.map(function (src, i) {
+            return '<figure class="gal-item">' +
+              '<img src="' + esc(src) + '" alt="">' +
+              (i === 0 ? '<span class="gal-item__cover">Cover</span>' : '') +
+              '<span class="gal-item__tools">' +
+                (i > 0 ? '<button type="button" data-gal-move="' + i + '" data-dir="-1" title="Move left">&#8592;</button>' : '') +
+                (i < list.length - 1 ? '<button type="button" data-gal-move="' + i + '" data-dir="1" title="Move right">&#8594;</button>' : '') +
+                '<button type="button" data-gal-del="' + i + '" title="Remove">&times;</button>' +
+              '</span></figure>';
+          }).join('')
+        : '<p class="hint" style="margin:0">No photos yet — the app will show a placeholder.</p>';
+    }
+
+    wrap.querySelector('[data-gal-pick]').addEventListener('click', function () { input.click(); });
+
+    input.addEventListener('change', function () {
+      var files = Array.prototype.slice.call(input.files || []);
+      files.forEach(function (file) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var MAX_DIRECT_BYTES = 6 * 1024 * 1024;
+          var MAX_DIMENSION = 2400;
+
+          function add(dataUrl) { list.push(dataUrl); sync(); }
+
+          if (file.size <= MAX_DIRECT_BYTES) { add(reader.result); return; }
+
+          // Oversized: downscale (never crop) so the longer side fits MAX_DIMENSION.
+          var img = new Image();
+          img.onload = function () {
+            var scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            add(canvas.toDataURL('image/jpeg', 0.95));
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+      input.value = '';
+    });
+
+    grid.addEventListener('click', function (event) {
+      var del = event.target.closest('[data-gal-del]');
+      var move = event.target.closest('[data-gal-move]');
+      if (del) {
+        list.splice(Number(del.getAttribute('data-gal-del')), 1);
+        sync();
+      }
+      if (move) {
+        var from = Number(move.getAttribute('data-gal-move'));
+        var to = from + Number(move.getAttribute('data-dir'));
+        if (to < 0 || to >= list.length) return;
+        var moved = list.splice(from, 1)[0];
+        list.splice(to, 0, moved);
+        sync();
+      }
+    });
+
+    sync();
   }
 
   function readForm(body) {
@@ -1182,10 +1283,11 @@
           '<option value="completed">Completed</option><option value="cancelled">Cancelled</option>' +
         '</select>' +
         '<select class="input" data-type style="width:auto">' +
-          '<option value="">All types</option><option value="movie">Movie</option><option value="food">Food</option>' +
+          '<option value="">All types</option><option value="movie">Movie</option>' +
+          '<option value="hotel">Stay</option><option value="food">Food</option>' +
         '</select>' +
       '</div><div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Reference</th><th>Customer</th><th>Item</th><th>Show</th><th>Seats</th><th class="num">Amount</th><th>Payment</th><th>Status</th><th></th></tr></thead>' +
+        '<thead><tr><th>Reference</th><th>Customer</th><th>Item</th><th>When</th><th>Seats / Rooms</th><th class="num">Amount</th><th>Payment</th><th>Status</th><th></th></tr></thead>' +
         '<tbody data-rows><tr><td colspan="9" class="empty-state">Loading…</td></tr></tbody>' +
       '</table></div></div></div>';
 
@@ -1206,9 +1308,12 @@
             return '<tr>' +
               '<td class="mono cell-strong">' + esc(b.reference) + '</td>' +
               '<td>' + (b.customer ? '<div class="cell-strong">' + esc(b.customer.name) + '</div><div class="cell-sub">' + esc(b.customer.email) + '</div>' : '—') + '</td>' +
-              '<td>' + esc(b.movieTitle || '—') + '<div class="cell-sub">' + esc(b.cinemaName) + '</div></td>' +
-              '<td>' + (b.showDate ? esc(b.showDate) + ' ' + esc(b.showTime) : esc(dateTime(b.startsAt))) + '</td>' +
-              '<td>' + esc(b.seatLabel || '—') + '</td>' +
+              '<td>' + esc(b.movieTitle || '—') + '<div class="cell-sub">' + esc(b.cinemaName) + '</div>' +
+                (b.guestName ? '<div class="cell-sub">Guest: ' + esc(b.guestName) + '</div>' : '') + '</td>' +
+              '<td>' + (b.stay
+                  ? '<span class="mono">' + esc(b.stay.checkIn) + '</span> →<br><span class="mono">' + esc(b.stay.checkOut) + '</span>'
+                  : b.showDate ? esc(b.showDate) + ' ' + esc(b.showTime) : esc(dateTime(b.startsAt))) + '</td>' +
+              '<td>' + (b.stay ? esc(b.stay.label) : esc(b.seatLabel || '—')) + '</td>' +
               '<td class="num cell-strong">' + money(b.total) + (b.refundAmount ? '<div class="cell-sub">refund ' + money(b.refundAmount) + '</div>' : '') + '</td>' +
               '<td>' + esc(b.paymentLabel) + '</td>' +
               '<td><span class="pill ' + pill + '">' + esc(b.status) + '</span></td>' +
@@ -1238,7 +1343,7 @@
         } catch (err) { toast(err.message, 'error'); }
       }
       if (cancel) {
-        var ok = await confirmDialog('Cancel this booking?', 'The seats will be released and a 75% refund recorded.', 'Cancel booking');
+        var ok = await confirmDialog('Cancel this booking?', 'The seats or rooms will be released and a 75% refund recorded.', 'Cancel booking');
         if (!ok) return;
         try {
           await API.post('/bookings/' + cancel.getAttribute('data-cancel') + '/cancel');
@@ -1283,8 +1388,18 @@
             '<table><tbody>' +
               tr('Reference', '<span class="mono">' + esc(b.reference) + '</span>') +
               tr('Customer', esc(b.customerName)) +
-              tr(b.type === 'food' ? 'Order' : 'Movie', esc(b.movieTitle)) +
-              tr('Cinema', esc(b.cinemaName)) +
+              tr(b.type === 'food' ? 'Order' : b.type === 'hotel' ? 'Room' : 'Movie', esc(b.movieTitle)) +
+              tr(b.type === 'hotel' ? 'Hotel' : 'Cinema', esc(b.cinemaName)) +
+              (b.guestName ? tr('Guest name', esc(b.guestName)) : '') +
+              (b.stay
+                ? tr('Stay', esc(b.stay.checkIn) + ' → ' + esc(b.stay.checkOut) +
+                    ' (' + b.stay.nights + ' night' + (b.stay.nights === 1 ? '' : 's') + ')') +
+                  tr('Rooms', b.stay.rooms + ' × ' + esc(b.movieTitle) +
+                    (b.stay.guests
+                      ? ' · ' + b.stay.guests.adults + ' adult' + (b.stay.guests.adults === 1 ? '' : 's') +
+                        (b.stay.guests.children ? ' + ' + b.stay.guests.children + ' child' : '')
+                      : ''))
+                : '') +
               (b.showDate ? tr('Show', esc(b.showDate) + ' at ' + esc(b.showTime)) : '') +
               (b.seatLabel ? tr('Seats', esc(b.seatLabel)) : '') +
               (b.food && b.food.length ? tr('Food', esc(b.food.map(function (f) { return f.name + ' × ' + f.qty; }).join(', '))) : '') +
@@ -1574,6 +1689,289 @@
     });
   }
 
+  // ── Hotel & rooms ────────────────────────────────────────────────────────
+  async function pageHotel(content, topActions) {
+    topActions.innerHTML =
+      '<button class="btn btn--ghost" data-action="edit-hotel">' + icon('building', 17) + ' Property details</button> ' +
+      '<button class="btn" data-action="new-room">' + icon('plus', 17) + ' Add room type</button>';
+
+    content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
+    var data = await API.get('/admin/hotel');
+    var hotel = data.hotel;
+
+    if (!hotel) {
+      content.innerHTML = '<div class="panel" style="margin-top:0"><div class="panel__body">' +
+        '<div class="empty-state"><strong>No hotel set up yet</strong>' +
+        '<p class="hint" style="margin-top:8px">Add the property details to start listing rooms.</p>' +
+        '<div style="margin-top:14px"><button class="btn" data-action="edit-hotel-empty">Add property details</button></div>' +
+        '</div></div></div>';
+      content.querySelector('[data-action="edit-hotel-empty"]').addEventListener('click', editHotel);
+      topActions.querySelector('[data-action="edit-hotel"]').addEventListener('click', editHotel);
+      return;
+    }
+
+    var t = data.totals;
+    content.innerHTML =
+      '<div class="cards">' +
+        card('Room types', String(t.roomTypes), t.physicalRooms + ' physical rooms') +
+        card('Upcoming stays', String(t.upcomingStays), 'checking out today or later') +
+        card('Room nights sold', String(t.roomNightsSold), 'all time') +
+        card('Stay revenue', money(t.revenue), 'excludes cancellations') +
+      '</div>' +
+
+      '<div class="panel"><div class="panel__head">' +
+        '<h2 class="panel__title">' + esc(hotel.name) + '</h2>' +
+        '<span class="pill ' + (hotel.active === false ? 'pill--red' : 'pill--green') + '">' +
+          (hotel.active === false ? 'Hidden' : 'Live') + '</span>' +
+      '</div><div class="panel__body">' +
+        '<div class="grid-2">' +
+          '<div><div class="label">Address</div><div>' + esc(hotel.address || '—') + '</div>' +
+            '<div class="cell-sub">' + esc([hotel.area, hotel.city].filter(Boolean).join(', ')) + '</div></div>' +
+          '<div><div class="label">Front desk</div><div>' + esc(hotel.phone || '—') + '</div>' +
+            '<div class="cell-sub">Check-in ' + esc(hotel.checkInTime || '12:00') +
+            ' · Check-out ' + esc(hotel.checkOutTime || '11:00') + '</div></div>' +
+        '</div>' +
+        '<div style="margin-top:16px"><div class="label">Hotel amenities</div>' +
+          ((hotel.amenities || []).length
+            ? hotel.amenities.map(function (a) { return '<span class="pill pill--purple" style="margin:0 6px 6px 0">' + esc(a) + '</span>'; }).join('')
+            : '<span class="hint">None listed</span>') +
+        '</div>' +
+      '</div></div>' +
+
+      '<div class="panel"><div class="panel__head">' +
+        '<h2 class="panel__title">Room types</h2>' +
+        '<span class="hint">Occupancy shown for the next ' + data.window.days + ' nights</span>' +
+      '</div>' +
+      '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Room</th><th>Sleeps</th><th class="num">Rate / night</th><th class="num">Taxes</th>' +
+          '<th class="num">Rooms</th><th class="num">Peak booked</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + (data.rooms.length ? data.rooms.map(function (r) {
+          var off = r.mrpPerNight > r.pricePerNight
+            ? '<div class="cell-sub"><s>' + money(r.mrpPerNight) + '</s> · ' +
+              Math.round((1 - r.pricePerNight / r.mrpPerNight) * 100) + '% off</div>'
+            : '';
+          return '<tr>' +
+            '<td><div class="cell-strong">' + esc(r.name) + '</div>' +
+              '<div class="cell-sub">' + esc(r.subtitle || '') + '</div>' +
+              '<div class="cell-sub">' + (r.sizeSqft ? r.sizeSqft + ' sq.ft · ' : '') +
+                esc(r.bedCount + ' ' + r.bedType) + ' · ' + (r.photos || []).length + ' photo(s)</div></td>' +
+            '<td>' + (r.maxGuests || 0) + ' adult' + ((r.maxGuests || 0) === 1 ? '' : 's') +
+              (r.maxChildren ? '<div class="cell-sub">+ ' + r.maxChildren + ' child</div>' : '') + '</td>' +
+            '<td class="num cell-strong">' + money(r.pricePerNight) + off + '</td>' +
+            '<td class="num">' + money(r.taxesPerNight) + '</td>' +
+            '<td class="num">' + (r.totalRooms || 0) + '</td>' +
+            '<td class="num">' + r.peakBooked + '<div class="cell-sub">' + r.occupancyPercent + '%</div></td>' +
+            '<td>' + (r.active !== false ? '<span class="pill pill--green">Live</span>' : '<span class="pill">Hidden</span>') + '</td>' +
+            '<td style="white-space:nowrap">' +
+              '<button class="btn btn--ghost btn--sm" data-cal="' + esc(r.id) + '">Calendar</button> ' +
+              '<button class="btn btn--ghost btn--sm" data-edit="' + esc(r.id) + '">Edit</button> ' +
+              '<button class="btn btn--line btn--sm" data-del="' + esc(r.id) + '">Delete</button></td></tr>';
+        }).join('') : '<tr><td colspan="8" class="empty-state">No room types yet — add one to start taking bookings.</td></tr>') +
+      '</tbody></table></div></div></div>';
+
+    // ── Property form ──
+    function hotelForm(existing) {
+      var p = existing || {};
+      return h('<div class="form-grid">' +
+        field('Hotel name', 'name', p.name, { span: true, placeholder: 'Hotel Kingfisher' }) +
+        field('Tagline', 'tagline', p.tagline, { span: true, placeholder: 'Comfortable AC rooms next to the water park' }) +
+        field('Area', 'area', p.area, { placeholder: 'Nagpur Road' }) +
+        field('City', 'city', p.city || 'Mandla') +
+        field('Address', 'address', p.address, { type: 'textarea', span: true }) +
+        field('Front desk phone', 'phone', p.phone, { placeholder: '7648913272' }) +
+        field('Rating (0-5)', 'rating', p.rating, { type: 'number', placeholder: '4.3' }) +
+        field('Review count', 'reviewCount', p.reviewCount, { type: 'number' }) +
+        field('Check-in time', 'checkInTime', p.checkInTime || '12:00', { placeholder: '12:00' }) +
+        field('Check-out time', 'checkOutTime', p.checkOutTime || '11:00', { placeholder: '11:00' }) +
+        galleryField('Property photos', 'photos', p.photos, { hint: 'The first photo is the header image on the Stay tab.' }) +
+        field('Hotel amenities (comma separated)', 'amenities', (p.amenities || []).join(', '),
+          { type: 'textarea', span: true, placeholder: 'Free Wi-Fi, Free parking, Room service' }) +
+        field('Policies (one per line)', 'policies', (p.policies || []).join('\n'),
+          { type: 'textarea', span: true, placeholder: 'Check-in from 12:00 PM\nValid photo ID required' }) +
+        field('Status', 'active', p.active === false ? 'false' : 'true',
+          { options: [{ value: 'true', label: 'Live (visible to customers)' }, { value: 'false', label: 'Hidden' }] }) +
+        '</div>');
+    }
+
+    function hotelPayload(body) {
+      var raw = readForm(body);
+      return {
+        name: raw.name,
+        tagline: raw.tagline,
+        area: raw.area,
+        city: raw.city,
+        address: raw.address,
+        phone: raw.phone,
+        rating: Number(raw.rating) || 0,
+        reviewCount: Number(raw.reviewCount) || 0,
+        checkInTime: raw.checkInTime,
+        checkOutTime: raw.checkOutTime,
+        photos: (raw.photos || '').split('\n').filter(Boolean),
+        amenities: csvList(raw.amenities),
+        policies: (raw.policies || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean),
+        active: raw.active === 'true',
+      };
+    }
+
+    function editHotel() {
+      var m = modal({
+        title: hotel ? 'Edit ' + hotel.name : 'Add property details',
+        body: hotelForm(hotel),
+        confirmLabel: 'Save property',
+      });
+      bindGalleryField(m.body, 'photos');
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          await API.put('/admin/hotel', hotelPayload(m.body));
+          toast('Property saved', 'success');
+          navigate('hotel');
+        });
+      });
+    }
+
+    // ── Room form ──
+    function roomForm(room) {
+      var r = room || {};
+      var groups = (r.amenityGroups || []).map(function (g) {
+        return g.title + ': ' + (g.items || []).join(', ');
+      }).join('\n');
+
+      return h('<div class="form-grid">' +
+        field('Room name', 'name', r.name, { span: true, placeholder: 'Deluxe Room' }) +
+        field('Subtitle', 'subtitle', r.subtitle, { type: 'textarea', span: true, placeholder: 'Cosy AC room with a double bed' }) +
+        field('Badge (optional)', 'badge', r.badge, { placeholder: 'Best Seller' }) +
+        field('Display order', 'order', r.order || 1, { type: 'number' }) +
+
+        field('Size (sq.ft)', 'sizeSqft', r.sizeSqft, { type: 'number', placeholder: '72' }) +
+        field('Size (sq.mt)', 'sizeSqmt', r.sizeSqmt, { type: 'number', placeholder: '7' }) +
+        field('Bed type', 'bedType', r.bedType || 'Double Bed', { placeholder: 'Double Bed' }) +
+        field('Number of beds', 'bedCount', r.bedCount || 1, { type: 'number' }) +
+        field('Bathrooms', 'bathrooms', r.bathrooms || 1, { type: 'number' }) +
+        field('Total rooms (inventory)', 'totalRooms', r.totalRooms || 1,
+          { type: 'number', hint: 'How many of this room type exist. Drives availability.' }) +
+        field('Max adults per room', 'maxGuests', r.maxGuests || 2, { type: 'number' }) +
+        field('Max children per room', 'maxChildren', r.maxChildren === undefined ? 1 : r.maxChildren, { type: 'number' }) +
+
+        field('Rack rate / night (₹)', 'mrpPerNight', r.mrpPerNight,
+          { type: 'number', hint: 'Shown struck through. Leave 0 for no discount badge.' }) +
+        field('Selling rate / night (₹)', 'pricePerNight', r.pricePerNight,
+          { type: 'number', hint: 'What the guest actually pays per night.' }) +
+        field('Taxes & fees / night (₹)', 'taxesPerNight', r.taxesPerNight,
+          { type: 'number', hint: 'Added on top of the nightly rate.' }) +
+
+        galleryField('Room photos', 'photos', r.photos) +
+
+        field('Popular with Guests (comma separated)', 'popularAmenities', (r.popularAmenities || []).join(', '),
+          { type: 'textarea', span: true, hint: 'The app shows the first 5 and collapses the rest into "N More".' }) +
+        field('Amenity groups — one per line, "Title: item, item"', 'amenityGroups', groups,
+          { type: 'textarea', span: true, placeholder: 'Bathroom: Towels, Slippers, Toiletries\nMedia and Entertainment: TV' }) +
+        field('Included with the stay (comma separated)', 'inclusions', (r.inclusions || []).join(', '),
+          { type: 'textarea', span: true, placeholder: 'Free Wi-Fi, Free parking, Daily housekeeping' }) +
+
+        field('Status', 'active', r.active === false ? 'false' : 'true',
+          { options: [{ value: 'true', label: 'Live (bookable)' }, { value: 'false', label: 'Hidden' }] }) +
+        '</div>');
+    }
+
+    function roomPayload(body) {
+      var raw = readForm(body);
+      return {
+        name: raw.name,
+        subtitle: raw.subtitle,
+        badge: raw.badge,
+        order: Number(raw.order) || 0,
+        sizeSqft: Number(raw.sizeSqft) || 0,
+        sizeSqmt: Number(raw.sizeSqmt) || 0,
+        bedType: raw.bedType,
+        bedCount: Number(raw.bedCount) || 1,
+        bathrooms: Number(raw.bathrooms) || 1,
+        totalRooms: Number(raw.totalRooms) || 1,
+        maxGuests: Number(raw.maxGuests) || 2,
+        maxChildren: Number(raw.maxChildren) || 0,
+        mrpPerNight: Number(raw.mrpPerNight) || 0,
+        pricePerNight: Number(raw.pricePerNight) || 0,
+        taxesPerNight: Number(raw.taxesPerNight) || 0,
+        photos: (raw.photos || '').split('\n').filter(Boolean),
+        popularAmenities: csvList(raw.popularAmenities),
+        amenityGroups: raw.amenityGroups || '',
+        inclusions: csvList(raw.inclusions),
+        active: raw.active === 'true',
+      };
+    }
+
+    topActions.querySelector('[data-action="edit-hotel"]').addEventListener('click', editHotel);
+
+    topActions.querySelector('[data-action="new-room"]').addEventListener('click', function () {
+      var m = modal({ title: 'Add room type', body: roomForm(null), confirmLabel: 'Create room type' });
+      bindGalleryField(m.body, 'photos');
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          await API.post('/admin/hotel/rooms', roomPayload(m.body));
+          toast('Room type created', 'success');
+          navigate('hotel');
+        });
+      });
+    });
+
+    content.addEventListener('click', async function (event) {
+      var edit = event.target.closest('[data-edit]');
+      var del = event.target.closest('[data-del]');
+      var cal = event.target.closest('[data-cal]');
+
+      if (edit) {
+        var room = data.rooms.find(function (r) { return r.id === edit.getAttribute('data-edit'); });
+        var m = modal({ title: 'Edit ' + room.name, body: roomForm(room), confirmLabel: 'Save changes' });
+        bindGalleryField(m.body, 'photos');
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.put('/admin/hotel/rooms/' + room.id, roomPayload(m.body));
+            toast('Room type updated', 'success');
+            navigate('hotel');
+          });
+        });
+      }
+
+      if (cal) {
+        var id = cal.getAttribute('data-cal');
+        var cm = modal({ title: 'Availability', body: '<div class="boot"><div class="spinner"></div></div>', footer: false });
+        try {
+          var res = await API.get('/admin/hotel/rooms/' + id + '/calendar?days=21');
+          cm.body.innerHTML =
+            '<p class="hint" style="margin:0 0 12px">' + esc(res.room.name) + ' — ' +
+              res.room.totalRooms + ' room(s) in inventory. Next 21 nights.</p>' +
+            '<div class="table-wrap"><table><thead><tr><th>Night</th><th class="num">Booked</th>' +
+              '<th class="num">Available</th><th>Status</th></tr></thead><tbody>' +
+            res.nights.map(function (n) {
+              var pct = res.room.totalRooms ? n.booked / res.room.totalRooms : 0;
+              var pill = n.available === 0 ? 'pill--red' : pct >= 0.7 ? 'pill--amber' : 'pill--green';
+              var label = n.available === 0 ? 'Sold out' : pct >= 0.7 ? 'Filling up' : 'Open';
+              return '<tr><td class="mono">' + esc(n.date) + '</td>' +
+                '<td class="num">' + n.booked + '</td>' +
+                '<td class="num cell-strong">' + n.available + '</td>' +
+                '<td><span class="pill ' + pill + '">' + label + '</span></td></tr>';
+            }).join('') +
+            '</tbody></table></div>';
+        } catch (err) {
+          cm.body.innerHTML = '<div class="error">' + esc(err.message) + '</div>';
+        }
+      }
+
+      if (del) {
+        var ok = await confirmDialog(
+          'Delete this room type?',
+          'It will stop appearing in the app. If it has upcoming stays it is hidden instead of deleted.',
+          'Delete room type'
+        );
+        if (!ok) return;
+        try {
+          var out = await API.del('/admin/hotel/rooms/' + del.getAttribute('data-del'));
+          toast(out.archived ? out.reason : 'Room type deleted', out.archived ? 'info' : 'success');
+          navigate('hotel');
+        } catch (err) { toast(err.message, 'error'); }
+      }
+    });
+  }
+
   // ── Customers ────────────────────────────────────────────────────────────
   async function pageCustomers(content) {
     content.innerHTML =
@@ -1636,6 +2034,7 @@
     showtimes: pageShowtimes,
     bookings: pageBookings,
     verify: pageVerify,
+    hotel: pageHotel,
     food: pageFood,
     offers: pageOffers,
     experiences: pageExperiences,

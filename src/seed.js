@@ -6,7 +6,7 @@
  */
 const db = require('./db');
 const auth = require('./auth');
-const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, SHOW_SLOTS } = require('./catalog');
+const { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, HOTEL, HOTEL_ROOMS, SHOW_SLOTS } = require('./catalog');
 const { computeTotals } = require('./pricing');
 
 const DAYS_BACK = 3;
@@ -604,4 +604,32 @@ function reseedFood() {
   console.log(`[seed] food menu synced — ${catalogRecords.length} catalog items, ${adminItems.length} admin item(s) preserved.`);
 }
 
-module.exports = { run, ensureRollingShowtimes, reseedFood, ensureExperiences, dateKey, addDays };
+/**
+ * Seed the hotel property and its room types once, then leave them alone.
+ *
+ * Unlike food/experiences (which resync from the catalogue on every boot) a
+ * room type carries live money — nightly rate, taxes, inventory count — plus
+ * admin-uploaded photos. Re-syncing would silently undo the admin's pricing
+ * every restart, so this only fills in what is genuinely missing.
+ */
+function ensureHotels() {
+  let hotel = db.findOne('hotels', (h) => h.slug === HOTEL.slug);
+
+  if (!hotel) {
+    hotel = db.insert('hotels', Object.assign({ id: `htl_${HOTEL.slug}`, active: true }, HOTEL));
+    console.log(`[seed] hotel created — ${hotel.name}`);
+  }
+
+  let added = 0;
+  for (const room of HOTEL_ROOMS) {
+    const id = `room_${room.slug}`;
+    if (db.byId('hotelRooms', id)) continue;
+    db.insert('hotelRooms', Object.assign({ id, hotelId: hotel.id, active: true }, room));
+    added += 1;
+  }
+
+  if (added) console.log(`[seed] hotel rooms created — ${added} room type(s).`);
+  if (added || !hotel.createdAt) db.flushNow();
+}
+
+module.exports = { run, ensureRollingShowtimes, reseedFood, ensureExperiences, ensureHotels, dateKey, addDays };

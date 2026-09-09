@@ -4,58 +4,12 @@ const auth = require('../auth');
 const seats = require('../seats');
 const barcode = require('../barcode');
 const { computeTotals, resolveOffer, CONVENIENCE_FEE_PER_SEAT, GST_RATE } = require('../pricing');
+const { expand, paymentRecord, notify, cutoffFor, REFUND_RATE } = require('../bookings');
 const { Router, HttpError } = require('../router');
 
 const router = new Router();
 
-const CANCELLATION_CUTOFF_MS = 2 * 60 * 60 * 1000; // no cancels inside 2h of showtime
-const REFUND_RATE = 0.75;
-
-const PAYMENT_LABELS = {
-  card: 'Credit / Debit Card',
-  upi: 'UPI',
-  wallet: 'Wallet',
-  netbanking: 'Net Banking',
-  cash: 'Pay at Counter',
-};
-
 // ── helpers ──────────────────────────────────────────────────────────────────
-function bucketOf(booking) {
-  if (booking.status === 'cancelled') return 'cancelled';
-  const start = booking.startsAt ? new Date(booking.startsAt).getTime() : 0;
-  return start && start < Date.now() ? 'passed' : 'upcoming';
-}
-
-function expand(booking) {
-  const movie = booking.movieId ? db.byId('movies', booking.movieId) : null;
-  const cinema = booking.cinemaId ? db.byId('cinemas', booking.cinemaId) : null;
-  const screen = booking.screenId ? db.byId('screens', booking.screenId) : null;
-
-  return Object.assign({}, booking, {
-    bucket: bucketOf(booking),
-    seatLabel: (booking.seats || []).map((s) => s.id).join(', '),
-    title: movie ? movie.title : booking.type === 'food' ? 'Food & Beverages' : 'CineFlex booking',
-    posterUrl: movie ? movie.posterUrl : '/img/food/_placeholder.svg',
-    movie: movie && {
-      id: movie.id,
-      title: movie.title,
-      posterUrl: movie.posterUrl,
-      backdropUrl: movie.backdropUrl,
-      certificate: movie.certificate,
-      runtime: movie.runtime,
-      genres: movie.genres,
-      languages: movie.languages,
-    },
-    cinema: cinema && { id: cinema.id, name: cinema.name, area: cinema.area, city: cinema.city, address: cinema.address },
-    screenName: screen ? screen.name : null,
-    barcodeUrl: `/api/bookings/${booking.id}/barcode.svg`,
-    canCancel:
-      booking.status === 'confirmed' &&
-      booking.type === 'movie' &&
-      new Date(booking.startsAt).getTime() - Date.now() > CANCELLATION_CUTOFF_MS,
-  });
-}
-
 function resolveFoodLines(rawItems) {
   const lines = [];
   for (const raw of rawItems || []) {
@@ -66,32 +20,6 @@ function resolveFoodLines(rawItems) {
     lines.push({ itemId: item.id, name: item.name, qty, price: item.price, imageUrl: item.imageUrl });
   }
   return lines;
-}
-
-function paymentRecord(payment, user, amount) {
-  const method = (payment && payment.method) || 'card';
-  if (!PAYMENT_LABELS[method]) throw new HttpError(400, `Unsupported payment method: ${method}`);
-
-  let label = PAYMENT_LABELS[method];
-  if (payment && payment.methodId) {
-    const saved = (user.paymentMethods || []).find((m) => m.id === payment.methodId);
-    if (saved) label = saved.label + (saved.last4 ? ` ••${saved.last4}` : '');
-  } else if (payment && payment.label) {
-    label = String(payment.label).slice(0, 60);
-  }
-
-  return {
-    method,
-    methodLabel: label,
-    status: method === 'cash' ? 'pending' : 'paid',
-    amount,
-    transactionId: `TXN${db.reference('').slice(0, 10)}`,
-    paidAt: method === 'cash' ? null : new Date().toISOString(),
-  };
-}
-
-function notify(userId, title, body, kind) {
-  db.insert('notifications', { id: db.id('ntf'), userId, title, body, kind, read: false });
 }
 
 // ── Offer preview ────────────────────────────────────────────────────────────
@@ -303,10 +231,15 @@ router.post('/bookings/:id/cancel', auth.requireAuth, (ctx) => {
   if (booking.status === 'cancelled') throw new HttpError(400, 'This booking is already cancelled');
   if (booking.status === 'completed') throw new HttpError(400, 'This show has already been watched');
 
-  if (ctx.user.role !== 'admin' && booking.type === 'movie') {
+  if (ctx.user.role !== 'admin' && (booking.type === 'movie' || booking.type === 'hotel')) {
     const msLeft = new Date(booking.startsAt).getTime() - Date.now();
-    if (msLeft < CANCELLATION_CUTOFF_MS) {
-      throw new HttpError(400, 'Tickets can only be cancelled up to 2 hours before showtime');
+    if (msLeft < cutoffFor(booking.type)) {
+      throw new HttpError(
+        400,
+        booking.type === 'hotel'
+          ? 'Stays can only be cancelled up to 24 hours before check-in'
+          : 'Tickets can only be cancelled up to 2 hours before showtime'
+      );
     }
   }
 

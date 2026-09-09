@@ -17,6 +17,7 @@ const { serveStatic, sendError, sendJSON } = require('./src/http');
 const seed = require('./src/seed');
 const { releaseExpiredHolds } = require('./src/seats');
 const { generateComboImages } = require('./tools/generate-combo-images');
+const { generateHotelImages } = require('./tools/generate-hotel-images');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -31,6 +32,8 @@ if (db.isEmpty()) {
 seed.ensureRollingShowtimes();
 seed.reseedFood(); // Always sync food catalog from catalog.js
 seed.ensureExperiences(); // Seed the Experiences tab once; admin edits persist after that
+seed.ensureHotels(); // Seed the hotel + room types once; admin pricing/photos persist after that
+generateHotelImages(); // Draw the room/hotel artwork if it is missing
 generateComboImages().catch(err => console.warn("[combo-images] Failed:", err.message));
 
 // ── Router ───────────────────────────────────────────────────────────────────
@@ -45,6 +48,7 @@ api.mount('/api', require('./src/routes/showtimes.routes'));
 api.mount('/api', require('./src/routes/bookings.routes'));
 api.mount('/api', require('./src/routes/food.routes'));
 api.mount('/api', require('./src/routes/experiences.routes'));
+api.mount('/api', require('./src/routes/hotels.routes'));
 api.mount('/api', require('./src/routes/users.routes'));
 api.mount('/api', require('./src/routes/admin.routes'));
 
@@ -60,6 +64,8 @@ api.get('/api/health', () => ({
     bookings: db.get('bookings').length,
     users: db.get('users').length,
     foodItems: db.get('foodItems').length,
+    hotels: db.get('hotels').length,
+    hotelRooms: db.get('hotelRooms').length,
   },
 }));
 
