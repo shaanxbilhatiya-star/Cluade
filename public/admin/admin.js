@@ -1690,9 +1690,75 @@
   }
 
   // ── Hotel & rooms ────────────────────────────────────────────────────────
+
+  /* Property photo galleries.
+
+     These are categorised galleries that hang off the property rather than off
+     a room type, so every room — including ones added later — shows the same
+     set on its booking page. Category list: /js/hotel-photo-categories.js.     */
+  var PHOTO_CATEGORIES = window.HotelPhotoCategories || [];
+
+  /** Field name used for a category's hidden gallery input. */
+  function photoFieldName(categoryId) {
+    return 'pp_' + categoryId.replace(/-/g, '_');
+  }
+
+  function photosFor(hotel, categoryId) {
+    return (hotel && hotel.propertyPhotos && hotel.propertyPhotos[categoryId]) || [];
+  }
+
+  /** Count pills for the property panel, so it's obvious what's still empty. */
+  function propertyPhotoSummary(hotel) {
+    var total = PHOTO_CATEGORIES.reduce(function (sum, c) { return sum + photosFor(hotel, c.id).length; }, 0);
+    if (!total) {
+      return '<span class="hint">No property photos yet — guests only see the room gallery.</span>';
+    }
+    return PHOTO_CATEGORIES.map(function (c) {
+      var n = photosFor(hotel, c.id).length;
+      return '<span class="pill ' + (n ? 'pill--green' : '') + '" style="margin:0 6px 6px 0">' +
+        esc(c.label) + ' · ' + n + '</span>';
+    }).join('') + '<div class="hint" style="margin-top:6px">' + total + ' photo(s) across the property.</div>';
+  }
+
+  /**
+   * Splits a gallery into request-sized batches.
+   *
+   * Freshly picked photos are base64 data: URLs, so a single category can easily
+   * be tens of megabytes — well past the server's request body limit. Batching
+   * keeps every request small; the first is sent as `replace` and the rest as
+   * `append`, which rebuilds the category server-side in order.
+   */
+  function batchPhotos(list, budgetBytes) {
+    var budget = budgetBytes || 6 * 1024 * 1024;
+    var batches = [];
+    var current = [];
+    var size = 0;
+
+    list.forEach(function (entry) {
+      // A stored path costs nothing; a data: URL is roughly its string length.
+      var cost = entry.length;
+      if (current.length && size + cost > budget) {
+        batches.push(current);
+        current = [];
+        size = 0;
+      }
+      current.push(entry);
+      size += cost;
+    });
+
+    // Always emit one batch, even when empty — that's how a category is cleared.
+    batches.push(current);
+    return batches;
+  }
+
+  function sameList(a, b) {
+    return a.length === b.length && a.every(function (v, i) { return v === b[i]; });
+  }
+
   async function pageHotel(content, topActions) {
     topActions.innerHTML =
       '<button class="btn btn--ghost" data-action="edit-hotel">' + icon('building', 17) + ' Property details</button> ' +
+      '<button class="btn btn--ghost" data-action="property-photos">' + icon('grid', 17) + ' Property photos</button> ' +
       '<button class="btn" data-action="new-room">' + icon('plus', 17) + ' Add room type</button>';
 
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
@@ -1707,6 +1773,9 @@
         '</div></div></div>';
       content.querySelector('[data-action="edit-hotel-empty"]').addEventListener('click', editHotel);
       topActions.querySelector('[data-action="edit-hotel"]').addEventListener('click', editHotel);
+      topActions.querySelector('[data-action="property-photos"]').addEventListener('click', function () {
+        toast('Add the property details first — photos attach to the property.', 'info');
+      });
       return;
     }
 
@@ -1735,6 +1804,10 @@
           ((hotel.amenities || []).length
             ? hotel.amenities.map(function (a) { return '<span class="pill pill--purple" style="margin:0 6px 6px 0">' + esc(a) + '</span>'; }).join('')
             : '<span class="hint">None listed</span>') +
+        '</div>' +
+        '<div style="margin-top:16px"><div class="label">Property photos ' +
+          '<span class="hint" style="font-weight:400">— shown on every room\u2019s booking page</span></div>' +
+          propertyPhotoSummary(hotel) +
         '</div>' +
       '</div></div>' +
 
@@ -1836,6 +1909,73 @@
       });
     }
 
+    // ── Property photo galleries ──
+    function propertyPhotosForm() {
+      return h('<div>' +
+        '<p class="hint" style="margin:0 0 18px">Photos of the property itself — these appear under ' +
+          '<strong>Check-in &amp; check-out</strong> on the booking page of <strong>every</strong> room type, ' +
+          'including any you add later. Upload once here instead of per room.</p>' +
+        PHOTO_CATEGORIES.map(function (c) {
+          var name = photoFieldName(c.id);
+          var existing = photosFor(hotel, c.id);
+          return '<section class="photo-cat-field">' +
+            '<div class="form-grid">' +
+              galleryField(c.label, name, existing, {
+                hint: existing.length
+                  ? existing.length + ' photo(s) — the first one leads the ' + c.label + ' row.'
+                  : 'No ' + c.label + ' photos yet. This section stays hidden from guests until you add one.',
+              }) +
+            '</div>' +
+          '</section>';
+        }).join('') +
+        '</div>');
+    }
+
+    /**
+     * Saves only the categories that actually changed, one request per batch, so
+     * a big upload can't exceed the server's request body limit.
+     */
+    async function savePropertyPhotos(body) {
+      var changed = 0;
+
+      for (var i = 0; i < PHOTO_CATEGORIES.length; i++) {
+        var category = PHOTO_CATEGORIES[i];
+        var hidden = body.querySelector('input[type="hidden"][name="' + photoFieldName(category.id) + '"]');
+        if (!hidden) continue;
+
+        var next = hidden.value ? hidden.value.split('\n').filter(Boolean) : [];
+        if (sameList(next, photosFor(hotel, category.id))) continue;
+
+        var batches = batchPhotos(next);
+        for (var b = 0; b < batches.length; b++) {
+          await API.put('/admin/hotel/photos', {
+            category: category.id,
+            photos: batches[b],
+            mode: b === 0 ? 'replace' : 'append',
+          });
+        }
+        changed++;
+      }
+
+      return changed;
+    }
+
+    function editPropertyPhotos() {
+      var m = modal({
+        title: 'Property photos',
+        body: propertyPhotosForm(),
+        confirmLabel: 'Save photos',
+      });
+      PHOTO_CATEGORIES.forEach(function (c) { bindGalleryField(m.body, photoFieldName(c.id)); });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var changed = await savePropertyPhotos(m.body);
+          toast(changed ? 'Property photos saved' : 'Nothing changed', changed ? 'success' : 'info');
+          navigate('hotel');
+        });
+      });
+    }
+
     // ── Room form ──
     function roomForm(room) {
       var r = room || {};
@@ -1909,6 +2049,7 @@
     }
 
     topActions.querySelector('[data-action="edit-hotel"]').addEventListener('click', editHotel);
+    topActions.querySelector('[data-action="property-photos"]').addEventListener('click', editPropertyPhotos);
 
     topActions.querySelector('[data-action="new-room"]').addEventListener('click', function () {
       var m = modal({ title: 'Add room type', body: roomForm(null), confirmLabel: 'Create room type' });

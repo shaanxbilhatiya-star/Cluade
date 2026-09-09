@@ -1364,3 +1364,79 @@ ul { margin: 0; padding: 0; list-style: none; }
 .cal__summary { min-height: 34px; margin-bottom: 8px; }
 .cal__summary strong { display: block; font-size: 14px; font-weight: 800; }
 .cal__summary span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+
+/* ── Property photos (categorised galleries on the room booking page) ─────── */
+.photo-intro { margin: -4px 16px 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.photo-nav { padding: 12px 16px 2px; }
+
+.photo-group { padding: 16px 16px 0; }
+.photo-group__title {
+  display: flex; align-items: center; gap: 7px;
+  margin: 0 0 9px;
+  font-size: 14px; font-weight: 800;
+}
+.photo-group__title svg { flex: none; color: var(--primary-600); }
+.photo-group__title small {
+  font-size: 11px; font-weight: 700; color: var(--ink-soft);
+  background: var(--bg-sunken); border-radius: 999px; padding: 2px 8px;
+}
+
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.photo-tile {
+  position: relative;
+  padding: 0; border: 0;
+  border-radius: 10px; overflow: hidden;
+  background: var(--bg-sunken);
+  aspect-ratio: 4 / 3;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.photo-tile:active { opacity: .82; }
+.photo-tile__img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.photo-tile__more {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(20, 20, 43, .55);
+  color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .2px;
+}
+
+/* Full-screen photo viewer */
+body.photo-viewer-open { overflow: hidden; }
+.photo-viewer {
+  position: fixed; inset: 0; z-index: 9998;
+  display: flex; flex-direction: column;
+  background: rgba(8, 8, 16, .96);
+}
+.photo-viewer__bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: calc(var(--safe-top) + 10px) 14px 10px;
+  color: #fff;
+}
+.photo-viewer__btn {
+  display: grid; place-items: center;
+  width: 38px; height: 38px; flex: none;
+  border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .14);
+  color: #fff; cursor: pointer;
+}
+.photo-viewer__label { flex: 1; font-size: 15px; font-weight: 700; }
+.photo-viewer__count { font-size: 13px; font-weight: 600; opacity: .75; }
+.photo-viewer__stage {
+  flex: 1; min-height: 0;
+  display: grid; place-items: center;
+  padding: 6px 12px calc(var(--safe-bottom) + 20px);
+}
+.photo-viewer__img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+.photo-viewer__nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center;
+  width: 42px; height: 42px;
+  border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .14);
+  color: #fff; cursor: pointer;
+}
+.photo-viewer__nav:hover { background: rgba(255, 255, 255, .26); }
+.photo-viewer__nav--prev { left: 10px; }
+.photo-viewer__nav--next { right: 10px; }
+.photo-viewer__nav[hidden] { display: none; }

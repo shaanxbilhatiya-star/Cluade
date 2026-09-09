@@ -280,3 +280,9 @@ textarea.input { resize: vertical; min-height: 84px; }
   cursor: pointer;
 }
 .gal-item__tools button:hover { background: #fff; }
+
+
+/* ── Property photo categories (one stacked gallery per category) ─────────── */
+.photo-cat-field + .photo-cat-field { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 18px; }
+.photo-cat-field .form-grid { gap: 0; }
+.photo-cat-field .label { font-size: 14px; font-weight: 700; }
