@@ -1784,7 +1784,10 @@
         field('Review count', 'reviewCount', p.reviewCount, { type: 'number' }) +
         field('Check-in time', 'checkInTime', p.checkInTime || '12:00', { placeholder: '12:00' }) +
         field('Check-out time', 'checkOutTime', p.checkOutTime || '11:00', { placeholder: '11:00' }) +
-        galleryField('Property photos', 'photos', p.photos, { hint: 'The first photo is the header image on the Stay tab.' }) +
+        galleryField('Property photos', 'photos', p.photos, {
+          hint: 'These replace the placeholder artwork at the top of the Stay tab. Add more than ' +
+            'one and guests can swipe through them. The first photo is the cover.',
+        }) +
         field('Hotel amenities (comma separated)', 'amenities', (p.amenities || []).join(', '),
           { type: 'textarea', span: true, placeholder: 'Free Wi-Fi, Free parking, Room service' }) +
         field('Policies (one per line)', 'policies', (p.policies || []).join('\n'),
