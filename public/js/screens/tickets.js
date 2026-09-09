@@ -11,6 +11,7 @@
   var TYPES = [
     { id: 'movie', label: 'Movie' },
     { id: 'hotel', label: 'Stay' },
+    { id: 'dinein', label: 'Dine-In' },
     { id: 'food', label: 'Food' },
     { id: 'event', label: 'Event' },
   ];
@@ -32,9 +33,11 @@
   function ticketCard(booking) {
     var subtitle = booking.type === 'hotel'
       ? stayLine(booking.stay)
-      : booking.type === 'food'
-        ? (booking.pickup ? UI.shortDate(booking.pickup.date) + ' · Pickup ' + booking.pickup.slot : UI.showLine(booking.startsAt))
-        : UI.showLine(booking.startsAt, booking.endsAt);
+      : booking.type === 'dinein'
+        ? UI.shortDate(booking.startsAt) + ' · ' + ((booking.dine || {}).mode === 'reserved' ? 'Reserved table' : 'Walk-in')
+        : booking.type === 'food'
+          ? (booking.pickup ? UI.shortDate(booking.pickup.date) + ' · Pickup ' + booking.pickup.slot : UI.showLine(booking.startsAt))
+          : UI.showLine(booking.startsAt, booking.endsAt);
 
     var showReminder = booking.bucket === 'upcoming' && booking.status === 'confirmed';
 
@@ -49,9 +52,11 @@
             : booking.type === 'hotel' && booking.stay
               ? '<p class="ticket__seats">' + booking.stay.rooms + ' room' + (booking.stay.rooms === 1 ? '' : 's') +
                 ' · ' + UI.money(booking.amounts.total) + '</p>'
-              : booking.food && booking.food.length
-                ? '<p class="ticket__seats">' + UI.esc(booking.food.length) + ' item' + (booking.food.length === 1 ? '' : 's') + ' · ' + UI.money(booking.amounts.total) + '</p>'
-                : '') +
+              : booking.type === 'dinein'
+                ? '<p class="ticket__seats">' + UI.money(booking.amounts.total) + ' paid · saved ' + UI.money(booking.amounts.discount) + '</p>'
+                : booking.food && booking.food.length
+                  ? '<p class="ticket__seats">' + UI.esc(booking.food.length) + ' item' + (booking.food.length === 1 ? '' : 's') + ' · ' + UI.money(booking.amounts.total) + '</p>'
+                  : '') +
           (booking.bucket !== 'upcoming' ? '<div style="margin-top:7px">' + UI.statusPill(booking) + '</div>' : '') +
         '</div>' +
         '<span class="row__chevron">' + UI.icon('chevron-right', 20) + '</span>' +
@@ -106,6 +111,15 @@
       var cache = {};
 
       function emptyFor() {
+        if (state.type === 'dinein') {
+          return UI.empty({
+            icon: 'food',
+            title: 'No dine-in bills',
+            text: 'Pay your restaurant bill from the Dine-In tab and your receipts will live here.',
+            action: 'browse-dinein',
+            actionLabel: 'Open Dine-In',
+          });
+        }
         if (state.type === 'event') {
           return UI.empty({ icon: 'sparkle', title: 'No event tickets', text: 'Fan shows, premieres and live events will appear here once you book one.' });
         }
@@ -173,6 +187,17 @@
         view.querySelectorAll('[data-type]').forEach(function (c) {
           c.setAttribute('aria-pressed', c === chip ? 'true' : 'false');
         });
+
+        // A dine-in bill is a receipt for a meal already eaten, so it is never
+        // "upcoming". Switch buckets rather than showing a permanently empty
+        // list to anyone who picks Dine-In from the default Upcoming tab.
+        if (state.type === 'dinein' && state.bucket === 'upcoming') {
+          state.bucket = 'passed';
+          view.querySelectorAll('[data-bucket]').forEach(function (t) {
+            t.setAttribute('aria-selected', t.getAttribute('data-bucket') === 'passed' ? 'true' : 'false');
+          });
+        }
+
         load();
       });
 
@@ -193,6 +218,7 @@
         browse: function () { App.navigate('/home'); },
         'browse-food': function () { App.navigate('/food'); },
         'browse-hotels': function () { App.navigate('/hotels'); },
+        'browse-dinein': function () { App.navigate('/dinein'); },
         reminder: async function (el) {
           var next = el.getAttribute('aria-checked') !== 'true';
           el.setAttribute('aria-checked', next ? 'true' : 'false');
@@ -220,7 +246,9 @@
       var b = res.booking;
       var isMovie = b.type === 'movie';
       var isStay = b.type === 'hotel';
+      var isDine = b.type === 'dinein';
       var stay = b.stay || {};
+      var dine = b.dine || {};
 
       function cell(label, value) {
         return '<div><div class="stub__cell-label">' + UI.esc(label) + '</div>' +
@@ -230,7 +258,7 @@
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({
-            title: isMovie ? 'Your ticket' : isStay ? 'Your stay' : 'Your order',
+            title: isMovie ? 'Your ticket' : isStay ? 'Your stay' : isDine ? 'Your bill' : 'Your order',
             back: true,
             right: '<button class="icon-btn" data-action="share" aria-label="Share">' + UI.icon('share', 21) + '</button>',
           }) +
@@ -263,17 +291,26 @@
                           ? stay.guests.adults + ' adult' + (stay.guests.adults === 1 ? '' : 's') +
                             (stay.guests.children ? ' · ' + stay.guests.children + ' child' + (stay.guests.children === 1 ? '' : 'ren') : '')
                           : '—')
-                      : cell('Pickup date', b.pickup ? UI.shortDate(b.pickup.date) : '—') +
-                        cell('Pickup time', b.pickup ? b.pickup.slot : '—') +
-                        cell('Counter', b.pickup ? b.pickup.counter : '—') +
-                        cell('Items', String((b.food || []).reduce(function (n, f) { return n + f.qty; }, 0)))) +
+                      : isDine
+                        ? cell('Paid', UI.shortDate(b.startsAt) + ' · ' + UI.hhmm(b.startsAt)) +
+                          cell('Type', dine.mode === 'reserved' ? 'Reserved table' : 'Walk-in') +
+                          cell('Discount', (dine.discountPercent || 0) + '%') +
+                          cell(dine.mode === 'reserved' ? 'Reservation' : 'Guests',
+                            dine.mode === 'reserved' ? (dine.reservationRef || '—') : (dine.partySize ? String(dine.partySize) : '—'))
+                        : cell('Pickup date', b.pickup ? UI.shortDate(b.pickup.date) : '—') +
+                          cell('Pickup time', b.pickup ? b.pickup.slot : '—') +
+                          cell('Counter', b.pickup ? b.pickup.counter : '—') +
+                          cell('Items', String((b.food || []).reduce(function (n, f) { return n + f.qty; }, 0)))) +
                 '</div>' +
                 '<div class="stub__perf"><div class="stub__perf-line"></div></div>' +
                 '<div class="stub__code">' +
                   '<img src="' + UI.esc(b.barcodeUrl) + '" alt="Barcode for booking ' + UI.esc(b.reference) + '">' +
-                  '<p class="stub__code-hint">Show this at the ' +
-                    (isMovie ? 'entry gate' : isStay ? 'front desk' : 'food counter') +
-                    ' · Booking ' + UI.esc(b.reference) + '</p>' +
+                  '<p class="stub__code-hint">' +
+                    (isDine
+                      ? 'Bill ' + UI.esc(b.reference)
+                      : 'Show this at the ' +
+                        (isMovie ? 'entry gate' : isStay ? 'front desk' : 'food counter') +
+                        ' · Booking ' + UI.esc(b.reference)) + '</p>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -299,6 +336,12 @@
                 '</div>'
               : '') +
 
+            // The dine-in notice is stored as rendered when the bill was paid,
+            // so the receipt keeps showing the terms that actually applied.
+            (isDine && dine.notice
+              ? '<div class="notice' + (dine.noticeKind === 'locked' ? ' notice--warn' : '') + '" style="margin-top:22px">' + UI.esc(dine.notice) + '</div>'
+              : '') +
+
             '<h2 class="subhead">Payment</h2>' +
             '<div style="padding:0 16px">' +
               (isMovie ? '<div class="kv"><span class="kv__key">Tickets (' + (b.seats || []).length + ')</span><span class="kv__val">' + UI.money(b.amounts.tickets) + '</span></div>' : '') +
@@ -308,10 +351,17 @@
                   (b.amounts.ratePerNight ? ' @ ' + UI.money(b.amounts.ratePerNight) : '') +
                   '</span><span class="kv__val">' + UI.money(b.amounts.roomCharge || 0) + '</span></div>'
                 : '') +
+              (isDine ? '<div class="kv"><span class="kv__key">Restaurant bill</span><span class="kv__val">' + UI.money(b.amounts.billAmount || 0) + '</span></div>' : '') +
               (b.amounts.food ? '<div class="kv"><span class="kv__key">Food & beverages</span><span class="kv__val">' + UI.money(b.amounts.food) + '</span></div>' : '') +
               (b.amounts.convenienceFee ? '<div class="kv"><span class="kv__key">Convenience fee</span><span class="kv__val">' + UI.money(b.amounts.convenienceFee) + '</span></div>' : '') +
               (b.amounts.gst ? '<div class="kv"><span class="kv__key">' + (isStay ? 'Taxes & fees' : 'GST') + '</span><span class="kv__val">' + UI.money(b.amounts.gst) + '</span></div>' : '') +
-              (b.amounts.discount ? '<div class="kv kv--discount"><span class="kv__key">Offer ' + UI.esc(b.offerCode || '') + '</span><span class="kv__val">- ' + UI.money(b.amounts.discount) + '</span></div>' : '') +
+              (b.amounts.discount
+                ? '<div class="kv kv--discount"><span class="kv__key">' +
+                  (isDine
+                    ? 'Dine-In discount (' + UI.esc(b.amounts.discountPercent || dine.discountPercent || 0) + '%)'
+                    : 'Offer ' + UI.esc(b.offerCode || '')) +
+                  '</span><span class="kv__val">- ' + UI.money(b.amounts.discount) + '</span></div>'
+                : '') +
               '<div class="kv kv--total"><span class="kv__key">Paid via ' + UI.esc(b.payment.methodLabel) + '</span><span class="kv__val">' + UI.money(b.amounts.total) + '</span></div>' +
               (b.status === 'cancelled' && b.refundAmount
                 ? '<div class="kv"><span class="kv__key">Refund in progress</span><span class="kv__val" style="color:var(--success)">' + UI.money(b.refundAmount) + '</span></div>'

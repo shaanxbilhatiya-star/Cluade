@@ -153,11 +153,61 @@ function resolveHotelOffer(offers, code, { ratePerNight, mrpPerNight, taxesPerNi
   return preview.discount > 0 ? offer : null;
 }
 
+/**
+ * Dine-In restaurant bills. The guest types in the total already printed on
+ * their restaurant bill - taxes and service are baked into that figure - so
+ * there is nothing to add here, only a percentage to take off.
+ *
+ * The discount percentage is decided by src/dinein.js (reserved vs walk-in);
+ * this function only does the arithmetic, and clamps it so a mis-configured
+ * percentage can never produce a negative bill or a discount larger than the
+ * bill itself.
+ *
+ * Like computeHotelTotals(), the result keeps the shared bill keys
+ * (discount, total, offerCode, gst, ...) so expand(), the admin bookings table
+ * and the receipt view all keep working unchanged.
+ *
+ * @param {object} input
+ * @param {number} input.billAmount        restaurant bill total
+ * @param {number} input.discountPercent   0-100
+ * @param {number} input.maxDiscountAmount rupee cap on the discount; 0 = uncapped
+ */
+function computeDineInTotals({ billAmount = 0, discountPercent = 0, maxDiscountAmount = 0 } = {}) {
+  const bill = Math.max(0, round(Number(billAmount) || 0));
+  const percent = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+
+  let discount = round((bill * percent) / 100);
+  const cap = Math.max(0, round(Number(maxDiscountAmount) || 0));
+  if (cap > 0) discount = Math.min(discount, cap);
+  discount = Math.min(discount, bill);
+
+  const total = Math.max(0, bill - discount);
+
+  return {
+    billAmount: bill,
+    discountPercent: percent,
+    discount,
+    total,
+    // Effective percentage actually granted, which differs from
+    // `discountPercent` whenever maxDiscountAmount clamps the saving.
+    effectivePercent: bill ? Math.round((discount / bill) * 1000) / 10 : 0,
+
+    // Shared bill shape: a restaurant bill has no tickets, no per-seat fee and
+    // no separate tax line (the bill total is already tax inclusive).
+    tickets: 0,
+    food: 0,
+    convenienceFee: 0,
+    gst: 0,
+    offerCode: null,
+  };
+}
+
 module.exports = {
   computeTotals,
   resolveOffer,
   computeHotelTotals,
   resolveHotelOffer,
+  computeDineInTotals,
   CONVENIENCE_FEE_PER_SEAT,
   GST_RATE,
   CURRENCY,

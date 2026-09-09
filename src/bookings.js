@@ -3,7 +3,7 @@
  * Shared booking logic.
  *
  * `bookings` is one polymorphic collection discriminated by `type`
- * ('movie' | 'food' | 'hotel'). These helpers are the single place that knows
+ * ('movie' | 'food' | 'hotel' | 'dinein'). These helpers are the single place that knows
  * how to present a booking of any type and how to record its payment, so the
  * movie/food routes and the hotel routes cannot drift apart.
  */
@@ -41,6 +41,9 @@ function cutoffFor(type) {
 function canCancel(booking) {
   if (booking.status !== 'confirmed') return false;
   if (booking.type === 'food') return false;
+  // A dine-in bill is a receipt for a meal already eaten - there is nothing
+  // left to cancel, and refunds are handled at the restaurant.
+  if (booking.type === 'dinein') return false;
   const start = new Date(booking.startsAt).getTime();
   if (!start) return false;
   return start - Date.now() > cutoffFor(booking.type);
@@ -54,6 +57,7 @@ function titleOf(booking, { movie, room, hotel }) {
     return `${roomName} · ${(hotel && hotel.name) || booking.stay?.hotelName || 'Hotel'}`;
   }
   if (booking.type === 'food') return 'Food & Beverages';
+  if (booking.type === 'dinein') return booking.dine?.restaurantName || 'Dine-In';
   return 'CineFlex booking';
 }
 

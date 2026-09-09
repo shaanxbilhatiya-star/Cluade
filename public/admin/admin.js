@@ -111,6 +111,7 @@
     { id: 'verify', label: 'Verify Ticket', icon: 'qr' },
     { id: 'hotel', label: 'Hotel & Rooms', icon: 'bed' },
     { id: 'food', label: 'Food & Drinks', icon: 'food' },
+    { id: 'dinein', label: 'Dine-In', icon: 'cup' },
     { id: 'offers', label: 'Offers', icon: 'tag' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle' },
     { id: 'customers', label: 'Customers', icon: 'users' },
@@ -160,6 +161,11 @@
         (stats.stays
           ? card('Stay revenue', money(stats.stays.revenue),
               stats.stays.roomNights + ' room nights · ' + stats.stays.upcoming + ' upcoming')
+          : '') +
+        (stats.dineIn
+          ? card('Dine-In revenue', money(stats.dineIn.revenue),
+              stats.dineIn.bills + ' bills · ' + money(stats.dineIn.discountGiven) + ' discounted · ' +
+              stats.dineIn.openReservations + ' open reservations')
           : '') +
       '</div>' +
 
@@ -1512,6 +1518,263 @@
     });
   }
 
+  // ── Dine-In (restaurant billing) ─────────────────────────────────────────
+
+  /* Mirror of renderNotice() in src/dinein.js. Substituting placeholders here
+     as well lets the admin see exactly what a customer would read while they
+     are still typing, before anything is saved. The server remains the single
+     authority: what it renders on save is what customers actually get. */
+  function renderNoticePreview(template, vars) {
+    return String(template || '').replace(/\{(\w+)\}/g, function (match, key) {
+      return vars[key] === undefined || vars[key] === null ? match : String(vars[key]);
+    });
+  }
+
+  var DINE_NOTICE_FIELDS = [
+    {
+      name: 'reserveNotice',
+      label: 'On the reservation form',
+      hint: 'Shown while a guest is booking a table.',
+    },
+    {
+      name: 'lockedNotice',
+      label: 'While billing is locked',
+      hint: 'Shown after booking, until the unlock window has passed. Use {minutesLeft} and {unlockTime} for the countdown.',
+    },
+    {
+      name: 'reservedNotice',
+      label: 'Reserved bill (unlocked)',
+      hint: 'Shown when a guest with a reservation may pay and earn the higher discount.',
+    },
+    {
+      name: 'walkInNotice',
+      label: 'Walk-in bill',
+      hint: 'Shown to guests paying without a reservation — this is where you nudge them to reserve next time.',
+    },
+  ];
+
+  async function pageDineIn(content, topActions) {
+    topActions.innerHTML = '<button class="btn" data-action="save">' + icon('check', 17) + ' Save settings</button>';
+    content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
+    var data = await API.get('/admin/dinein');
+    var cfg = data.settings;
+    var stats = data.stats;
+
+    function lockCell(r) {
+      if (r.status !== 'booked') return '<span class="pill pill--grey">—</span>';
+      return r.locked
+        ? '<span class="pill pill--amber">Locked · ' + esc(r.minutesLeft) + ' min</span>'
+        : '<span class="pill pill--green">Unlocked</span>';
+    }
+
+    function statusCell(status) {
+      var cls = status === 'booked' ? 'pill--purple' : status === 'billed' ? 'pill--green' : 'pill--red';
+      return '<span class="pill ' + cls + '">' + esc(status) + '</span>';
+    }
+
+    content.innerHTML =
+      '<div class="cards">' +
+        card('Dine-In revenue', money(stats.revenue), stats.bills + ' bills settled in the app') +
+        card('Discount given', money(stats.discountGiven), 'on ' + money(stats.grossBilled) + ' of restaurant bills') +
+        card('Open reservations', String(stats.openReservations), stats.lockedReservations + ' still inside the lock window') +
+        card('Reserved bills', String(stats.reserved.bills), money(stats.reserved.discountGiven) + ' discounted at ' + cfg.reservedDiscountPercent + '%') +
+        card('Walk-in bills', String(stats.walkin.bills), money(stats.walkin.discountGiven) + ' discounted at ' + cfg.walkInDiscountPercent + '%') +
+        card('Billing status', cfg.active ? 'Open' : 'Closed', cfg.active ? 'Customers can pay from the app' : 'Dine-In tab is disabled') +
+      '</div>' +
+
+      '<div class="panel"><div class="panel__head"><h2 class="panel__title">Discounts &amp; billing rules</h2></div>' +
+      '<div class="panel__body">' +
+        '<div class="form-grid" data-settings>' +
+          field('Dine-In billing', 'active', cfg.active ? 'true' : 'false', { options: [
+            { value: 'true', label: 'Open — customers can pay in the app' },
+            { value: 'false', label: 'Closed — hide Dine-In billing' },
+          ] }) +
+          field('Restaurant name', 'restaurantName', cfg.restaurantName) +
+          field('Discount with a reservation (%)', 'reservedDiscountPercent', cfg.reservedDiscountPercent, {
+            type: 'number', hint: 'Applied once the reservation clears the unlock window below.',
+          }) +
+          field('Walk-in discount (%)', 'walkInDiscountPercent', cfg.walkInDiscountPercent, {
+            type: 'number', hint: 'Applied immediately, with no reservation.',
+          }) +
+          field('Billing unlock window (minutes)', 'unlockMinutes', cfg.unlockMinutes, {
+            type: 'number', hint: 'How long after booking a table before its bill can be paid. 0 unlocks instantly.',
+          }) +
+          field('Maximum discount (\u20B9)', 'maxDiscountAmount', cfg.maxDiscountAmount, {
+            type: 'number', hint: '0 means no cap on the rupee value of the discount.',
+          }) +
+          field('Minimum bill (\u20B9)', 'minBillAmount', cfg.minBillAmount, { type: 'number', hint: '0 means no minimum.' }) +
+          field('Maximum bill (\u20B9)', 'maxBillAmount', cfg.maxBillAmount, { type: 'number', hint: 'Larger bills must be settled at the counter.' }) +
+          field('Contact phone', 'phone', cfg.phone) +
+          field('Maximum party size', 'maxPartySize', cfg.maxPartySize, { type: 'number' }) +
+          field('Reservation time slots', 'slots', (cfg.slots || []).join(', '), {
+            span: true, placeholder: '12:00, 13:00, 19:00, 20:00',
+            hint: 'Comma separated, 24-hour HH:MM. Invalid entries are dropped on save.',
+          }) +
+        '</div>' +
+      '</div></div>' +
+
+      '<div class="panel"><div class="panel__head"><h2 class="panel__title">Customer notices</h2></div>' +
+      '<div class="panel__body">' +
+        '<p class="hint" style="margin:0 0 16px">' +
+          'These are templates. Placeholders are filled in with the live numbers above, so a notice can never contradict the discount a customer is actually given. ' +
+          'Available: ' + data.placeholders.map(function (p) { return '<code>' + esc(p) + '</code>'; }).join(' ') +
+        '</p>' +
+        '<div data-notices>' +
+          DINE_NOTICE_FIELDS.map(function (n) {
+            return '<div class="form-row">' +
+              '<label class="label">' + esc(n.label) + '</label>' +
+              '<textarea class="input" name="' + n.name + '" rows="2" data-notice-input="' + n.name + '">' + esc(cfg[n.name]) + '</textarea>' +
+              '<div class="hint">' + esc(n.hint) + '</div>' +
+              '<div class="hint" style="margin-top:8px;padding:10px 12px;background:var(--primary-soft);color:var(--primary-dark);border-radius:8px">' +
+                '<strong>Customer sees:</strong> <span data-notice-preview="' + n.name + '"></span>' +
+              '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+        '<button class="btn" data-action="save2">' + icon('check', 17) + ' Save settings</button>' +
+      '</div></div>' +
+
+      '<div class="panel"><div class="panel__head"><h2 class="panel__title">' + data.reservations.length + ' reservations</h2></div>' +
+      '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Reference</th><th>Customer</th><th>Table / party</th><th>Booked for</th><th>Booked at</th><th>Billing</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + (data.reservations.length ? data.reservations.map(function (r) {
+          return '<tr><td class="mono cell-strong">' + esc(r.reference) + '</td>' +
+            '<td>' + (r.customer
+              ? '<div class="cell-strong">' + esc(r.customer.name) + '</div><div class="cell-sub">' + esc(r.customer.email) + '</div>'
+              : '\u2014') + '</td>' +
+            '<td>' + esc(r.tableLabel) + '<div class="cell-sub">' + esc(r.partySize) + ' guest(s)</div></td>' +
+            '<td>' + esc(r.date) + ' ' + time12(r.slot) + '</td>' +
+            '<td>' + esc(dateTime(r.bookedAt)) + '<div class="cell-sub">unlocks ' + esc(r.unlockTime) + '</div></td>' +
+            '<td>' + lockCell(r) + '</td>' +
+            '<td>' + statusCell(r.status) + '</td>' +
+            '<td style="white-space:nowrap">' +
+              (r.status === 'booked' ? '<button class="btn btn--line btn--sm" data-cancel-res="' + esc(r.id) + '">Cancel</button>' : '') +
+            '</td></tr>';
+        }).join('') : '<tr><td colspan="8" class="empty-state">No reservations yet.</td></tr>') +
+      '</tbody></table></div></div></div>' +
+
+      '<div class="panel"><div class="panel__head"><h2 class="panel__title">' + data.bills.length + ' bills paid in the app</h2></div>' +
+      '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Reference</th><th>Customer</th><th>Type</th><th class="num">Bill</th><th class="num">Discount</th><th class="num">Paid</th><th>Payment</th><th>When</th></tr></thead>' +
+        '<tbody>' + (data.bills.length ? data.bills.map(function (b) {
+          return '<tr><td class="mono cell-strong">' + esc(b.reference) + '</td>' +
+            '<td>' + (b.customer
+              ? '<div class="cell-strong">' + esc(b.customer.name) + '</div><div class="cell-sub">' + esc(b.customer.email) + '</div>'
+              : '\u2014') + '</td>' +
+            '<td><span class="pill ' + (b.mode === 'reserved' ? 'pill--green' : 'pill--purple') + '">' +
+              (b.mode === 'reserved' ? 'Reserved' : 'Walk-in') + '</span>' +
+              (b.reservationRef ? '<div class="cell-sub mono">' + esc(b.reservationRef) + '</div>' : '') + '</td>' +
+            '<td class="num">' + money(b.billAmount) + '</td>' +
+            '<td class="num">' + esc(b.discountPercent) + '%<div class="cell-sub">- ' + money(b.discountAmount) + '</div></td>' +
+            '<td class="num cell-strong">' + money(b.total) + '</td>' +
+            '<td>' + esc(b.paymentLabel) + '</td>' +
+            '<td>' + esc(dateTime(b.createdAt)) + '</td></tr>';
+        }).join('') : '<tr><td colspan="8" class="empty-state">No dine-in bills yet.</td></tr>') +
+      '</tbody></table></div></div></div>';
+
+    var settingsBody = content.querySelector('[data-settings]');
+    var noticesBody = content.querySelector('[data-notices]');
+
+    /** Current form values, coerced the same way the server will coerce them. */
+    function readSettings() {
+      var raw = readForm(settingsBody);
+      var notices = readForm(noticesBody);
+      return {
+        active: raw.active === 'true',
+        restaurantName: raw.restaurantName,
+        phone: raw.phone,
+        reservedDiscountPercent: Number(raw.reservedDiscountPercent),
+        walkInDiscountPercent: Number(raw.walkInDiscountPercent),
+        unlockMinutes: Number(raw.unlockMinutes),
+        maxDiscountAmount: Number(raw.maxDiscountAmount),
+        minBillAmount: Number(raw.minBillAmount),
+        maxBillAmount: Number(raw.maxBillAmount),
+        maxPartySize: Number(raw.maxPartySize),
+        slots: csvList(raw.slots),
+        reserveNotice: notices.reserveNotice,
+        lockedNotice: notices.lockedNotice,
+        reservedNotice: notices.reservedNotice,
+        walkInNotice: notices.walkInNotice,
+      };
+    }
+
+    /** Re-renders every notice preview from the values currently in the form. */
+    function refreshPreviews() {
+      var s = readSettings();
+      var vars = {
+        reservedDiscount: s.reservedDiscountPercent,
+        walkInDiscount: s.walkInDiscountPercent,
+        extraDiscount: Math.max(0, s.reservedDiscountPercent - s.walkInDiscountPercent),
+        unlockMinutes: s.unlockMinutes,
+        minutesLeft: s.unlockMinutes,
+        unlockTime: '20:30',
+        discount: s.reservedDiscountPercent,
+        restaurantName: s.restaurantName,
+        phone: s.phone,
+        reference: 'DR7K2M9Q',
+        tableLabel: 'Table 4',
+        partySize: 4,
+        bill: 2000,
+        saved: Math.round((2000 * s.reservedDiscountPercent) / 100),
+        payable: 2000 - Math.round((2000 * s.reservedDiscountPercent) / 100),
+      };
+
+      DINE_NOTICE_FIELDS.forEach(function (n) {
+        var input = noticesBody.querySelector('[data-notice-input="' + n.name + '"]');
+        var out = content.querySelector('[data-notice-preview="' + n.name + '"]');
+        if (!input || !out) return;
+        // The walk-in notice is about the walk-in tier, so {discount} there
+        // means the walk-in percentage.
+        var scoped = n.name === 'walkInNotice'
+          ? Object.assign({}, vars, { discount: s.walkInDiscountPercent, saved: Math.round((2000 * s.walkInDiscountPercent) / 100) })
+          : vars;
+        out.textContent = renderNoticePreview(input.value, scoped);
+      });
+    }
+
+    async function save(btn) {
+      var old = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        var res = await API.put('/admin/dinein/settings', readSettings());
+        toast('Dine-In settings saved', 'success');
+        // Reload so the tables, stat cards and previews all reflect what the
+        // server actually stored (after clamping and slot normalisation).
+        cfg = res.settings;
+        navigate('dinein');
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+    }
+
+    // Live preview as the admin types or changes a percentage.
+    content.addEventListener('input', refreshPreviews);
+    content.addEventListener('change', refreshPreviews);
+    refreshPreviews();
+
+    topActions.querySelector('[data-action="save"]').addEventListener('click', function (event) { save(event.currentTarget); });
+    content.querySelector('[data-action="save2"]').addEventListener('click', function (event) { save(event.currentTarget); });
+
+    content.addEventListener('click', async function (event) {
+      var cancelRes = event.target.closest('[data-cancel-res]');
+      if (!cancelRes) return;
+      var ok = await confirmDialog(
+        'Cancel this reservation?',
+        'The guest loses the reservation discount tied to it and will have to book again.',
+        'Cancel reservation'
+      );
+      if (!ok) return;
+      try {
+        await API.post('/admin/dinein/reservations/' + cancelRes.getAttribute('data-cancel-res') + '/cancel');
+        toast('Reservation cancelled', 'success');
+        navigate('dinein');
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
   // ── Offers ───────────────────────────────────────────────────────────────
   async function pageOffers(content, topActions) {
     topActions.innerHTML = '<button class="btn" data-action="new">' + icon('plus', 17) + ' Add offer</button>';
@@ -2186,6 +2449,7 @@
     verify: pageVerify,
     hotel: pageHotel,
     food: pageFood,
+    dinein: pageDineIn,
     offers: pageOffers,
     experiences: pageExperiences,
     customers: pageCustomers,

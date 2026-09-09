@@ -146,7 +146,9 @@ Mobile-only, five tabs, dark mode throughout.
 
 **Food Order** — offer-banner carousel, category rails (*Most Popular*, *New Beverages*, *Value Combos*…), item detail pages, a persistent cart, and checkout with cinema + pickup-slot selection.
 
-**My Tickets** — `Upcoming / Passed / Canceled` tabs × `Movie / Food / Event` filters, per-booking **"Remind me 30 minutes earlier"** toggle, and a full ticket view with a scannable barcode, itemised bill and cancellation.
+**Dine-In** — pay a restaurant bill from the app at one of two discount tiers. Reserve a table and the bill earns the higher discount, but only once the table has been booked for the configured waiting period — until then billing is locked behind a live countdown. Walk in with no reservation and the bill can be paid instantly at the lower rate, with a notice nudging the guest to reserve ahead next time. Both percentages, the lock window and the wording of every notice are editable in the admin console.
+
+**My Tickets** — `Upcoming / Passed / Canceled` tabs × `Movie / Stay / Dine-In / Food / Event` filters, per-booking **"Remind me 30 minutes earlier"** toggle, and a full ticket view with a scannable barcode, itemised bill and cancellation.
 
 **Account** — Watchlist, Movie Interest, Payment Methods, Personal Info, Notification preferences, Security (password change), Language, **Dark Mode** toggle, Help Center, About, and a membership card with its own barcode.
 
@@ -154,7 +156,22 @@ Mobile-only, five tabs, dark mode throughout.
 
 ## The admin console
 
-Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Food CRUD · Offers CRUD · Customers (spend, points, enable/disable).
+Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Food CRUD · **Dine-In** (discount tiers, lock window, editable notices with a live preview, reservations and bills) · Offers CRUD · Customers (spend, points, enable/disable).
+
+### Dine-In settings
+
+Everything lives in `meta.dineIn` and is editable at **Admin → Dine-In**:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `reservedDiscountPercent` | `30` | Discount for a guest who reserved a table |
+| `walkInDiscountPercent` | `10` | Discount for a walk-in guest |
+| `unlockMinutes` | `30` | How long after booking before that reservation's bill can be paid |
+| `maxDiscountAmount` | `0` | Rupee cap on the discount; `0` = uncapped |
+| `minBillAmount` / `maxBillAmount` | `0` / `200000` | Accepted bill range |
+| `reserveNotice`, `lockedNotice`, `reservedNotice`, `walkInNotice` | — | Customer-facing copy |
+
+Notices are **templates**, not fixed strings. Placeholders — `{reservedDiscount}`, `{walkInDiscount}`, `{extraDiscount}`, `{unlockMinutes}`, `{minutesLeft}`, `{unlockTime}`, `{bill}`, `{saved}`, `{payable}` and more — are substituted server-side from the settings in force at that moment, so a notice can never contradict the discount a customer is actually given. Change a percentage and every notice follows automatically; the admin form shows a live preview of exactly what the customer will read. The wording rendered at the moment of payment is stored on the bill, so a receipt always reflects the terms that actually applied to it.
 
 ---
 
@@ -170,11 +187,14 @@ Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinema
 │   ├── auth.js             scrypt password hashing + HMAC session tokens
 │   ├── pricing.js          Single source of truth for money
 │   ├── seats.js            Seat maps, availability, temporary holds
+│   ├── bookings.js         Shared booking logic for every booking type
+│   ├── dinein.js           Dine-In policy: discount tiers, lock window, notices
 │   ├── barcode.js          Code 39 barcode renderer (SVG)
 │   ├── catalog.js          Demo catalogue + seat-layout presets
 │   ├── seed.js             First-run seeding + rolling showtime schedule
 │   └── routes/             auth · home · movies · cinemas · showtimes ·
-│                           bookings · food · users · admin
+│                           bookings · food · dinein · hotels ·
+│                           experiences · users · admin
 ├── public/
 │   ├── index.html          Customer app shell
 │   ├── css/app.css         Design system (light + dark via CSS variables)
@@ -195,7 +215,9 @@ Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinema
 
 **Seat holds, not optimistic booking.** Picking seats creates a 10-minute hold (`src/seats.js`). Other users immediately see those seats as unavailable, the checkout screen counts down, expired holds are reaped every 30 seconds, and checkout re-validates availability before writing the booking — so two people racing for the last seat get a clear 409 instead of a double sale.
 
-**Money is computed server-side only.** `src/pricing.js` owns ticket subtotals, the ₹30/seat convenience fee, 18% GST on that fee and offer discounts. The client asks `POST /api/bookings/quote` for a preview and never computes a payable amount itself. All amounts are whole rupees, so a receipt's parts always sum exactly to its total.
+**Money is computed server-side only.** `src/pricing.js` owns ticket subtotals, the ₹30/seat convenience fee, 18% GST on that fee, stay rates and Dine-In discounts. The client asks `POST /api/bookings/quote` (or `/api/dinein/quote`) for a preview and never computes a payable amount itself. All amounts are whole rupees, so a receipt's parts always sum exactly to its total.
+
+**Dine-In notices are templates, not copy.** The percentages, the lock window and the notice wording are one setting object (`src/dinein.js`), and the notice a customer reads is rendered from that object on every request. Changing a discount therefore updates the wording everywhere at once — there is no second place to keep in sync, and no way for a notice to promise a discount the pricing code will not honour. The lock itself is recomputed from `bookedAt` against the *current* window, so shortening the window releases waiting reservations immediately.
 
 **Deletes protect paid tickets.** Deleting a movie, cinema, screen or showtime that has confirmed bookings *archives* it instead, and the API says so in the response. Paid tickets are never orphaned.
 
@@ -253,11 +275,21 @@ All responses are JSON. Authenticated routes take `Authorization: Bearer <token>
 `GET|PUT /api/me/interests` · `GET|POST|DELETE /api/me/payment-methods` ·
 `GET /api/me/notifications` · `POST /api/me/notifications/read`
 
+### Dine-In
+`GET /api/dinein` (settings, rendered notices, your reservation and past bills) ·
+`GET|POST /api/dinein/reservations` · `POST /api/dinein/reservations/:id/cancel` ·
+`POST /api/dinein/quote` · `POST /api/dinein/bills`
+
+Paying while a reservation is still inside its lock window returns **423 Locked** with the
+minutes remaining. A paid bill is stored as a booking of `type: 'dinein'`, so it flows into
+My Tickets, the admin bookings table and revenue reporting like any other booking.
+
 ### Admin (🔒 admin role)
 `GET /api/admin/stats` · CRUD on `/api/admin/{movies,cinemas,screens,showtimes,food,offers}` ·
 `POST /api/admin/showtimes/generate` · `GET /api/admin/bookings` · `GET /api/admin/users` ·
 `POST /api/admin/users/:id/toggle` · `GET /api/admin/verify/:reference` ·
-`POST /api/admin/bookings/:id/checkin`
+`POST /api/admin/bookings/:id/checkin` · `GET /api/admin/dinein` ·
+`PUT /api/admin/dinein/settings` · `POST /api/admin/dinein/reservations/:id/cancel`
 
 ---
 
