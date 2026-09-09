@@ -1754,6 +1754,7 @@
             '<td><div class="cell-strong">' + esc(r.name) + '</div>' +
               '<div class="cell-sub">' + esc(r.subtitle || '') + '</div>' +
               '<div class="cell-sub">' + (r.sizeSqft ? r.sizeSqft + ' sq.ft · ' : '') +
+                (r.view ? esc(r.view) + ' · ' : '') +
                 esc(r.bedCount + ' ' + r.bedType) + ' · ' + (r.photos || []).length + ' photo(s)</div></td>' +
             '<td>' + (r.maxGuests || 0) + ' adult' + ((r.maxGuests || 0) === 1 ? '' : 's') +
               (r.maxChildren ? '<div class="cell-sub">+ ' + r.maxChildren + ' child</div>' : '') + '</td>' +
@@ -1844,6 +1845,7 @@
 
         field('Size (sq.ft)', 'sizeSqft', r.sizeSqft, { type: 'number', placeholder: '72' }) +
         field('Size (sq.mt)', 'sizeSqmt', r.sizeSqmt, { type: 'number', placeholder: '7' }) +
+        field('View (optional)', 'view', r.view, { placeholder: 'Garden View', hint: 'Shown as a spec chip. Leave blank if there is no view to sell.' }) +
         field('Bed type', 'bedType', r.bedType || 'Double Bed', { placeholder: 'Double Bed' }) +
         field('Number of beds', 'bedCount', r.bedCount || 1, { type: 'number' }) +
         field('Bathrooms', 'bathrooms', r.bathrooms || 1, { type: 'number' }) +
@@ -1882,6 +1884,7 @@
         order: Number(raw.order) || 0,
         sizeSqft: Number(raw.sizeSqft) || 0,
         sizeSqmt: Number(raw.sizeSqmt) || 0,
+        view: raw.view,
         bedType: raw.bedType,
         bedCount: Number(raw.bedCount) || 1,
         bathrooms: Number(raw.bathrooms) || 1,

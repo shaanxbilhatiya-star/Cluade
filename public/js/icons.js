@@ -83,6 +83,9 @@
     chair: '<path d="M7 4.5h10l-.8 8.5H7.8L7 4.5Z"/><path d="M6 13h12"/><path d="M8 13v6.5"/><path d="M16 13v6.5"/>',
     blanket: '<path d="M4 8.5h16v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8Z"/><path d="M4 8.5 6.5 4.5h11L20 8.5"/><path d="M9 12.5v4M12 12.5v4M15 12.5v4"/>',
     concierge: '<path d="M4 17.5h16"/><path d="M5.5 17.5a6.5 6.5 0 0 1 13 0"/><path d="M12 11V8.5"/><circle cx="12" cy="7" r="1.3"/><path d="M3.5 20.5h17"/>',
+    plug: '<path d="M9 3.5v5"/><path d="M15 3.5v5"/><path d="M6 8.5h12v2.2a6 6 0 0 1-12 0V8.5Z"/><path d="M12 16.7v3.8"/>',
+    cup: '<path d="M5 7.5h11v6.8a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V7.5Z"/><path d="M16 9.5h1.8a2.2 2.2 0 0 1 0 4.4H16"/><path d="M4 20.5h13"/>',
+    tree: '<path d="M12 20.5v-4"/><path d="M12 16.5a5 5 0 0 0 1.4-9.8A3.6 3.6 0 0 0 7 5.9 3.4 3.4 0 0 0 6.2 12a4.6 4.6 0 0 0 5.8 4.5Z"/><path d="M9.5 20.5h5"/>',
     music: '<circle cx="7" cy="17.5" r="2.3"/><circle cx="17" cy="15.5" r="2.3"/><path d="M9.3 17.5V6l9.7-1.8v11.3"/>',
   };
 

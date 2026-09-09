@@ -125,22 +125,41 @@
   }
 
   // ── Amenity icons ──────────────────────────────────────────────────────────
+  /**
+   * Amenity label -> icon. First match wins, so the specific patterns must come
+   * before the broad ones (e.g. "Geyser/Water Heater" before plain "Heater",
+   * and "front desk"/housekeeping before the generic "desk").
+   */
   var AMENITY_ICONS = [
     [/wi-?fi|internet/i, 'wifi'],
     [/air ?condition|^ac$|a\/c/i, 'snow'],
     [/mineral water|drinking water/i, 'droplet'],
-    [/geyser|water heater|hot ?& ?cold/i, 'droplet'],
+    [/geyser|water heater|hot ?& ?cold|shower/i, 'droplet'],
+    [/heater|warmer/i, 'sun'],
     [/laundry|iron/i, 'hanger'],
+    [/closet|cupboard|wardrobe/i, 'hanger'],
+    [/front desk|room service|housekeep/i, 'concierge'],
     [/tv|television|entertainment/i, 'tv'],
+    [/telephone|phone|intercom/i, 'phone'],
+    [/charging|socket|plug ?point/i, 'plug'],
+    [/kettle|tea|coffee/i, 'cup'],
+    [/fruit|welcome drink/i, 'food'],
+    [/hairdryer|dryer/i, 'fan'],
+    [/couch|sofa/i, 'sofa'],
+    [/mirror/i, 'eye'],
     [/safe|lock|security/i, 'lock'],
-    [/towel|toiletr|dental|slipper|bath/i, 'bath'],
+    [/bathtub|bath ?tub/i, 'bath'],
+    [/towel|toiletr|dental|slipper|toilet|bath/i, 'bath'],
     [/blanket|linen|duvet/i, 'blanket'],
+    [/study|work desk/i, 'doc'],
     [/chair|desk|table/i, 'chair'],
+    [/mosquito|net/i, 'shield'],
+    [/newspaper|magazine/i, 'file'],
+    [/garden|view|balcony/i, 'tree'],
     [/fan/i, 'fan'],
     [/bed/i, 'bed'],
     [/parking/i, 'map-pin'],
     [/restaurant|breakfast|food|meal/i, 'food'],
-    [/front desk|room service|housekeep/i, 'concierge'],
     [/power|backup|generator/i, 'sparkle'],
     [/pool|water park/i, 'waves'],
     [/cinema|movie/i, 'play'],
@@ -182,6 +201,7 @@
   function specRow(room) {
     var specs = [
       { icon: 'grid', text: room.sizeSqft ? room.sizeSqft + ' sq.ft (' + room.sizeSqmt + ' sq.mt)' : null },
+      { icon: 'tree', text: room.view || null },
       { icon: 'bed', text: room.bedCount ? room.bedCount + ' ' + room.bedType : null },
       { icon: 'bath', text: room.bathrooms ? room.bathrooms + ' Bathroom' + (room.bathrooms === 1 ? '' : 's') : null },
     ].filter(function (s) { return s.text; });
