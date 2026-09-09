@@ -153,11 +153,95 @@ function resolveHotelOffer(offers, code, { ratePerNight, mrpPerNight, taxesPerNi
   return preview.discount > 0 ? offer : null;
 }
 
+/**
+ * A dine-in bill is the restaurant's own total, so there is nothing to price up
+ * from parts - the job here is applying the instant discount tier the guest
+ * qualified for (30% with a held reservation, 10% as a walk-in) and, optionally,
+ * a coupon on top of it.
+ *
+ * Like computeHotelTotals() this keeps the shared bill keys so anything that
+ * renders a generic bill breakdown keeps working.
+ *
+ * @param {object} input
+ * @param {number} input.billAmount       the bill printed by the restaurant
+ * @param {number} input.discountPercent  the tier's percentage off
+ * @param {number} input.maxDiscount      rupee cap on the instant discount (0 = uncapped)
+ * @param {object|null} input.offer       coupon, applied after the tier discount
+ */
+function computeDineTotals({ billAmount = 0, discountPercent = 0, maxDiscount = 0, offer = null } = {}) {
+  const bill = Math.max(0, round(Number(billAmount) || 0));
+  const percent = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+  const cap = Math.max(0, round(Number(maxDiscount) || 0));
+
+  let instantDiscount = round((bill * percent) / 100);
+  if (cap > 0) instantDiscount = Math.min(instantDiscount, cap);
+  instantDiscount = Math.min(instantDiscount, bill);
+
+  // A coupon stacks on top, but only on what is still payable, so the two
+  // discounts can never combine to more than the bill itself.
+  let offerDiscount = 0;
+  if (offer) {
+    const remaining = bill - instantDiscount;
+    // The coupon's own minimum is judged on the same base it is applied to.
+    if (remaining >= (offer.minAmount || 0)) {
+      offerDiscount =
+        offer.discountType === 'percent'
+          ? Math.min(round((remaining * offer.discountValue) / 100), offer.maxDiscount || Infinity)
+          : Math.min(offer.discountValue, offer.maxDiscount || Infinity);
+      offerDiscount = Math.min(offerDiscount, remaining);
+    }
+  }
+
+  // The cap is what the admin form calls "maximum discount per bill", so it has
+  // to bound the tier and the coupon together rather than just the tier.
+  if (cap > 0 && instantDiscount + offerDiscount > cap) {
+    offerDiscount = Math.max(0, cap - instantDiscount);
+  }
+
+  const discount = instantDiscount + offerDiscount;
+  const total = Math.max(0, round(bill - discount));
+
+  return {
+    billAmount: bill,
+    discountPercent: percent,
+    instantDiscount,
+    offerDiscount,
+    discount,
+    total,
+    offerCode: offer && offerDiscount > 0 ? offer.code : null,
+    /** Effective percentage actually taken off, for the "you saved" line. */
+    effectivePercent: bill > 0 ? Math.round((discount / bill) * 100) : 0,
+
+    // Shared bill shape: the whole amount is food, with no fees or taxes added
+    // on top because the restaurant's bill already includes them.
+    tickets: 0,
+    food: bill,
+    convenienceFee: 0,
+    gst: 0,
+  };
+}
+
+/** Offer codes usable on a dine-in bill: appliesTo 'dinein' (or 'all'). */
+function resolveDineOffer(offers, code, { billAmount, discountPercent, maxDiscount } = {}) {
+  if (!code) return null;
+  const offer = offers.find(
+    (o) =>
+      o.code.toUpperCase() === String(code).toUpperCase() &&
+      o.active !== false &&
+      (o.appliesTo === 'dinein' || o.appliesTo === 'all')
+  );
+  if (!offer) return null;
+  const preview = computeDineTotals({ billAmount, discountPercent, maxDiscount, offer });
+  return preview.offerDiscount > 0 ? offer : null;
+}
+
 module.exports = {
   computeTotals,
   resolveOffer,
   computeHotelTotals,
   resolveHotelOffer,
+  computeDineTotals,
+  resolveDineOffer,
   CONVENIENCE_FEE_PER_SEAT,
   GST_RATE,
   CURRENCY,

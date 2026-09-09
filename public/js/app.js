@@ -11,6 +11,7 @@
   var TABS = [
     { id: 'home', label: 'Movie', icon: 'home', path: '/home' },
     { id: 'hotels', label: 'Stay', icon: 'bed', path: '/hotels' },
+    { id: 'dinein', label: 'Dine-In', icon: 'dine', path: '/dine-in' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle', path: '/experiences' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },
   ];
@@ -26,6 +27,11 @@
     ['/hotel/checkout', 'hotelCheckout'],
     ['/hotel/confirmed/:bookingId', 'hotelConfirmation'],
     ['/hotel/room/:id', 'hotelRoom'],
+    // Literal dine-in paths must precede /dine-in/:anything patterns.
+    ['/dine-in', 'dineIn'],
+    ['/dine-in/reserve', 'dineReserve'],
+    ['/dine-in/bill', 'dineBill'],
+    ['/dine-in/paid/:id', 'dinePaid'],
     ['/search', 'search'],
     ['/notifications', 'notifications'],
     ['/movies/:status', 'movieList'],
