@@ -9,11 +9,9 @@
   var appEl = document.getElementById('app');
 
   var TABS = [
-    { id: 'home', label: 'Home', icon: 'home', path: '/home' },
+    { id: 'home', label: 'Movie', icon: 'home', path: '/home' },
     { id: 'hotels', label: 'Stay', icon: 'bed', path: '/hotels' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle', path: '/experiences' },
-    { id: 'food', label: 'Food', icon: 'food', path: '/food' },
-    { id: 'tickets', label: 'Tickets', icon: 'ticket', path: '/tickets' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },
   ];
 

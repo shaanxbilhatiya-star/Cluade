@@ -282,6 +282,27 @@ ul { margin: 0; padding: 0; list-style: none; }
 .rail::-webkit-scrollbar { display: none; }
 .rail > * { scroll-snap-align: start; flex: none; }
 
+/* ── Quick access vector (Tickets | Food) ───────────────────────────────── */
+.quickbar {
+  display: flex; align-items: stretch;
+  margin: 0 16px 0 20px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,.08));
+  border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  overflow: hidden;
+}
+.quickbar__item {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 14px 10px;
+  background: none; border: none;
+  font-size: 15px; font-weight: 700; color: var(--text, #1a1a1a);
+}
+.quickbar__item svg { color: var(--primary-600); flex: none; }
+.quickbar__item:active { background: var(--primary-50, rgba(91,33,182,.06)); }
+.quickbar__divider { width: 1px; background: var(--border, rgba(0,0,0,.08)); margin: 10px 0; }
+
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 0 16px 0 20px; }
 .stack { display: grid; gap: 12px; padding: 0 16px; }
 
@@ -1004,6 +1025,9 @@ ul { margin: 0; padding: 0; list-style: none; }
 .sheet__head { display: flex; align-items: center; gap: 12px; padding: 8px 16px 12px; flex: none; }
 .sheet__title { flex: 1; margin: 0; font-size: 18px; font-weight: 700; }
 .sheet__body { overflow-y: auto; padding-bottom: 18px; }
+.sheet__body > .screen { flex: none; min-height: 0; }
+.sheet__body > .screen .scroll { flex: none; overflow: visible; max-height: none; }
+.sheet__body > .screen .tabbar { display: none; }
 
 /* ── Misc ───────────────────────────────────────────────────────────────── */
 .divider { height: 1px; background: var(--line); margin: 18px 16px; }

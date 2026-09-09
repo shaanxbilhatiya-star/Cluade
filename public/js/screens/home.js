@@ -47,6 +47,39 @@
       '</div></div>';
   }
 
+  /** Compact "Ticket | Food" quick-access vector shown above Now Playing. */
+  function quickAccessBar() {
+    return '<div class="section">' +
+      '<div class="quickbar" role="group" aria-label="Quick access">' +
+        '<button class="quickbar__item" data-action="quick-tickets" aria-label="Tickets">' +
+          UI.icon('ticket', 24) +
+          '<span>Tickets</span>' +
+        '</button>' +
+        '<span class="quickbar__divider" aria-hidden="true"></span>' +
+        '<button class="quickbar__item" data-action="quick-food" aria-label="Food">' +
+          UI.icon('food', 24) +
+          '<span>Food</span>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /** Opens a screen module's rendered view inside a popup sheet instead of a full navigation. */
+  function openScreenPopup(screenName, title) {
+    var screen = window.Screens[screenName];
+    if (!screen) return;
+    Promise.resolve(screen.render({}, {})).then(function (view) {
+      var sheetApi = UI.sheet({ title: title, body: view });
+      UI.initCarousels(view);
+      view.querySelectorAll('[data-action="back"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { sheetApi.close(); });
+      });
+    }).catch(function (err) {
+      console.error('[home] popup render failed', screenName, err);
+      UI.toast('Could not open ' + title, 'error');
+    });
+  }
+
   function cityPicker(cities, current) {
     var body = UI.h('<div>' +
       cities.map(function (city) {
@@ -94,6 +127,8 @@
 
             (data.nextBooking ? nextBookingCard(data.nextBooking) : '') +
 
+            quickAccessBar() +
+
             '<div class="section">' +
               UI.sectionHead('Now Playing', 'all-now-playing') +
               (data.nowPlaying.length
@@ -136,6 +171,11 @@
         'all-now-playing': function () { App.navigate('/movies/now_playing'); },
         'all-coming-soon': function () { App.navigate('/movies/coming_soon'); },
         'all-cinemas': function () { App.navigate('/cinemas'); },
+        'quick-tickets': function () {
+          if (!API.isSignedIn()) { sessionStorage.setItem('cineflex.returnTo', '/tickets'); App.navigate('/login'); return; }
+          openScreenPopup('tickets', 'Tickets');
+        },
+        'quick-food': function () { openScreenPopup('food', 'Food'); },
       });
 
       return view;
