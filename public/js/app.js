@@ -10,6 +10,7 @@
 
   var TABS = [
     { id: 'home', label: 'Movie', icon: 'home', path: '/home' },
+    { id: 'dinein', label: 'Dine-In', icon: 'food', path: '/dinein' },
     { id: 'hotels', label: 'Stay', icon: 'bed', path: '/hotels' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle', path: '/experiences' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },
@@ -21,6 +22,11 @@
     ['/register', 'register'],
     ['/home', 'home'],
     ['/experiences', 'experiences'],
+    // Literal dine-in paths first, so /dinein/reserve is never read as an id.
+    ['/dinein/reserve', 'dineinReserve'],
+    ['/dinein/bill', 'dineinBill'],
+    ['/dinein/paid/:bookingId', 'dineinPaid'],
+    ['/dinein', 'dinein'],
     // Specific hotel paths must come before /hotel/room/:id-style patterns.
     ['/hotels', 'hotels'],
     ['/hotel/checkout', 'hotelCheckout'],

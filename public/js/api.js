@@ -127,6 +127,16 @@
     validateHotelOffer: function (payload) { return request('POST', '/hotels/offers/validate', payload); },
     bookHotel: function (payload) { return request('POST', '/hotels/bookings', payload); },
 
+    // ── Dine-In (restaurant billing) ──
+    /** Settings, rendered notices, the guest's reservation and past bills. */
+    dineIn: function () { return request('GET', '/dinein'); },
+    reserveTable: function (payload) { return request('POST', '/dinein/reservations', payload); },
+    dineInReservations: function () { return request('GET', '/dinein/reservations'); },
+    cancelReservation: function (id) { return request('POST', '/dinein/reservations/' + id + '/cancel', {}); },
+    /** @param {{mode:'reserved'|'walkin', billAmount:number, reservationId?:string}} payload */
+    dineInQuote: function (payload) { return request('POST', '/dinein/quote', payload); },
+    payDineInBill: function (payload) { return request('POST', '/dinein/bills', payload); },
+
     // ── Account ──
     updateProfile: function (patch) { return request('PATCH', '/me', patch); },
     updateSettings: function (patch) { return request('PATCH', '/me/settings', patch); },

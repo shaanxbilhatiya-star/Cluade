@@ -4,6 +4,7 @@ const path = require('path');
 const db = require('../db');
 const auth = require('../auth');
 const hotels = require('../hotels');
+const dinein = require('../dinein');
 const storage = require('../storage');
 const { LAYOUTS } = require('../catalog');
 const { ensureRollingShowtimes, markSeedRemoved, unmarkSeedRemoved } = require('../seed');
@@ -233,6 +234,18 @@ router.get('/admin/stats', auth.requireAdmin, () => {
     upcoming: stays.filter((b) => (b.stay?.checkOut || '') >= new Date().toISOString().slice(0, 10)).length,
   };
 
+  // Dine-In settles a restaurant tab rather than selling seats, so like stays
+  // it gets its own line instead of disappearing into the movie numbers.
+  const dineBills = active.filter((b) => b.type === 'dinein');
+  const dineInStats = {
+    bills: dineBills.length,
+    revenue: dineBills.reduce((s, b) => s + (b.amounts?.total || 0), 0),
+    discountGiven: dineBills.reduce((s, b) => s + (b.amounts?.discount || 0), 0),
+    reserved: dineBills.filter((b) => b.dine?.mode === 'reserved').length,
+    walkin: dineBills.filter((b) => b.dine?.mode === 'walkin').length,
+    openReservations: db.find('dineReservations', (r) => r.status === 'booked').length,
+  };
+
   // Occupancy is only meaningful for shows that have actually run - measuring
   // sold seats against every future showtime would always round to ~0%.
   const now = Date.now();
@@ -270,6 +283,7 @@ router.get('/admin/stats', auth.requireAdmin, () => {
     },
     today: { bookings: todays.length, revenue: todays.reduce((s, b) => s + (b.amounts?.total || 0), 0) },
     stays: stayStats,
+    dineIn: dineInStats,
     topMovies,
     trend,
   };
@@ -1064,6 +1078,106 @@ router.post('/admin/bookings/:id/checkin', auth.requireAdmin, (ctx) => {
   if (!booking) throw new HttpError(404, 'Booking not found');
   if (booking.status !== 'confirmed') throw new HttpError(400, `Cannot check in a ${booking.status} booking`);
   return { booking: db.update('bookings', booking.id, { checkedInAt: new Date().toISOString(), status: 'completed' }) };
+});
+
+// ── Dine-In (restaurant billing) ─────────────────────────────────────────────
+/**
+ * Settings, live reservations and paid bills for the Dine-In tab.
+ *
+ * `settings` is the raw configuration (the editable templates, with their
+ * {placeholders} intact) while `preview` is the same notices rendered with the
+ * current numbers - which is what a customer would read right now. Showing
+ * both lets the admin edit wording and immediately see the result.
+ */
+router.get('/admin/dinein', auth.requireAdmin, () => {
+  const cfg = dinein.settings();
+
+  const reservations = [...db.get('dineReservations')]
+    .sort((a, b) => String(b.bookedAt || b.createdAt).localeCompare(String(a.bookedAt || a.createdAt)))
+    .slice(0, 200)
+    .map((r) => {
+      const user = db.byId('users', r.userId);
+      return Object.assign(dinein.expandReservation(r, cfg), {
+        customer: user ? { id: user.id, name: user.name, email: user.email } : null,
+      });
+    });
+
+  const bills = db
+    .find('bookings', (b) => b.type === 'dinein')
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, 200)
+    .map((b) => {
+      const user = db.byId('users', b.userId);
+      return {
+        id: b.id,
+        reference: b.reference,
+        status: b.status,
+        createdAt: b.createdAt,
+        mode: b.dine?.mode || 'walkin',
+        billAmount: b.dine?.billAmount || b.amounts?.billAmount || 0,
+        discountPercent: b.dine?.discountPercent || 0,
+        discountAmount: b.amounts?.discount || 0,
+        total: b.amounts?.total || 0,
+        reservationRef: b.dine?.reservationRef || null,
+        tableLabel: b.dine?.tableLabel || null,
+        partySize: b.dine?.partySize || null,
+        notice: b.dine?.notice || '',
+        paymentLabel: b.payment?.methodLabel || '',
+        customer: user ? { id: user.id, name: user.name, email: user.email } : null,
+      };
+    });
+
+  const paid = bills.filter((b) => b.status !== 'cancelled');
+  const sum = (list, key) => list.reduce((s, b) => s + (b[key] || 0), 0);
+  const reservedBills = paid.filter((b) => b.mode === 'reserved');
+  const walkInBills = paid.filter((b) => b.mode === 'walkin');
+
+  return {
+    settings: cfg,
+    preview: dinein.publicSettings(cfg).notices,
+    noticeKeys: dinein.NOTICE_KEYS,
+    placeholders: [
+      '{reservedDiscount}', '{walkInDiscount}', '{extraDiscount}', '{unlockMinutes}',
+      '{minutesLeft}', '{unlockTime}', '{discount}', '{restaurantName}', '{phone}',
+      '{reference}', '{tableLabel}', '{partySize}', '{bill}', '{saved}', '{payable}',
+    ],
+    stats: {
+      openReservations: reservations.filter((r) => r.status === 'booked').length,
+      lockedReservations: reservations.filter((r) => r.status === 'booked' && r.locked).length,
+      billedReservations: reservations.filter((r) => r.status === 'billed').length,
+      bills: paid.length,
+      revenue: sum(paid, 'total'),
+      grossBilled: sum(paid, 'billAmount'),
+      discountGiven: sum(paid, 'discountAmount'),
+      reserved: { bills: reservedBills.length, revenue: sum(reservedBills, 'total'), discountGiven: sum(reservedBills, 'discountAmount') },
+      walkin: { bills: walkInBills.length, revenue: sum(walkInBills, 'total'), discountGiven: sum(walkInBills, 'discountAmount') },
+    },
+    reservations,
+    bills,
+  };
+});
+
+/**
+ * Update discounts, the lock window and the notice wording. Values are
+ * validated and clamped in src/dinein.js, and the response echoes both the
+ * saved settings and the freshly rendered notices.
+ */
+router.put('/admin/dinein/settings', auth.requireAdmin, (ctx) => {
+  const saved = dinein.saveSettings(pick(ctx.body, dinein.SETTING_FIELDS));
+  return { settings: saved, preview: dinein.publicSettings(saved).notices };
+});
+
+router.post('/admin/dinein/reservations/:id/cancel', auth.requireAdmin, (ctx) => {
+  const reservation = db.byId('dineReservations', ctx.params.id);
+  if (!reservation) throw new HttpError(404, 'Reservation not found');
+  if (reservation.status !== 'booked') throw new HttpError(400, `Cannot cancel a ${reservation.status} reservation`);
+
+  const updated = db.update('dineReservations', reservation.id, {
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString(),
+    cancelledBy: 'admin',
+  });
+  return { reservation: dinein.expandReservation(updated) };
 });
 
 module.exports = router;

@@ -54,6 +54,7 @@ api.mount('/api', require('./src/routes/bookings.routes'));
 api.mount('/api', require('./src/routes/food.routes'));
 api.mount('/api', require('./src/routes/experiences.routes'));
 api.mount('/api', require('./src/routes/hotels.routes'));
+api.mount('/api', require('./src/routes/dinein.routes'));
 api.mount('/api', require('./src/routes/users.routes'));
 api.mount('/api', require('./src/routes/admin.routes'));
 
@@ -73,6 +74,7 @@ api.get('/api/health', () => ({
     foodItems: db.get('foodItems').length,
     hotels: db.get('hotels').length,
     hotelRooms: db.get('hotelRooms').length,
+    dineReservations: db.get('dineReservations').length,
   },
 }));
 
