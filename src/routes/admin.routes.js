@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const auth = require('../auth');
+const hotels = require('../hotels');
 const { LAYOUTS } = require('../catalog');
 const { ensureRollingShowtimes } = require('../seed');
 const { Router, HttpError } = require('../router');
@@ -19,30 +20,65 @@ const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng',
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
 const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'active'];
 const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active', 'image'];
+const HOTEL_FIELDS = [
+  'name', 'tagline', 'area', 'city', 'address', 'phone', 'rating', 'reviewCount',
+  'checkInTime', 'checkOutTime', 'photos', 'amenities', 'policies', 'active',
+];
+const ROOM_FIELDS = [
+  'name', 'subtitle', 'sizeSqft', 'sizeSqmt', 'bedType', 'bedCount', 'bathrooms',
+  'maxGuests', 'maxChildren', 'totalRooms', 'mrpPerNight', 'pricePerNight', 'taxesPerNight',
+  'badge', 'photos', 'popularAmenities', 'amenityGroups', 'inclusions', 'order', 'active',
+];
 
-// Experience cover photos (Instagram-square 1080x1080 crop, done client-side) are
-// sent up as a data: URL and saved to disk here so the JSON db only stores a path.
-const EXPERIENCE_IMG_DIR = path.join(__dirname, '..', '..', 'public', 'img', 'experiences');
+// Uploaded photos arrive as a data: URL and are saved to disk here so the JSON
+// db only ever stores a path.
+const IMG_ROOT = path.join(__dirname, '..', '..', 'public', 'img');
 const DATA_URL_RE = /^data:image\/(png|jpe?g|webp);base64,/i;
 
-function saveExperienceImage(slug, dataUrl) {
+/** Saves a data: URL into public/img/<folder>/ and returns its public path. */
+function saveUploadedImage(folder, slug, dataUrl) {
   const match = DATA_URL_RE.exec(dataUrl);
   if (!match) throw new HttpError(400, 'Image must be a PNG, JPEG or WEBP file');
   const ext = match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase();
   const base64 = dataUrl.slice(match[0].length);
   const buffer = Buffer.from(base64, 'base64');
   if (buffer.length > 10 * 1024 * 1024) throw new HttpError(400, 'Image is too large (max 10 MB)');
-  if (!fs.existsSync(EXPERIENCE_IMG_DIR)) fs.mkdirSync(EXPERIENCE_IMG_DIR, { recursive: true });
-  const filename = `${slug}-${Date.now().toString(36)}.${ext}`;
-  fs.writeFileSync(path.join(EXPERIENCE_IMG_DIR, filename), buffer);
-  return `/img/experiences/${filename}`;
+
+  const dir = path.join(IMG_ROOT, folder);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  // Random suffix so several photos saved in the same millisecond cannot collide.
+  const unique = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const filename = `${slug || 'photo'}-${unique}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return `/img/${folder}/${filename}`;
+}
+
+function isDataUrl(value) {
+  return typeof value === 'string' && DATA_URL_RE.test(value);
 }
 
 /** Mutates body.image in place: a data: URL becomes a saved file path, anything else passes through untouched. */
 function resolveExperienceImage(body, slug) {
-  if (typeof body.image === 'string' && DATA_URL_RE.test(body.image)) {
-    body.image = saveExperienceImage(slug, body.image);
-  }
+  if (isDataUrl(body.image)) body.image = saveUploadedImage('experiences', slug, body.image);
+}
+
+/**
+ * Normalises a photo gallery: accepts an array or newline/comma separated text,
+ * persists any freshly uploaded data: URLs and leaves existing paths alone.
+ */
+function resolvePhotoList(value, folder, slug) {
+  if (value === undefined) return undefined;
+
+  const list = Array.isArray(value)
+    ? value
+    : String(value || '')
+        .split(/[\n,]/)
+        .map((s) => s.trim());
+
+  return list
+    .filter(Boolean)
+    .slice(0, 12)
+    .map((entry) => (isDataUrl(entry) ? saveUploadedImage(folder, slug, entry) : entry));
 }
 
 function pick(body, fields) {
@@ -58,6 +94,69 @@ function slugify(value) {
 function requireFields(body, fields) {
   const missing = fields.filter((f) => body[f] === undefined || body[f] === '' || body[f] === null);
   if (missing.length) throw new HttpError(400, `Missing required field(s): ${missing.join(', ')}`);
+}
+
+/** 'a, b, c' -> ['a','b','c'] (already-arrays pass through). */
+function csv(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return String(value || '').split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+/** One item per line -> array. Used for policies and amenity groups. */
+function lines(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return String(value || '').split('\n').map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * Amenity groups are edited as plain text, one group per line:
+ *   Bathroom: Towels, Slippers, Toiletries
+ * which keeps the admin form simple while the app still gets structured data.
+ */
+function parseAmenityGroups(value) {
+  if (Array.isArray(value)) {
+    return value
+      .filter((g) => g && (g.title || g.items))
+      .map((g) => ({ title: String(g.title || '').trim(), items: csv(g.items) }))
+      .filter((g) => g.title && g.items.length);
+  }
+
+  return lines(value)
+    .map((line) => {
+      const idx = line.indexOf(':');
+      if (idx === -1) return null;
+      const title = line.slice(0, idx).trim();
+      const items = csv(line.slice(idx + 1));
+      return title && items.length ? { title, items } : null;
+    })
+    .filter(Boolean);
+}
+
+/** Coerces the room form's text inputs into the right types. */
+function normaliseRoom(body, slug) {
+  const numbers = [
+    'sizeSqft', 'sizeSqmt', 'bedCount', 'bathrooms', 'maxGuests', 'maxChildren',
+    'totalRooms', 'mrpPerNight', 'pricePerNight', 'taxesPerNight', 'order',
+  ];
+  for (const key of numbers) {
+    if (body[key] !== undefined && body[key] !== '') body[key] = Math.max(0, Number(body[key]) || 0);
+  }
+
+  if (body.pricePerNight !== undefined && !(Number(body.pricePerNight) > 0)) {
+    throw new HttpError(400, 'Nightly rate must be greater than zero');
+  }
+  if (body.totalRooms !== undefined && !(Number(body.totalRooms) > 0)) {
+    throw new HttpError(400, 'Total rooms must be at least 1');
+  }
+
+  if (body.popularAmenities !== undefined) body.popularAmenities = csv(body.popularAmenities);
+  if (body.inclusions !== undefined) body.inclusions = csv(body.inclusions);
+  if (body.amenityGroups !== undefined) body.amenityGroups = parseAmenityGroups(body.amenityGroups);
+
+  const photos = resolvePhotoList(body.photos, 'hotels', slug);
+  if (photos !== undefined) body.photos = photos;
+
+  return body;
 }
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
@@ -98,6 +197,16 @@ router.get('/admin/stats', auth.requireAdmin, () => {
 
   const seatsSold = active.reduce((s, b) => s + (b.seats || []).length, 0);
 
+  // Stay revenue is broken out separately: it does not sell seats, so it would
+  // otherwise be invisible next to the movie numbers.
+  const stays = active.filter((b) => b.type === 'hotel');
+  const stayStats = {
+    bookings: stays.length,
+    revenue: stays.reduce((s, b) => s + (b.amounts?.total || 0), 0),
+    roomNights: stays.reduce((s, b) => s + (Number(b.stay?.nights) || 0) * (Number(b.stay?.rooms) || 1), 0),
+    upcoming: stays.filter((b) => (b.stay?.checkOut || '') >= new Date().toISOString().slice(0, 10)).length,
+  };
+
   // Occupancy is only meaningful for shows that have actually run - measuring
   // sold seats against every future showtime would always round to ~0%.
   const now = Date.now();
@@ -124,6 +233,7 @@ router.get('/admin/stats', auth.requireAdmin, () => {
       foodItems: db.get('foodItems').length,
       offers: db.get('offers').length,
       experiences: db.get('experiences').length,
+      hotelRooms: db.get('hotelRooms').length,
       users: db.find('users', (u) => u.role === 'customer').length,
       bookings: bookings.length,
       cancelled: bookings.filter((b) => b.status === 'cancelled').length,
@@ -133,6 +243,7 @@ router.get('/admin/stats', auth.requireAdmin, () => {
       showsCompleted: pastShowIds.size,
     },
     today: { bookings: todays.length, revenue: todays.reduce((s, b) => s + (b.amounts?.total || 0), 0) },
+    stays: stayStats,
     topMovies,
     trend,
   };
@@ -552,6 +663,186 @@ router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
   return { deleted: true, id: ctx.params.id };
 });
 
+// ── Hotel & rooms ────────────────────────────────────────────────────────────
+/** Rooms and their live occupancy for the next `days` nights. */
+router.get('/admin/hotel', auth.requireAdmin, (ctx) => {
+  const hotel = db.findOne('hotels', (h) => h.active !== false) || db.get('hotels')[0] || null;
+  const rooms = [...db.get('hotelRooms')].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const days = Math.min(60, Math.max(1, Number(ctx.query.days) || 14));
+
+  const from = hotels.today();
+  const to = hotels.addDays(from, days);
+
+  const stays = db.find('bookings', (b) => b.type === 'hotel' && b.status !== 'cancelled');
+  const upcoming = stays.filter((b) => (b.stay?.checkOut || '') >= from);
+
+  return {
+    hotel,
+    window: { from, to, days },
+    totals: {
+      roomTypes: rooms.length,
+      physicalRooms: rooms.reduce((sum, r) => sum + (Number(r.totalRooms) || 0), 0),
+      upcomingStays: upcoming.length,
+      revenue: stays.reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+      roomNightsSold: stays.reduce(
+        (sum, b) => sum + (Number(b.stay?.nights) || 0) * (Number(b.stay?.rooms) || 1),
+        0
+      ),
+    },
+    rooms: rooms.map((room) => {
+      const state = hotels.availability(room, from, to);
+      return Object.assign({}, room, {
+        // Busiest night in the window, so the admin can see pressure at a glance.
+        peakBooked: state.booked,
+        availableNow: state.available,
+        occupancyPercent: state.totalRooms
+          ? Math.round((state.booked / state.totalRooms) * 1000) / 10
+          : 0,
+      });
+    }),
+  };
+});
+
+/** Night-by-night occupancy for one room type — powers the availability table. */
+router.get('/admin/hotel/rooms/:id/calendar', auth.requireAdmin, (ctx) => {
+  const room = db.byId('hotelRooms', ctx.params.id);
+  if (!room) throw new HttpError(404, 'Room type not found');
+
+  const days = Math.min(60, Math.max(1, Number(ctx.query.days) || 14));
+  const from = ctx.query.from && hotels.parseKey(ctx.query.from) ? ctx.query.from : hotels.today();
+  const to = hotels.addDays(from, days);
+  const { perNight } = hotels.bookedRooms(room.id, from, to);
+  const totalRooms = Number(room.totalRooms) || 0;
+
+  return {
+    room: { id: room.id, name: room.name, totalRooms },
+    nights: hotels.nightKeys(from, to).map((date) => ({
+      date,
+      booked: perNight[date] || 0,
+      available: Math.max(0, totalRooms - (perNight[date] || 0)),
+    })),
+  };
+});
+
+router.put('/admin/hotel', auth.requireAdmin, (ctx) => {
+  const existing = db.findOne('hotels', (h) => h.active !== false) || db.get('hotels')[0];
+  const body = Object.assign({}, ctx.body);
+  if (typeof body.amenities === 'string') body.amenities = csv(body.amenities);
+  if (typeof body.policies === 'string') body.policies = lines(body.policies);
+
+  const slug = existing ? existing.slug : slugify(body.name || 'hotel');
+  const photos = resolvePhotoList(body.photos, 'hotels', slug);
+  if (photos !== undefined) body.photos = photos;
+
+  if (!existing) {
+    requireFields(body, ['name']);
+    const hotel = db.insert(
+      'hotels',
+      Object.assign(
+        {
+          id: db.id('htl'),
+          slug,
+          tagline: '',
+          area: '',
+          city: 'Mandla',
+          address: '',
+          phone: '',
+          rating: 0,
+          reviewCount: 0,
+          checkInTime: '12:00',
+          checkOutTime: '11:00',
+          photos: [],
+          amenities: [],
+          policies: [],
+          active: true,
+        },
+        pick(body, HOTEL_FIELDS)
+      )
+    );
+    ctx.state.status = 201;
+    return { hotel };
+  }
+
+  return { hotel: db.update('hotels', existing.id, pick(body, HOTEL_FIELDS)) };
+});
+
+router.get('/admin/hotel/rooms', auth.requireAdmin, () => ({
+  rooms: [...db.get('hotelRooms')].sort((a, b) => (a.order || 0) - (b.order || 0)),
+}));
+
+router.post('/admin/hotel/rooms', auth.requireAdmin, (ctx) => {
+  requireFields(ctx.body, ['name', 'pricePerNight']);
+
+  const hotel = db.findOne('hotels', (h) => h.active !== false) || db.get('hotels')[0];
+  if (!hotel) throw new HttpError(400, 'Set up the hotel details before adding rooms');
+
+  const body = normaliseRoom(Object.assign({}, ctx.body), slugify(ctx.body.slug || ctx.body.name));
+
+  const room = db.insert(
+    'hotelRooms',
+    Object.assign(
+      {
+        id: db.id('room'),
+        hotelId: hotel.id,
+        slug: slugify(ctx.body.slug || ctx.body.name),
+        subtitle: '',
+        sizeSqft: 0,
+        sizeSqmt: 0,
+        bedType: 'Double Bed',
+        bedCount: 1,
+        bathrooms: 1,
+        maxGuests: 2,
+        maxChildren: 1,
+        totalRooms: 1,
+        mrpPerNight: 0,
+        taxesPerNight: 0,
+        badge: '',
+        photos: [],
+        popularAmenities: [],
+        amenityGroups: [],
+        inclusions: [],
+        order: db.get('hotelRooms').length + 1,
+        active: true,
+      },
+      pick(body, ROOM_FIELDS)
+    )
+  );
+
+  ctx.state.status = 201;
+  return { room };
+});
+
+router.put('/admin/hotel/rooms/:id', auth.requireAdmin, (ctx) => {
+  const existing = db.byId('hotelRooms', ctx.params.id);
+  if (!existing) throw new HttpError(404, 'Room type not found');
+
+  const body = normaliseRoom(Object.assign({}, ctx.body), existing.slug || slugify(existing.name));
+  return { room: db.update('hotelRooms', ctx.params.id, pick(body, ROOM_FIELDS)) };
+});
+
+router.delete('/admin/hotel/rooms/:id', auth.requireAdmin, (ctx) => {
+  const room = db.byId('hotelRooms', ctx.params.id);
+  if (!room) throw new HttpError(404, 'Room type not found');
+
+  // A room type with live stays is hidden rather than deleted, so existing
+  // guests keep a valid booking record to check in against.
+  const liveStays = db.find(
+    'bookings',
+    (b) => b.type === 'hotel' && b.roomId === room.id && b.status === 'confirmed' && (b.stay?.checkOut || '') >= hotels.today()
+  );
+
+  if (liveStays.length) {
+    return {
+      archived: true,
+      reason: `${liveStays.length} upcoming stay(s) use this room type, so it was hidden from the app instead of deleted.`,
+      room: db.update('hotelRooms', room.id, { active: false }),
+    };
+  }
+
+  db.remove('hotelRooms', room.id);
+  return { deleted: true, id: room.id };
+});
+
 // ── Bookings & users ─────────────────────────────────────────────────────────
 router.get('/admin/bookings', auth.requireAdmin, (ctx) => {
   const { status, type, movieId, cinemaId, q, limit } = ctx.query;
@@ -580,6 +871,12 @@ router.get('/admin/bookings', auth.requireAdmin, (ctx) => {
       const user = db.byId('users', b.userId);
       const movie = b.movieId ? db.byId('movies', b.movieId) : null;
       const cinema = b.cinemaId ? db.byId('cinemas', b.cinemaId) : null;
+      const hotel = b.hotelId ? db.byId('hotels', b.hotelId) : null;
+
+      const stayLabel = b.stay
+        ? `${b.stay.rooms} room${b.stay.rooms === 1 ? '' : 's'} · ${b.stay.nights} night${b.stay.nights === 1 ? '' : 's'}`
+        : '';
+
       return {
         id: b.id,
         reference: b.reference,
@@ -595,8 +892,20 @@ router.get('/admin/bookings', auth.requireAdmin, (ctx) => {
         refundAmount: b.refundAmount || 0,
         paymentLabel: b.payment?.methodLabel || '',
         customer: user ? { id: user.id, name: user.name, email: user.email, phone: user.phone } : null,
-        movieTitle: movie ? movie.title : b.type === 'food' ? 'Food order' : '',
-        cinemaName: cinema ? cinema.name : '',
+        movieTitle: movie ? movie.title : b.type === 'food' ? 'Food order' : b.type === 'hotel' ? b.stay?.roomName || 'Stay' : '',
+        cinemaName: cinema ? cinema.name : hotel ? hotel.name : '',
+        // Stay-specific columns (null for every other booking type).
+        stay: b.stay
+          ? {
+              checkIn: b.stay.checkIn,
+              checkOut: b.stay.checkOut,
+              nights: b.stay.nights,
+              rooms: b.stay.rooms,
+              guests: b.stay.guests,
+              label: stayLabel,
+            }
+          : null,
+        guestName: b.guest?.name || '',
       };
     }),
   };
@@ -636,14 +945,30 @@ router.get('/admin/verify/:reference', auth.requireAdmin, (ctx) => {
   const user = db.byId('users', booking.userId);
   const movie = booking.movieId ? db.byId('movies', booking.movieId) : null;
   const cinema = booking.cinemaId ? db.byId('cinemas', booking.cinemaId) : null;
+  const hotel = booking.hotelId ? db.byId('hotels', booking.hotelId) : null;
 
-  const valid =
-    booking.status === 'confirmed' &&
-    (!booking.startsAt || new Date(booking.startsAt).getTime() > Date.now() - 3 * 60 * 60 * 1000);
+  // A stay stays scannable for the whole trip (a guest may arrive late on
+  // check-in day), whereas a ticket expires 3h after the show starts.
+  const isStay = booking.type === 'hotel';
+  const withinWindow = isStay
+    ? (booking.stay?.checkOut || '') >= hotels.today()
+    : !booking.startsAt || new Date(booking.startsAt).getTime() > Date.now() - 3 * 60 * 60 * 1000;
+
+  const valid = booking.status === 'confirmed' && withinWindow;
 
   return {
     valid,
-    reason: valid ? 'Ticket is valid' : booking.status === 'cancelled' ? 'Ticket was cancelled' : 'Show has already ended',
+    reason: valid
+      ? isStay
+        ? 'Stay is valid — guest can check in'
+        : 'Ticket is valid'
+      : booking.status === 'cancelled'
+        ? `${isStay ? 'Stay' : 'Ticket'} was cancelled`
+        : booking.status === 'completed'
+          ? 'Already checked in'
+          : isStay
+            ? 'Stay has already ended'
+            : 'Show has already ended',
     booking: {
       reference: booking.reference,
       type: booking.type,
@@ -651,11 +976,13 @@ router.get('/admin/verify/:reference', auth.requireAdmin, (ctx) => {
       seatLabel: (booking.seats || []).map((s) => s.id).join(', '),
       showDate: booking.showDate,
       showTime: booking.showTime,
-      movieTitle: movie ? movie.title : 'Food order',
-      cinemaName: cinema ? cinema.name : '',
+      movieTitle: movie ? movie.title : isStay ? booking.stay?.roomName || 'Stay' : 'Food order',
+      cinemaName: cinema ? cinema.name : hotel ? hotel.name : '',
       customerName: user ? user.name : '',
       total: booking.amounts?.total || 0,
       food: booking.food || [],
+      stay: booking.stay || null,
+      guestName: booking.guest?.name || '',
     },
   };
 });

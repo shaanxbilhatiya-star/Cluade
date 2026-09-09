@@ -972,6 +972,96 @@ const EXPERIENCES = [
   },
 ];
 
+/* ── Hotel ──────────────────────────────────────────────────────────────────
+   Kingfisher's stay property. One hotel record + its room types. Everything
+   here is editable from the admin panel (Hotel & Rooms); this catalogue is
+   only the first-boot content, and admin edits/uploads always win. */
+const HOTEL = {
+  slug: 'kingfisher-mandla',
+  name: 'Hotel Kingfisher',
+  tagline: 'Comfortable AC rooms right next to the water park & cinema',
+  area: 'Nagpur Road',
+  city: 'Mandla',
+  address: 'Kingfisher Resort, Nagpur Road, Mandla, Madhya Pradesh 481661',
+  phone: '7648913272',
+  rating: 4.3,
+  reviewCount: 268,
+  checkInTime: '12:00',
+  checkOutTime: '11:00',
+  photos: ['/img/hotels/kingfisher-mandla-1.svg'],
+  amenities: [
+    'Free Wi-Fi',
+    'Free parking',
+    '24-hour front desk',
+    'Room service',
+    'Restaurant',
+    'Power backup',
+    'Water park access',
+    'Cinema on site',
+  ],
+  policies: [
+    'Check-in from 12:00 PM · check-out by 11:00 AM',
+    'Valid government photo ID required for all guests at check-in',
+    'Couples and families are welcome — local IDs accepted',
+    'Outside food and alcohol are not permitted in the rooms',
+    'Free cancellation up to 24 hours before check-in (75% refund after that)',
+  ],
+};
+
+/**
+ * Room types. Amenities are grouped exactly the way the stay listing shows
+ * them, and `popularAmenities` drives the "Popular with Guests" summary chip
+ * row (the UI shows the first five and collapses the rest into "N More").
+ */
+const HOTEL_ROOMS = [
+  {
+    slug: 'deluxe-double-room',
+    name: 'Deluxe Room',
+    subtitle: 'Cosy AC room with a double bed and attached bathroom',
+    sizeSqft: 72,
+    sizeSqmt: 7,
+    bedType: 'Double Bed',
+    bedCount: 1,
+    bathrooms: 1,
+    maxGuests: 2,
+    maxChildren: 1,
+    totalRooms: 12,
+    mrpPerNight: 1263,
+    pricePerNight: 726,
+    taxesPerNight: 131,
+    badge: 'Best Seller',
+    photos: [
+      '/img/hotels/deluxe-double-room-1.svg',
+      '/img/hotels/deluxe-double-room-2.svg',
+      '/img/hotels/deluxe-double-room-3.svg',
+      '/img/hotels/deluxe-double-room-4.svg',
+    ],
+    popularAmenities: [
+      'Mineral Water',
+      'Laundry Service',
+      'Air Conditioning',
+      'Iron/Ironing Board',
+      'Wi-Fi',
+      'TV',
+      'Safe',
+      'Towels',
+    ],
+    amenityGroups: [
+      { title: 'Room Features', items: ['Chair'] },
+      { title: 'Beds and Blanket', items: ['Woollen Blanket'] },
+      { title: 'Safety and Security', items: ['Safe', 'Cupboards with Locks'] },
+      { title: 'Media and Entertainment', items: ['TV'] },
+      {
+        title: 'Bathroom',
+        items: ['Dental Kit', 'Towels', 'Geyser/Water Heater', 'Slippers', 'Toiletries', 'Hot & Cold Water'],
+      },
+      { title: 'Other Facilities', items: ['Ceiling Fan'] },
+    ],
+    inclusions: ['Free Wi-Fi', 'Free parking', 'Daily housekeeping'],
+    order: 1,
+  },
+];
+
 const GENRES = [
   'Action', 'Comedy', 'Drama', 'Horror', 'Thriller', 'Romance', 'Sci-Fi',
   'Fantasy', 'Mystery', 'Family', 'Crime', 'History', 'Superhero', 'Mythology',
@@ -984,4 +1074,8 @@ const CITIES = ['Mandla'];
 /** Daily show slots (24h) used to generate the rolling schedule. */
 const SHOW_SLOTS = ['09:15', '12:30', '15:45', '17:30', '19:00', '22:15'];
 
-module.exports = { MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES, GENRES, LANGUAGES, CITIES, SHOW_SLOTS };
+module.exports = {
+  MOVIES, LAYOUTS, CINEMAS, FOOD_ITEMS, OFFERS, EXPERIENCES,
+  HOTEL, HOTEL_ROOMS,
+  GENRES, LANGUAGES, CITIES, SHOW_SLOTS,
+};

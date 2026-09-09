@@ -113,6 +113,20 @@
     offers: function (appliesTo) { return request('GET', '/offers' + (appliesTo ? '?appliesTo=' + appliesTo : '')); },
     experiences: function () { return request('GET', '/experiences'); },
 
+    // ── Hotel / stays ──
+    /** @param {{checkIn?:string, checkOut?:string, rooms?:number}} [params] */
+    hotels: function (params) {
+      var qs = new URLSearchParams(params || {}).toString();
+      return request('GET', '/hotels' + (qs ? '?' + qs : ''));
+    },
+    hotelRoom: function (id, params) {
+      var qs = new URLSearchParams(params || {}).toString();
+      return request('GET', '/hotels/rooms/' + id + (qs ? '?' + qs : ''));
+    },
+    hotelQuote: function (payload) { return request('POST', '/hotels/quote', payload); },
+    validateHotelOffer: function (payload) { return request('POST', '/hotels/offers/validate', payload); },
+    bookHotel: function (payload) { return request('POST', '/hotels/bookings', payload); },
+
     // ── Account ──
     updateProfile: function (patch) { return request('PATCH', '/me', patch); },
     updateSettings: function (patch) { return request('PATCH', '/me/settings', patch); },
