@@ -25,7 +25,7 @@ const HOTEL_FIELDS = [
   'checkInTime', 'checkOutTime', 'photos', 'amenities', 'policies', 'active',
 ];
 const ROOM_FIELDS = [
-  'name', 'subtitle', 'sizeSqft', 'sizeSqmt', 'bedType', 'bedCount', 'bathrooms',
+  'name', 'subtitle', 'sizeSqft', 'sizeSqmt', 'view', 'bedType', 'bedCount', 'bathrooms',
   'maxGuests', 'maxChildren', 'totalRooms', 'mrpPerNight', 'pricePerNight', 'taxesPerNight',
   'badge', 'photos', 'popularAmenities', 'amenityGroups', 'inclusions', 'order', 'active',
 ];
@@ -788,6 +788,7 @@ router.post('/admin/hotel/rooms', auth.requireAdmin, (ctx) => {
         subtitle: '',
         sizeSqft: 0,
         sizeSqmt: 0,
+        view: '',
         bedType: 'Double Bed',
         bedCount: 1,
         bathrooms: 1,
