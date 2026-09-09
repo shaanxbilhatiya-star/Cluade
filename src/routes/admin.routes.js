@@ -8,6 +8,11 @@ const storage = require('../storage');
 const { LAYOUTS } = require('../catalog');
 const { ensureRollingShowtimes, markSeedRemoved, unmarkSeedRemoved } = require('../seed');
 const { Router, HttpError } = require('../router');
+const {
+  PROPERTY_PHOTO_CATEGORY_IDS,
+  PHOTOS_PER_CATEGORY,
+  isPropertyPhotoCategory,
+} = require('../hotelPhotos');
 
 const router = new Router();
 
@@ -23,7 +28,7 @@ const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValu
 const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active', 'image'];
 const HOTEL_FIELDS = [
   'name', 'tagline', 'area', 'city', 'address', 'phone', 'rating', 'reviewCount',
-  'checkInTime', 'checkOutTime', 'coverPhoto', 'photos', 'amenities', 'policies', 'active',
+  'checkInTime', 'checkOutTime', 'coverPhoto', 'photos', 'propertyPhotos', 'amenities', 'policies', 'active',
 ];
 const ROOM_FIELDS = [
   'name', 'subtitle', 'sizeSqft', 'sizeSqmt', 'view', 'bedType', 'bedCount', 'bathrooms',
@@ -67,7 +72,7 @@ function resolveExperienceImage(body, slug) {
  * Normalises a photo gallery: accepts an array or newline/comma separated text,
  * persists any freshly uploaded data: URLs and leaves existing paths alone.
  */
-function resolvePhotoList(value, folder, slug) {
+function resolvePhotoList(value, folder, slug, limit = 12) {
   if (value === undefined) return undefined;
 
   const list = Array.isArray(value)
@@ -78,8 +83,28 @@ function resolvePhotoList(value, folder, slug) {
 
   return list
     .filter(Boolean)
-    .slice(0, 12)
+    .slice(0, limit)
     .map((entry) => (isDataUrl(entry) ? saveUploadedImage(folder, slug, entry) : entry));
+}
+
+/**
+ * Normalises the whole { category: [photos] } property gallery map. Unknown
+ * categories are dropped and empty ones are omitted so the stored record only
+ * ever holds categories that actually have photos.
+ */
+function resolvePropertyPhotos(value, slug) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new HttpError(400, 'propertyPhotos must be an object keyed by category');
+  }
+
+  const out = {};
+  for (const category of PROPERTY_PHOTO_CATEGORY_IDS) {
+    if (value[category] === undefined) continue;
+    const photos = resolvePhotoList(value[category], 'hotels', slug, PHOTOS_PER_CATEGORY);
+    if (photos && photos.length) out[category] = photos;
+  }
+  return out;
 }
 
 function pick(body, fields) {
@@ -741,6 +766,11 @@ router.put('/admin/hotel', auth.requireAdmin, (ctx) => {
   if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('hotels', slug, body.coverPhoto);
   const photos = resolvePhotoList(body.photos, 'hotels', slug);
   if (photos !== undefined) body.photos = photos;
+  // The property details form leaves this out, so the categorised galleries
+  // survive an edit untouched; a full map may still be sent (e.g. an import).
+  const propertyPhotos = resolvePropertyPhotos(body.propertyPhotos, slug);
+  if (propertyPhotos !== undefined) body.propertyPhotos = propertyPhotos;
+  else delete body.propertyPhotos;
 
   if (!existing) {
     requireFields(body, ['name']);
@@ -760,6 +790,7 @@ router.put('/admin/hotel', auth.requireAdmin, (ctx) => {
           checkInTime: '12:00',
           checkOutTime: '11:00',
           photos: [],
+          propertyPhotos: {},
           amenities: [],
           policies: [],
           active: true,
@@ -772,6 +803,35 @@ router.put('/admin/hotel', auth.requireAdmin, (ctx) => {
   }
 
   return { hotel: db.update('hotels', existing.id, pick(body, HOTEL_FIELDS)) };
+});
+
+/**
+ * Saves one category of the property gallery.
+ *
+ * Photos arrive as base64 data: URLs, so a category full of full-quality shots
+ * would blow past the request body limit if sent in one go. The admin panel
+ * therefore sends the first batch as `replace` and any remainder as `append`,
+ * which lets it upload a category of any size a few megabytes at a time.
+ */
+router.put('/admin/hotel/photos', auth.requireAdmin, (ctx) => {
+  const hotel = db.findOne('hotels', (h) => h.active !== false) || db.get('hotels')[0];
+  if (!hotel) throw new HttpError(400, 'Add the property details before uploading photos');
+
+  const category = String(ctx.body.category || '');
+  if (!isPropertyPhotoCategory(category)) {
+    throw new HttpError(400, `Unknown photo category: ${category || '(none)'}`);
+  }
+
+  const incoming = resolvePhotoList(ctx.body.photos || [], 'hotels', hotel.slug, PHOTOS_PER_CATEGORY) || [];
+  const current = (hotel.propertyPhotos && hotel.propertyPhotos[category]) || [];
+  const merged = (ctx.body.mode === 'append' ? current.concat(incoming) : incoming).slice(0, PHOTOS_PER_CATEGORY);
+
+  const propertyPhotos = Object.assign({}, hotel.propertyPhotos);
+  if (merged.length) propertyPhotos[category] = merged;
+  else delete propertyPhotos[category];
+
+  const updated = db.update('hotels', hotel.id, { propertyPhotos });
+  return { category, photos: merged, propertyPhotos: updated.propertyPhotos };
 });
 
 router.get('/admin/hotel/rooms', auth.requireAdmin, () => ({

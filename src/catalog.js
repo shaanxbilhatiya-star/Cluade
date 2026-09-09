@@ -989,6 +989,9 @@ const HOTEL = {
   checkInTime: '12:00',
   checkOutTime: '11:00',
   photos: ['/img/hotels/kingfisher-mandla-1.svg'],
+  // Categorised galleries shared by every room type — filled in from the admin
+  // panel (Hotel & Rooms → Property photos). See src/hotelPhotos.js.
+  propertyPhotos: {},
   amenities: [
     'Free Wi-Fi',
     'Free parking',

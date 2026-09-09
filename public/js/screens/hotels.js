@@ -183,6 +183,155 @@
       'loading="lazy" data-fallback="/img/hotels/_placeholder.svg">';
   }
 
+  // ── Property photos ────────────────────────────────────────────────────────
+  /* Galleries of the property itself (pool, reception, restaurant …). They live
+     on the hotel record, not on a room type, so every room shows the same set —
+     including rooms added long after the photos were uploaded. Categories are
+     defined once in /js/hotel-photo-categories.js.                             */
+
+  /** Tiles shown per category before the rest collapse behind "+N Photos". */
+  var PHOTO_TILES = 6;
+
+  function photoCategories() {
+    return window.HotelPhotoCategories || [];
+  }
+
+  function photoCategoryLabel(id) {
+    var match = photoCategories().filter(function (c) { return c.id === id; })[0];
+    return match ? match.label : 'Photos';
+  }
+
+  function photosInCategory(hotel, id) {
+    return (((hotel || {}).propertyPhotos || {})[id] || []).filter(Boolean);
+  }
+
+  /** Categories that actually have photos, in the order they're defined. */
+  function photoGroups(hotel) {
+    return photoCategories()
+      .map(function (c) {
+        return { id: c.id, label: c.label, icon: c.icon, photos: photosInCategory(hotel, c.id) };
+      })
+      .filter(function (g) { return g.photos.length; });
+  }
+
+  function propertyPhotos(hotel) {
+    var groups = photoGroups(hotel);
+    if (!groups.length) return '';
+
+    return '<h2 class="subhead">Property photos</h2>' +
+      '<p class="photo-intro">Shared spaces and facilities every guest can use.</p>' +
+      '<div class="chips photo-nav">' +
+        groups.map(function (g) {
+          return '<button class="chip chip--sm" type="button" data-action="jump-photos" ' +
+            'data-cat="' + UI.esc(g.id) + '">' + UI.esc(g.label) + '</button>';
+        }).join('') +
+      '</div>' +
+      groups.map(function (g) {
+        var shown = Math.min(g.photos.length, PHOTO_TILES);
+        var hidden = g.photos.length - shown;
+
+        return '<section class="photo-group" data-photo-group="' + UI.esc(g.id) + '">' +
+          '<h3 class="photo-group__title">' + UI.icon(g.icon, 15) +
+            '<span>' + UI.esc(g.label) + '</span>' +
+            '<small>' + g.photos.length + '</small></h3>' +
+          '<div class="photo-grid">' +
+            g.photos.slice(0, shown).map(function (src, i) {
+              // The last visible tile carries the overflow count, so nothing is
+              // silently unreachable — tapping it opens the viewer mid-gallery.
+              var overflow = i === shown - 1 ? hidden : 0;
+              return '<button class="photo-tile" type="button" data-action="view-photo" ' +
+                  'data-cat="' + UI.esc(g.id) + '" data-index="' + i + '" ' +
+                  'aria-label="' + UI.esc(g.label + ' photo ' + (i + 1) + ' of ' + g.photos.length) + '">' +
+                  img(src, g.label + ' photo ' + (i + 1), 'photo-tile__img') +
+                  (overflow ? '<span class="photo-tile__more">+' + overflow + ' Photos</span>' : '') +
+                '</button>';
+            }).join('') +
+          '</div>' +
+        '</section>';
+      }).join('');
+  }
+
+  /** Full-screen photo viewer: arrows, swipe, Esc and tap-outside all close/step. */
+  function openPhotoViewer(photos, startIndex, label) {
+    if (!photos.length) return;
+    var index = Math.min(Math.max(startIndex || 0, 0), photos.length - 1);
+
+    var node = UI.h(
+      '<div class="photo-viewer" role="dialog" aria-modal="true" ' +
+          'aria-label="' + UI.esc(label || 'Photos') + '">' +
+        '<div class="photo-viewer__bar">' +
+          '<button class="photo-viewer__btn" type="button" data-close aria-label="Close photos">' +
+            UI.icon('close', 22) + '</button>' +
+          '<span class="photo-viewer__label">' + UI.esc(label || '') + '</span>' +
+          '<span class="photo-viewer__count" data-count></span>' +
+        '</div>' +
+        '<div class="photo-viewer__stage" data-stage></div>' +
+        '<button class="photo-viewer__nav photo-viewer__nav--prev" type="button" data-prev ' +
+          'aria-label="Previous photo">' + UI.icon('chevron-left', 26) + '</button>' +
+        '<button class="photo-viewer__nav photo-viewer__nav--next" type="button" data-next ' +
+          'aria-label="Next photo">' + UI.icon('chevron-right', 26) + '</button>' +
+      '</div>'
+    );
+
+    var stage = node.querySelector('[data-stage]');
+    var counter = node.querySelector('[data-count]');
+    var prevBtn = node.querySelector('[data-prev]');
+    var nextBtn = node.querySelector('[data-next]');
+
+    function paint() {
+      stage.innerHTML = '<img class="photo-viewer__img" src="' + UI.esc(photos[index]) + '" ' +
+        'alt="' + UI.esc((label || 'Photo') + ' ' + (index + 1)) + '" ' +
+        'data-fallback="/img/hotels/_placeholder.svg">';
+      counter.textContent = (index + 1) + ' / ' + photos.length;
+      prevBtn.hidden = photos.length < 2;
+      nextBtn.hidden = photos.length < 2;
+    }
+
+    function step(delta) {
+      index = (index + delta + photos.length) % photos.length;
+      paint();
+    }
+
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      document.body.classList.remove('photo-viewer-open');
+      node.remove();
+    }
+
+    function onKey(event) {
+      if (event.key === 'Escape') close();
+      else if (event.key === 'ArrowLeft') step(-1);
+      else if (event.key === 'ArrowRight') step(1);
+    }
+
+    node.addEventListener('click', function (event) {
+      // Tapping the backdrop (but not the photo itself) dismisses the viewer.
+      if (event.target.closest('[data-close]') || event.target === node || event.target === stage) {
+        close();
+      } else if (event.target.closest('[data-prev]')) {
+        step(-1);
+      } else if (event.target.closest('[data-next]')) {
+        step(1);
+      }
+    });
+
+    var swipeFrom = null;
+    stage.addEventListener('touchstart', function (event) {
+      swipeFrom = event.touches[0].clientX;
+    }, { passive: true });
+    stage.addEventListener('touchend', function (event) {
+      if (swipeFrom === null) return;
+      var dx = event.changedTouches[0].clientX - swipeFrom;
+      swipeFrom = null;
+      if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1);
+    });
+
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(node);
+    document.body.classList.add('photo-viewer-open');
+    paint();
+  }
+
   /** Struck-through rack rate, live rate, and the per-night taxes line. */
   function priceBlock(room, cls) {
     var p = room.pricing || {};
@@ -711,6 +860,8 @@
               UI.row({ icon: 'clock', label: 'Check-out', value: 'by ' + (hotel.checkOutTime || '11:00'), action: 'noop' }) +
             '</div>' +
 
+            propertyPhotos(hotel) +
+
             ((hotel.policies || []).length
               ? '<h2 class="subhead">Things to know</h2><ul class="policy-list">' +
                 hotel.policies.map(function (p) {
@@ -789,6 +940,18 @@
         'more-amenities': function () {
           expanded = true;
           paint();
+        },
+        'jump-photos': function (el) {
+          var group = view.querySelector('[data-photo-group="' + el.getAttribute('data-cat') + '"]');
+          if (group) group.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+        'view-photo': function (el) {
+          var category = el.getAttribute('data-cat');
+          openPhotoViewer(
+            photosInCategory(hotel, category),
+            Number(el.getAttribute('data-index')) || 0,
+            photoCategoryLabel(category)
+          );
         },
         book: function () {
           App.navigate('/hotel/checkout?' + stayQuery(stay, { roomId: room.id }));
