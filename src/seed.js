@@ -175,22 +175,72 @@ function seedExperiences() {
   }
 }
 
+/* ── Protecting admin edits from the boot-time catalogue resync ──────────────
+   foodItems and experiences are re-synced from catalog.js on every boot so new
+   content ships with a deploy. That must not silently undo the admin's work, so:
+
+     · a record the admin has edited is stamped `adminEdited` and skipped here
+     · a catalogue record the admin deleted is remembered in meta.removedSeedIds
+       and not resurrected
+
+   Net effect: the catalogue only drives records nobody has touched. */
+
+function removedSeedIds() {
+  const meta = db.get('meta');
+  return Array.isArray(meta.removedSeedIds) ? meta.removedSeedIds : [];
+}
+
+function isSeedRemoved(id) {
+  return removedSeedIds().includes(id);
+}
+
+/** Remembers that the admin deleted a seeded record, so boot won't re-add it. */
+function markSeedRemoved(id) {
+  const list = removedSeedIds();
+  if (list.includes(id)) return;
+  const meta = db.get('meta');
+  meta.removedSeedIds = [...list, id];
+  db.markDirty('meta');
+  db.flushNow();
+}
+
+/** Clears the tombstone, e.g. if the admin re-creates the same id. */
+function unmarkSeedRemoved(id) {
+  const list = removedSeedIds();
+  if (!list.includes(id)) return;
+  const meta = db.get('meta');
+  meta.removedSeedIds = list.filter((x) => x !== id);
+  db.markDirty('meta');
+  db.flushNow();
+}
+
 /**
- * Always resync the experiences collection with the current EXPERIENCES
- * catalog on boot, mirroring reseedFood(). This keeps title/order/pricing/etc
- * in sync whenever the catalog is updated, instead of only inserting slugs
- * that are missing. Admin-only entries (not present in the catalog) and any
- * admin active/inactive toggle are preserved.
+ * Resync the experiences collection with the current EXPERIENCES catalog,
+ * mirroring reseedFood(). Admin-created entries, admin-edited entries and
+ * admin deletions are all left alone.
  */
 function ensureExperiences() {
   const catalogIds = new Set(EXPERIENCES.map((e) => `exp_${e.slug}`));
   const existing = db.get('experiences');
   const existingMap = new Map(existing.map((e) => [e.id, e]));
 
-  const catalogRecords = EXPERIENCES.map((e) => {
-    const prev = existingMap.get(`exp_${e.slug}`);
-    return {
-      id: `exp_${e.slug}`,
+  let edited = 0;
+  let deleted = 0;
+  const catalogRecords = [];
+
+  for (const e of EXPERIENCES) {
+    const id = `exp_${e.slug}`;
+    if (isSeedRemoved(id)) { deleted += 1; continue; }
+
+    const prev = existingMap.get(id);
+    if (prev && prev.adminEdited) {
+      catalogRecords.push(prev); // the admin owns this one now
+      edited += 1;
+      continue;
+    }
+
+    catalogRecords.push({
+      id,
       slug: e.slug,
       title: e.title,
       category: e.category,
@@ -203,13 +253,18 @@ function ensureExperiences() {
       badge: e.badge || '',
       order: e.order || 0,
       active: prev ? prev.active : true,
-    };
-  });
+      // An uploaded cover survives even when nothing else was edited.
+      image: (prev && prev.image) || '',
+    });
+  }
 
   const adminItems = existing.filter((e) => !catalogIds.has(e.id));
   db.replace('experiences', [...catalogRecords, ...adminItems]);
   db.flushNow();
-  console.log(`[seed] experiences synced — ${catalogRecords.length} catalog items, ${adminItems.length} admin item(s) preserved.`);
+  console.log(
+    `[seed] experiences synced — ${catalogRecords.length} catalog items ` +
+    `(${edited} admin-edited kept as-is), ${adminItems.length} admin item(s), ${deleted} admin-deleted skipped.`
+  );
 }
 
 function seedUsers() {
@@ -578,12 +633,25 @@ function reseedFood() {
   const existing = db.get('foodItems');
   const existingMap = new Map(existing.map((e) => [e.id, e]));
 
-  const catalogRecords = FOOD_ITEMS.map((f) => {
-    const prev = existingMap.get(`food_${f.slug}`);
-    return {
+  let edited = 0;
+  let deleted = 0;
+  const catalogRecords = [];
+
+  for (const f of FOOD_ITEMS) {
+    const id = `food_${f.slug}`;
+    if (isSeedRemoved(id)) { deleted += 1; continue; }
+
+    const prev = existingMap.get(id);
+    if (prev && prev.adminEdited) {
+      catalogRecords.push(prev); // the admin owns this one now
+      edited += 1;
+      continue;
+    }
+
+    catalogRecords.push({
       createdAt: prev ? prev.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      id: `food_${f.slug}`,
+      id,
       slug: f.slug,
       name: f.name,
       category: f.category,
@@ -593,15 +661,21 @@ function reseedFood() {
       size: f.size,
       veg: f.veg,
       popular: f.popular,
-      imageUrl: f.imageUrl || `/img/food/${f.slug}.svg`,
+      // An uploaded photo survives even when nothing else was edited.
+      imageUrl: (prev && prev.imageUrl && prev.imageUrl.startsWith('/uploads/'))
+        ? prev.imageUrl
+        : f.imageUrl || `/img/food/${f.slug}.svg`,
       available: prev ? prev.available : true,
-    };
-  });
+    });
+  }
 
   const adminItems = existing.filter((e) => !catalogIds.has(e.id));
   db.replace('foodItems', [...catalogRecords, ...adminItems]);
   db.flushNow();
-  console.log(`[seed] food menu synced — ${catalogRecords.length} catalog items, ${adminItems.length} admin item(s) preserved.`);
+  console.log(
+    `[seed] food menu synced — ${catalogRecords.length} catalog items ` +
+    `(${edited} admin-edited kept as-is), ${adminItems.length} admin item(s), ${deleted} admin-deleted skipped.`
+  );
 }
 
 /**
@@ -623,7 +697,8 @@ function ensureHotels() {
   let added = 0;
   for (const room of HOTEL_ROOMS) {
     const id = `room_${room.slug}`;
-    if (db.byId('hotelRooms', id)) continue;
+    // Skip rooms that already exist, and ones the admin deliberately deleted.
+    if (db.byId('hotelRooms', id) || isSeedRemoved(id)) continue;
     db.insert('hotelRooms', Object.assign({ id, hotelId: hotel.id, active: true }, room));
     added += 1;
   }
@@ -632,4 +707,15 @@ function ensureHotels() {
   if (added || !hotel.createdAt) db.flushNow();
 }
 
-module.exports = { run, ensureRollingShowtimes, reseedFood, ensureExperiences, ensureHotels, dateKey, addDays };
+module.exports = {
+  run,
+  ensureRollingShowtimes,
+  reseedFood,
+  ensureExperiences,
+  ensureHotels,
+  markSeedRemoved,
+  unmarkSeedRemoved,
+  isSeedRemoved,
+  dateKey,
+  addDays,
+};

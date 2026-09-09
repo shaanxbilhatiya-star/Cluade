@@ -77,20 +77,58 @@ nested), the builder reports *"could not determine how to build the app"*.
 
 ### Persisting data between deploys
 
-`data/` is the database, and it is deliberately git-ignored. On a platform with
-an ephemeral filesystem (Railway, Render, Fly, Heroku) the directory is
-recreated and **re-seeded with the demo catalogue on every deploy** — which is
-usually what you want for a demo, and definitely not what you want in
-production.
+Two things have to survive a redeploy, and **both** live under one directory
+(see `src/storage.js`):
 
-To keep real bookings, mount a persistent volume and point the app at it:
+| What | Where | Contains |
+|---|---|---|
+| Database | `<data dir>/*.json` | bookings, room types, prices, users, admin edits |
+| Uploads | `<data dir>/uploads/` | photos uploaded from the admin panel |
 
-```bash
-DATA_DIR=/data node server.js
+On a platform with an ephemeral filesystem (Railway, Render, Fly, Heroku) the
+deployed app directory is rebuilt from the repo on every deploy. Anything stored
+inside it is **erased** — bookings reset to the demo catalogue and uploaded
+photos disappear.
+
+**Attach a volume and you are done.** Railway sets `RAILWAY_VOLUME_MOUNT_PATH`
+automatically when a volume is attached, and the app picks it up with no extra
+configuration:
+
+1. Right-click the service → **Attach volume**, mount path `/data`.
+2. Redeploy.
+
+The boot log then confirms it:
+
+```
+[storage] persistent  data=/data  uploads=/data/uploads
 ```
 
-`DATA_DIR` overrides where the JSON collections live (see `src/db.js`). On
-Railway: add a volume, mount it at `/data`, and set `DATA_DIR=/data`.
+If no volume is detected it says so loudly instead:
+
+```
+⚠  [storage] EPHEMERAL STORAGE — bookings and uploaded photos will be
+   lost on the next deploy.
+```
+
+`GET /api/health` reports the same thing under `storage`, so you can check from
+a browser without opening the logs.
+
+Overrides, in order of precedence:
+
+| Variable | Effect |
+|---|---|
+| `DATA_DIR` | Where the JSON collections live |
+| `UPLOAD_DIR` | Where uploads live (defaults to `<DATA_DIR>/uploads`) |
+| `RAILWAY_VOLUME_MOUNT_PATH` | Set by Railway; used automatically |
+| `VOLUME_PATH` | Same idea, for other hosts |
+
+```bash
+DATA_DIR=/data node server.js   # equivalent to attaching a volume at /data
+```
+
+Uploaded images are served from `/uploads/...` off that disk, **not** from
+`public/`. Photos uploaded by older builds (which wrote into `public/img/`) are
+migrated automatically on the next boot.
 
 For anything beyond a single cinema, replace `src/db.js` with a real database —
 the in-memory cache means only one server process can safely own the data, so

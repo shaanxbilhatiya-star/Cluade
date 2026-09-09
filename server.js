@@ -12,6 +12,7 @@ const path = require('path');
 
 const db = require('./src/db');
 const auth = require('./src/auth');
+const storage = require('./src/storage');
 const { Router } = require('./src/router');
 const { serveStatic, sendError, sendJSON } = require('./src/http');
 const seed = require('./src/seed');
@@ -24,7 +25,11 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 // ── Boot: load data, seed on first run ───────────────────────────────────────
+storage.ensureDirs();
+storage.warnIfEphemeral();
+
 db.load();
+storage.migrateLegacyUploads(db); // one-off move of pre-volume photo uploads
 if (db.isEmpty()) {
   console.log('[boot] Empty database detected - seeding demo catalogue...');
   seed.run();
@@ -57,6 +62,8 @@ api.get('/api/health', () => ({
   service: 'cineflex-movie-booking',
   version: require('./package.json').version,
   uptimeSeconds: Math.round(process.uptime()),
+  // Lets you confirm from the browser that a volume is actually in use.
+  storage: storage.describe(),
   counts: {
     movies: db.get('movies').length,
     cinemas: db.get('cinemas').length,
@@ -102,6 +109,14 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname.startsWith('/api/')) {
       sendError(res, 404, `No API route for ${req.method} ${url.pathname}`);
+      return;
+    }
+
+    // Admin-uploaded images, served off the persistent disk rather than public/.
+    if (url.pathname.startsWith('/uploads/')) {
+      const rel = url.pathname.slice('/uploads'.length);
+      if (serveStatic(storage.UPLOAD_DIR, rel, req, res)) return;
+      sendError(res, 404, 'Upload not found');
       return;
     }
 

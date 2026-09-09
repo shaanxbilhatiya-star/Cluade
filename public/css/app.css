@@ -1106,11 +1106,30 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* ── Stay / hotel ───────────────────────────────────────────────────────── */
 .hotel-hero { position: relative; }
 .hotel-hero__img { display: block; width: 100%; height: 190px; object-fit: cover; background: var(--bg-sunken); }
+/* Full-bleed slides: the shared carousel is tuned for inset cards. */
+.hotel-hero .carousel__track { padding: 0; gap: 0; }
+.hotel-hero .carousel__slide { flex: 0 0 100%; width: 100%; }
+.hotel-hero .carousel__dots {
+  position: absolute; top: 12px; left: 12px;
+  padding: 0; justify-content: flex-start;
+}
+.hotel-hero .carousel__dot { background: rgba(255, 255, 255, .5); }
+.hotel-hero .carousel__dot[aria-current="true"] { background: #fff; }
 .hotel-hero__veil {
   position: absolute; inset: auto 0 0 0; height: 70%;
   background: linear-gradient(to top, rgba(10, 8, 20, .82), rgba(10, 8, 20, 0));
+  /* Must not swallow swipes on the gallery underneath. */
+  pointer-events: none;
 }
-.hotel-hero__text { position: absolute; left: 16px; right: 16px; bottom: 12px; color: #fff; }
+.hotel-hero__text { position: absolute; left: 16px; right: 16px; bottom: 12px; color: #fff; pointer-events: none; }
+.hotel-hero__count {
+  position: absolute; bottom: 12px; right: 12px;
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(10, 8, 20, .62); color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 8px; border-radius: 999px;
+  pointer-events: none;
+}
 .hotel-hero__text h2 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.3px; }
 .hotel-hero__text p {
   margin: 5px 0 0; display: flex; align-items: center; gap: 5px;

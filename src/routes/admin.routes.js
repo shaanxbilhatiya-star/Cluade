@@ -4,8 +4,9 @@ const path = require('path');
 const db = require('../db');
 const auth = require('../auth');
 const hotels = require('../hotels');
+const storage = require('../storage');
 const { LAYOUTS } = require('../catalog');
-const { ensureRollingShowtimes } = require('../seed');
+const { ensureRollingShowtimes, markSeedRemoved, unmarkSeedRemoved } = require('../seed');
 const { Router, HttpError } = require('../router');
 
 const router = new Router();
@@ -31,11 +32,11 @@ const ROOM_FIELDS = [
 ];
 
 // Uploaded photos arrive as a data: URL and are saved to disk here so the JSON
-// db only ever stores a path.
-const IMG_ROOT = path.join(__dirname, '..', '..', 'public', 'img');
+// db only ever stores a path. They go to the upload directory (a mounted volume
+// in production) rather than into public/, which is rebuilt on every deploy.
 const DATA_URL_RE = /^data:image\/(png|jpe?g|webp);base64,/i;
 
-/** Saves a data: URL into public/img/<folder>/ and returns its public path. */
+/** Saves a data: URL into the upload directory and returns its public URL. */
 function saveUploadedImage(folder, slug, dataUrl) {
   const match = DATA_URL_RE.exec(dataUrl);
   if (!match) throw new HttpError(400, 'Image must be a PNG, JPEG or WEBP file');
@@ -44,13 +45,13 @@ function saveUploadedImage(folder, slug, dataUrl) {
   const buffer = Buffer.from(base64, 'base64');
   if (buffer.length > 10 * 1024 * 1024) throw new HttpError(400, 'Image is too large (max 10 MB)');
 
-  const dir = path.join(IMG_ROOT, folder);
+  const dir = path.join(storage.UPLOAD_DIR, folder);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   // Random suffix so several photos saved in the same millisecond cannot collide.
   const unique = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const filename = `${slug || 'photo'}-${unique}.${ext}`;
   fs.writeFileSync(path.join(dir, filename), buffer);
-  return `/img/${folder}/${filename}`;
+  return storage.uploadUrl(folder, filename);
 }
 
 function isDataUrl(value) {
@@ -593,12 +594,15 @@ router.post('/admin/food', auth.requireAdmin, (ctx) => {
 
 router.put('/admin/food/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('foodItems', ctx.params.id)) throw new HttpError(404, 'Food item not found');
-  return { item: db.update('foodItems', ctx.params.id, pick(ctx.body, FOOD_FIELDS)) };
+  // `adminEdited` stops the boot-time catalogue resync from reverting this item.
+  const patch = Object.assign(pick(ctx.body, FOOD_FIELDS), { adminEdited: true });
+  return { item: db.update('foodItems', ctx.params.id, patch) };
 });
 
 router.delete('/admin/food/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('foodItems', ctx.params.id)) throw new HttpError(404, 'Food item not found');
   db.remove('foodItems', ctx.params.id);
+  markSeedRemoved(ctx.params.id); // stays deleted across restarts
   return { deleted: true, id: ctx.params.id };
 });
 
@@ -654,12 +658,15 @@ router.put('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
   const body = Object.assign({}, ctx.body);
   if (typeof body.features === 'string') body.features = body.features.split(',').map((s) => s.trim()).filter(Boolean);
   resolveExperienceImage(body, existing.slug || slugify(existing.title));
-  return { experience: db.update('experiences', ctx.params.id, pick(body, EXPERIENCE_FIELDS)) };
+  // `adminEdited` stops the boot-time catalogue resync from reverting this entry.
+  const patch = Object.assign(pick(body, EXPERIENCE_FIELDS), { adminEdited: true });
+  return { experience: db.update('experiences', ctx.params.id, patch) };
 });
 
 router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
   db.remove('experiences', ctx.params.id);
+  markSeedRemoved(ctx.params.id); // stays deleted across restarts
   return { deleted: true, id: ctx.params.id };
 });
 
@@ -772,6 +779,8 @@ router.get('/admin/hotel/rooms', auth.requireAdmin, () => ({
 
 router.post('/admin/hotel/rooms', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['name', 'pricePerNight']);
+  // Re-creating a previously deleted seeded slug should un-tombstone it.
+  unmarkSeedRemoved(`room_${slugify(ctx.body.slug || ctx.body.name)}`);
 
   const hotel = db.findOne('hotels', (h) => h.active !== false) || db.get('hotels')[0];
   if (!hotel) throw new HttpError(400, 'Set up the hotel details before adding rooms');
@@ -841,6 +850,7 @@ router.delete('/admin/hotel/rooms/:id', auth.requireAdmin, (ctx) => {
   }
 
   db.remove('hotelRooms', room.id);
+  markSeedRemoved(room.id); // a seeded room type stays deleted across restarts
   return { deleted: true, id: room.id };
 });
 

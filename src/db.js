@@ -10,11 +10,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// DATA_DIR can be overridden (used by the smoke test so it never touches your
-// real data): DATA_DIR=/tmp/cineflex-test node server.js
-const DATA_DIR = process.env.DATA_DIR
-  ? path.resolve(process.env.DATA_DIR)
-  : path.join(__dirname, '..', 'data');
+// Resolved in src/storage.js so the database and uploaded images always land on
+// the same (optionally volume-backed) disk. Override with DATA_DIR, e.g. the
+// smoke test uses DATA_DIR=/tmp/cineflex-test so it never touches real data.
+const { DATA_DIR } = require('./storage');
 
 const COLLECTIONS = [
   'users',

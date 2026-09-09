@@ -264,6 +264,38 @@
     return '<p class="room-avail">' + a.available + ' rooms available</p>';
   }
 
+  /**
+   * Property header. Swipeable when the admin has uploaded more than one photo,
+   * a single still otherwise. The overlay is click-through so swiping the
+   * gallery still works where the gradient covers it.
+   */
+  function hotelHero(hotel) {
+    var photos = (hotel.photos || []).filter(Boolean);
+    if (!photos.length) photos = ['/img/hotels/_placeholder.svg'];
+
+    var media = photos.length > 1
+      ? UI.carousel(photos.map(function (src) {
+          return '<div class="carousel__slide">' + img(src, hotel.name, 'hotel-hero__img') + '</div>';
+        }))
+      : img(photos[0], hotel.name, 'hotel-hero__img');
+
+    return '<div class="hotel-hero">' +
+      media +
+      '<div class="hotel-hero__veil"></div>' +
+      '<div class="hotel-hero__text">' +
+        '<h2>' + UI.esc(hotel.name) + '</h2>' +
+        '<p>' + UI.icon('map-pin', 14) + UI.esc([hotel.area, hotel.city].filter(Boolean).join(', ')) + '</p>' +
+      '</div>' +
+      (hotel.rating
+        ? '<span class="hotel-hero__rating">' + UI.icon('star', 13) + Number(hotel.rating).toFixed(1) +
+          (hotel.reviewCount ? '<small>' + hotel.reviewCount + '</small>' : '') + '</span>'
+        : '') +
+      (photos.length > 1
+        ? '<span class="hotel-hero__count">' + UI.icon('grid', 12) + photos.length + '</span>'
+        : '') +
+      '</div>';
+  }
+
   /** The search bar showing the chosen dates/guests; opens the pickers. */
   function stayBar(stay) {
     var nights = nightsBetween(stay.checkIn, stay.checkOut);
@@ -524,18 +556,7 @@
         '<div class="screen">' +
           UI.appbar({ title: 'Stay with us' }) +
           '<div class="scroll">' +
-            '<div class="hotel-hero">' +
-              img((hotel.photos || [])[0] || '/img/hotels/_placeholder.svg', hotel.name, 'hotel-hero__img') +
-              '<div class="hotel-hero__veil"></div>' +
-              '<div class="hotel-hero__text">' +
-                '<h2>' + UI.esc(hotel.name) + '</h2>' +
-                '<p>' + UI.icon('map-pin', 14) + UI.esc([hotel.area, hotel.city].filter(Boolean).join(', ')) + '</p>' +
-              '</div>' +
-              (hotel.rating
-                ? '<span class="hotel-hero__rating">' + UI.icon('star', 13) + Number(hotel.rating).toFixed(1) +
-                  (hotel.reviewCount ? '<small>' + hotel.reviewCount + '</small>' : '') + '</span>'
-                : '') +
-            '</div>' +
+            hotelHero(hotel) +
 
             (hotel.tagline ? '<p class="hotel-tagline">' + UI.esc(hotel.tagline) + '</p>' : '') +
 
