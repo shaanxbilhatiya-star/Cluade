@@ -23,7 +23,7 @@ const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValu
 const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active', 'image'];
 const HOTEL_FIELDS = [
   'name', 'tagline', 'area', 'city', 'address', 'phone', 'rating', 'reviewCount',
-  'checkInTime', 'checkOutTime', 'photos', 'amenities', 'policies', 'active',
+  'checkInTime', 'checkOutTime', 'coverPhoto', 'photos', 'amenities', 'policies', 'active',
 ];
 const ROOM_FIELDS = [
   'name', 'subtitle', 'sizeSqft', 'sizeSqmt', 'view', 'bedType', 'bedCount', 'bathrooms',
@@ -738,6 +738,7 @@ router.put('/admin/hotel', auth.requireAdmin, (ctx) => {
   if (typeof body.policies === 'string') body.policies = lines(body.policies);
 
   const slug = existing ? existing.slug : slugify(body.name || 'hotel');
+  if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('hotels', slug, body.coverPhoto);
   const photos = resolvePhotoList(body.photos, 'hotels', slug);
   if (photos !== undefined) body.photos = photos;
 

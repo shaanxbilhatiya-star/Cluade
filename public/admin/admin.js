@@ -1784,6 +1784,7 @@
         field('Review count', 'reviewCount', p.reviewCount, { type: 'number' }) +
         field('Check-in time', 'checkInTime', p.checkInTime || '12:00', { placeholder: '12:00' }) +
         field('Check-out time', 'checkOutTime', p.checkOutTime || '11:00', { placeholder: '11:00' }) +
+        imageField('Cover photo', 'coverPhoto', p.coverPhoto, {}) +
         galleryField('Property photos', 'photos', p.photos, {
           hint: 'These replace the placeholder artwork at the top of the Stay tab. Add more than ' +
             'one and guests can swipe through them. The first photo is the cover.',
@@ -1810,6 +1811,7 @@
         reviewCount: Number(raw.reviewCount) || 0,
         checkInTime: raw.checkInTime,
         checkOutTime: raw.checkOutTime,
+        coverPhoto: raw.coverPhoto || '',
         photos: (raw.photos || '').split('\n').filter(Boolean),
         amenities: csvList(raw.amenities),
         policies: (raw.policies || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean),
@@ -1823,6 +1825,7 @@
         body: hotelForm(hotel),
         confirmLabel: 'Save property',
       });
+      bindImageField(m.body, 'coverPhoto');
       bindGalleryField(m.body, 'photos');
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
