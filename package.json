@@ -11,7 +11,8 @@
     "dev": "node --watch server.js",
     "seed": "node tools/reseed.js",
     "assets": "node tools/generate-assets.js",
-    "test": "node tools/smoke-test.js"
+    "test": "node tools/smoke-test.js",
+    "test:dine-in": "node tools/dine-in-test.js"
   },
   "keywords": [
     "movie",

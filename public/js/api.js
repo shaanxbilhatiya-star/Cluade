@@ -127,6 +127,20 @@
     validateHotelOffer: function (payload) { return request('POST', '/hotels/offers/validate', payload); },
     bookHotel: function (payload) { return request('POST', '/hotels/bookings', payload); },
 
+    // ── Dine-In ──
+    /** Tab payload: live discount tiers, my reservation + its billing lock. */
+    dineIn: function () { return request('GET', '/dine-in'); },
+    dineSlots: function (date) { return request('GET', '/dine-in/slots' + (date ? '?date=' + encodeURIComponent(date) : '')); },
+    dineReservations: function () { return request('GET', '/dine-in/reservations'); },
+    reserveTable: function (payload) { return request('POST', '/dine-in/reservations', payload); },
+    cancelReservation: function (id) { return request('POST', '/dine-in/reservations/' + id + '/cancel', {}); },
+    /** Server decides the tier, the lock state and the notice wording. */
+    dineQuote: function (payload) { return request('POST', '/dine-in/quote', payload); },
+    validateDineOffer: function (payload) { return request('POST', '/dine-in/offers/validate', payload); },
+    payDineBill: function (payload) { return request('POST', '/dine-in/bills', payload); },
+    dineBills: function () { return request('GET', '/dine-in/bills'); },
+    dineBill: function (id) { return request('GET', '/dine-in/bills/' + id); },
+
     // ── Account ──
     updateProfile: function (patch) { return request('PATCH', '/me', patch); },
     updateSettings: function (patch) { return request('PATCH', '/me/settings', patch); },

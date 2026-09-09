@@ -4,7 +4,9 @@ const path = require('path');
 const db = require('../db');
 const auth = require('../auth');
 const hotels = require('../hotels');
+const dine = require('../dinein');
 const storage = require('../storage');
+const { notify } = require('../bookings');
 const { LAYOUTS } = require('../catalog');
 const { ensureRollingShowtimes, markSeedRemoved, unmarkSeedRemoved } = require('../seed');
 const { Router, HttpError } = require('../router');
@@ -233,6 +235,24 @@ router.get('/admin/stats', auth.requireAdmin, () => {
     upcoming: stays.filter((b) => (b.stay?.checkOut || '') >= new Date().toISOString().slice(0, 10)).length,
   };
 
+  // Dine-In lives in its own collections, so it is summarised separately too.
+  // `discountGiven` is the number that matters here: it is what the instant
+  // 30%/10% offer actually cost, against the bills it brought in.
+  const dineBills = db.get('dineBills');
+  const dineStats = {
+    bills: dineBills.length,
+    revenue: dineBills.reduce((s, b) => s + (b.amounts?.total || 0), 0),
+    billed: dineBills.reduce((s, b) => s + (b.amounts?.billAmount || 0), 0),
+    discountGiven: dineBills.reduce((s, b) => s + (b.amounts?.discount || 0), 0),
+    reservedBills: dineBills.filter((b) => b.mode === 'reserved').length,
+    walkinBills: dineBills.filter((b) => b.mode === 'walkin').length,
+    reservations: db.get('dineReservations').length,
+    upcomingReservations: db.find(
+      'dineReservations',
+      (r) => r.status === 'confirmed' && new Date(r.startsAt).getTime() > Date.now()
+    ).length,
+  };
+
   // Occupancy is only meaningful for shows that have actually run - measuring
   // sold seats against every future showtime would always round to ~0%.
   const now = Date.now();
@@ -260,6 +280,8 @@ router.get('/admin/stats', auth.requireAdmin, () => {
       offers: db.get('offers').length,
       experiences: db.get('experiences').length,
       hotelRooms: db.get('hotelRooms').length,
+      dineReservations: db.get('dineReservations').length,
+      dineBills: db.get('dineBills').length,
       users: db.find('users', (u) => u.role === 'customer').length,
       bookings: bookings.length,
       cancelled: bookings.filter((b) => b.status === 'cancelled').length,
@@ -270,6 +292,7 @@ router.get('/admin/stats', auth.requireAdmin, () => {
     },
     today: { bookings: todays.length, revenue: todays.reduce((s, b) => s + (b.amounts?.total || 0), 0) },
     stays: stayStats,
+    dine: dineStats,
     topMovies,
     trend,
   };
@@ -692,6 +715,119 @@ router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('experiences', ctx.params.id)) throw new HttpError(404, 'Experience not found');
   db.remove('experiences', ctx.params.id);
   markSeedRemoved(ctx.params.id); // stays deleted across restarts
+  return { deleted: true, id: ctx.params.id };
+});
+
+// ── Dine-In (discounts, notices, reservations, bills) ────────────────────────
+/**
+ * Everything the Dine-In admin section renders: the live settings (so the
+ * discount and notice inputs show what customers are being offered right now),
+ * a preview of each notice with its {tokens} already substituted, and the
+ * reservation/bill ledgers.
+ */
+router.get('/admin/dine-in', auth.requireAdmin, () => {
+  const s = dine.settings();
+  const customerName = (userId) => {
+    const user = db.byId('users', userId);
+    return user ? user.name : 'Unknown';
+  };
+
+  const reservations = [...db.get('dineReservations')]
+    .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt))
+    .slice(0, 200)
+    .map((r) => Object.assign(dine.decorateReservation(r, s), { customerName: customerName(r.userId) }));
+
+  const bills = [...db.get('dineBills')]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 200)
+    .map((b) => Object.assign({}, b, { customerName: customerName(b.userId) }));
+
+  return {
+    settings: s,
+    defaults: dine.DEFAULTS,
+    /** Token reference shown under the notice inputs in the admin form. */
+    noticeTokens: Object.keys(dine.noticeTokens(s)),
+    /** Live render of each notice, so the admin sees exactly what a guest reads. */
+    previews: {
+      reserved: dine.renderNotice(s.reservedNotice, dine.noticeTokens(s)),
+      locked: dine.renderNotice(
+        s.lockedNotice,
+        dine.noticeTokens(s, {
+          minutesLeft: dine.durationLabel(s.lockMinutes),
+          unlockTime: dine.clockLabel(new Date(Date.now() + s.lockMinutes * 60000)),
+        })
+      ),
+      walkin: dine.renderNotice(s.walkinNotice, dine.noticeTokens(s)),
+      paidReserved: dine.renderNotice(
+        s.paidReservedNotice,
+        dine.noticeTokens(s, { saving: dine.money(Math.round((1000 * s.reservedDiscountPercent) / 100)) })
+      ),
+      paidWalkin: dine.renderNotice(
+        s.paidWalkinNotice,
+        dine.noticeTokens(s, { saving: dine.money(Math.round((1000 * s.walkinDiscountPercent) / 100)) })
+      ),
+    },
+    stats: {
+      bills: db.get('dineBills').length,
+      revenue: db.get('dineBills').reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+      discountGiven: db.get('dineBills').reduce((sum, b) => sum + (b.amounts?.discount || 0), 0),
+      reservations: db.get('dineReservations').length,
+      upcoming: db.find(
+        'dineReservations',
+        (r) => r.status === 'confirmed' && new Date(r.startsAt).getTime() > Date.now()
+      ).length,
+    },
+    reservations,
+    bills,
+  };
+});
+
+/**
+ * Updates discounts, the lock window and the notice copy. Takes effect on the
+ * very next customer request - both the amount they are charged and the wording
+ * of the notice they are shown come from here.
+ */
+router.put('/admin/dine-in/settings', auth.requireAdmin, (ctx) => {
+  const settings = dine.saveSettings(ctx.body || {});
+  return { settings, previews: { walkin: dine.renderNotice(settings.walkinNotice, dine.noticeTokens(settings)) } };
+});
+
+/** Restores the shipped notice wording, leaving the numbers alone. */
+router.post('/admin/dine-in/notices/reset', auth.requireAdmin, () => {
+  const patch = {};
+  for (const key of dine.NOTICE_FIELDS) patch[key] = dine.DEFAULTS[key];
+  return { settings: dine.saveSettings(patch) };
+});
+
+router.post('/admin/dine-in/reservations/:id/cancel', auth.requireAdmin, (ctx) => {
+  const reservation = db.byId('dineReservations', ctx.params.id);
+  if (!reservation) throw new HttpError(404, 'Reservation not found');
+  if (reservation.status !== 'confirmed') throw new HttpError(400, 'That reservation is not active');
+  const updated = db.update('dineReservations', ctx.params.id, {
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString(),
+    cancelledBy: 'admin',
+  });
+  // The guest loses their in-app discount, so they are told — same as when they
+  // cancel it themselves.
+  notify(
+    reservation.userId,
+    'Reservation cancelled',
+    `Your table at ${dine.settings().restaurantName} on ${reservation.date} at ${reservation.time} ` +
+      'was cancelled by the restaurant. Please call us to rebook.',
+    'booking'
+  );
+  return { reservation: dine.decorateReservation(updated) };
+});
+
+router.delete('/admin/dine-in/reservations/:id', auth.requireAdmin, (ctx) => {
+  const reservation = db.byId('dineReservations', ctx.params.id);
+  if (!reservation) throw new HttpError(404, 'Reservation not found');
+  // Deleting one that paid a bill would leave dineBills.reservationId dangling.
+  if (reservation.billId) {
+    throw new HttpError(400, 'That reservation settled a bill and is kept for the record');
+  }
+  db.remove('dineReservations', ctx.params.id);
   return { deleted: true, id: ctx.params.id };
 });
 
