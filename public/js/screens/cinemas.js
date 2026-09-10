@@ -46,35 +46,21 @@
   window.Screens.cinemas = {
     tab: 'cinemas',
     render: async function () {
-      var results = await Promise.all([
-        API.cinemas('city=' + encodeURIComponent(Store.city)),
-        API.movieProperty(),
-      ]);
-      var data = results[0];
+      var data = await API.cinemas('city=' + encodeURIComponent(Store.city));
       var all = data.cinemas;
-      var property = results[1].property;
 
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({ title: 'Cinemas' }) +
+          '<div class="search-field">' + UI.icon('search', 19) +
+            '<input type="search" placeholder="Search by name or area" data-filter autocomplete="off">' +
+          '</div>' +
           '<div class="scroll">' +
-            (property ? UI.propertyHero({
-              photos: property.photos, coverPhoto: property.coverPhoto,
-              rating: property.rating, reviewCount: property.reviewCount,
-              name: property.name, location: property.location,
-            }) : '') +
-            (property && property.tagline
-              ? '<p style="padding:12px 16px 0;margin:0;font-size:13.5px;color:var(--ink-soft)">' + UI.esc(property.tagline) + '</p>'
-              : '') +
-            '<div class="search-field">' + UI.icon('search', 19) +
-              '<input type="search" placeholder="Search by name or area" data-filter autocomplete="off">' +
-            '</div>' +
             '<p style="padding:14px 16px 4px;margin:0;font-size:13px;color:var(--muted)">' +
               UI.esc(all.length) + ' cinema' + (all.length === 1 ? '' : 's') + ' in ' + UI.esc(Store.city) +
               ' &middot; <button class="link-btn" data-action="city" style="font-size:13px">Change city</button>' +
             '</p>' +
             '<div class="stack" data-list style="margin-top:12px"></div>' +
-            (property ? UI.propertyExtras(property) : '') +
             '<div class="spacer-24"></div>' +
           '</div>' +
         '</div>'

@@ -306,24 +306,34 @@
         '</div>' +
         '<div class="img-field__controls">' +
           '<input type="file" accept="image/*" data-imgfield-input>' +
-          '<button type="button" class="btn btn--ghost btn--sm" data-imgfield-pick>Choose photo</button>' +
-          '<div class="hint">Any size or ratio \u2014 poster, square post, whatever you use. Uploaded at full quality.</div>' +
+          '<button type="button" class="btn btn--ghost btn--sm" data-imgfield-pick>Choose photo</button> ' +
+          '<button type="button" class="btn btn--line btn--sm" data-imgfield-remove>Remove</button>' +
+          '<div class="hint">' + (o.hint || 'Any size or ratio \u2014 poster, square post, whatever you use. Uploaded at full quality.') + '</div>' +
         '</div>' +
       '</div>' +
       '<input type="hidden" name="' + name + '" value="' + esc(value || '') + '">' +
       '</div>';
   }
 
-  /** Wires up an imageField() block: pick button, file read, downsize-only via canvas (never crops). */
+  /** Wires up an imageField() block: pick button, file read, downsize-only via canvas (never crops), and remove-to-blank. */
   function bindImageField(body, name) {
     var wrap = body.querySelector('[data-imgfield="' + name + '"]');
     if (!wrap) return;
     var input = wrap.querySelector('[data-imgfield-input]');
     var pickBtn = wrap.querySelector('[data-imgfield-pick]');
+    var removeBtn = wrap.querySelector('[data-imgfield-remove]');
     var preview = wrap.querySelector('.img-field__preview');
     var hidden = body.querySelector('input[type="hidden"][name="' + name + '"]');
 
     pickBtn.addEventListener('click', function () { input.click(); });
+
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function () {
+        hidden.value = '';
+        preview.classList.add('img-field__preview--empty');
+        preview.innerHTML = icon('sparkle', 22);
+      });
+    }
 
     input.addEventListener('change', function () {
       var file = input.files && input.files[0];

@@ -38,6 +38,7 @@ seed.ensureRollingShowtimes();
 seed.reseedFood(); // Always sync food catalog from catalog.js
 seed.ensureExperiences(); // Seed the Experiences tab once; admin edits persist after that
 seed.ensureHotels(); // Seed the hotel + room types once; admin pricing/photos persist after that
+seed.clearGeneratedPosterArt(); // Strip leftover auto-generated posters/backdrops; admin uploads are untouched
 generateHotelImages(); // Draw the room/hotel artwork if it is missing
 generateComboImages().catch(err => console.warn("[combo-images] Failed:", err.message));
 

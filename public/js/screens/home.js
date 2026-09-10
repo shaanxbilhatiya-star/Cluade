@@ -104,7 +104,9 @@
   window.Screens.home = {
     tab: 'home',
     render: async function () {
-      var data = await API.home(Store.city);
+      var results = await Promise.all([API.home(Store.city), API.movieProperty()]);
+      var data = results[0];
+      var property = results[1].property;
       var user = data.user;
 
       var view = UI.h(
@@ -121,6 +123,15 @@
           '</header>' +
 
           '<div class="scroll">' +
+            (property ? UI.propertyHero({
+              photos: property.photos, coverPhoto: property.coverPhoto,
+              rating: property.rating, reviewCount: property.reviewCount,
+              name: property.name, location: property.location,
+            }) : '') +
+            (property && property.tagline
+              ? '<p style="padding:10px 16px 0;margin:0;font-size:13.5px;color:var(--ink-soft)">' + UI.esc(property.tagline) + '</p>'
+              : '') +
+
             '<div class="section" style="margin-top:16px">' +
               (data.hero.length ? UI.carousel(data.hero.map(heroSlide), { autoplay: 4500 }) : '') +
             '</div>' +
@@ -144,6 +155,8 @@
             (data.offers.length
               ? '<div class="section">' + UI.sectionHead('Offers for you') + UI.carousel(data.offers.map(offerSlide), { autoplay: 6000 }) + '</div>'
               : '') +
+
+            (property ? UI.propertyExtras(property) : '') +
 
             '<div class="spacer-24"></div>' +
           '</div>' +

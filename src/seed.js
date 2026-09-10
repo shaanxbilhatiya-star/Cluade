@@ -62,8 +62,11 @@ function seedMovies() {
         cast: m.cast,
         synopsis: m.synopsis,
         trailerUrl: m.trailerUrl,
-        posterUrl: `/img/posters/${m.slug}.svg`,
-        backdropUrl: `/img/backdrops/${m.slug}.svg`,
+        // No auto-generated poster/backdrop art — demo movies ship blank so the
+        // admin's own uploads are the only images that ever appear, instead of
+        // placeholder art nobody asked for.
+        posterUrl: '',
+        backdropUrl: '',
         accentColor: m.art.colors[1],
         active: true,
         tierPrices: m.tierPrices || { sofa: 500, recliner: 500, platinum: 400, gold: 300, silver: 250 },
@@ -688,12 +691,34 @@ function ensureHotels() {
   if (added || !hotel.createdAt) db.flushNow();
 }
 
+/**
+ * One-time cleanup for installs seeded before demo movies stopped shipping
+ * placeholder poster/backdrop art: strips any auto-generated path (never
+ * anything an admin has uploaded, which lives under /uploads/) so old demo
+ * artwork disappears on the next boot with no admin action needed.
+ */
+function clearGeneratedPosterArt() {
+  const GENERATED_RE = /^\/img\/(posters|backdrops)\//;
+  let cleared = 0;
+  for (const movie of db.get('movies')) {
+    const patch = {};
+    if (GENERATED_RE.test(movie.posterUrl || '')) patch.posterUrl = '';
+    if (GENERATED_RE.test(movie.backdropUrl || '')) patch.backdropUrl = '';
+    if (Object.keys(patch).length) {
+      db.update('movies', movie.id, patch);
+      cleared += 1;
+    }
+  }
+  if (cleared) console.log(`[seed] cleared auto-generated poster/backdrop art on ${cleared} movie(s)`);
+}
+
 module.exports = {
   run,
   ensureRollingShowtimes,
   reseedFood,
   ensureExperiences,
   ensureHotels,
+  clearGeneratedPosterArt,
   markSeedRemoved,
   unmarkSeedRemoved,
   isSeedRemoved,
