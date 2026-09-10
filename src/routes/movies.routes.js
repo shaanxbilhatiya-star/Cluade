@@ -3,6 +3,7 @@ const db = require('../db');
 const auth = require('../auth');
 const { Router, HttpError } = require('../router');
 const { GENRES, LANGUAGES, CITIES } = require('../catalog');
+const movieProperty = require('../movieProperty');
 
 const router = new Router();
 
@@ -235,6 +236,26 @@ async function getReviewsFor(movie) {
 
   return { reviewList, summary };
 }
+
+/** Cinema property details (rating, cover photo, gallery, amenities, policies) for the movies hero. */
+router.get('/movies/property', () => {
+  const s = movieProperty.settings();
+  if (s.active === false) return { property: null };
+  return {
+    property: {
+      name: s.name,
+      tagline: s.tagline,
+      location: [s.area, s.city].filter(Boolean).join(', '),
+      address: s.address,
+      rating: s.rating,
+      reviewCount: s.reviewCount,
+      coverPhoto: s.coverPhoto,
+      photos: s.photos,
+      amenities: s.amenities,
+      policies: s.policies,
+    },
+  };
+});
 
 router.get('/movies', (ctx) => {
   const { status, genre, language, q, city, limit, sort } = ctx.query;

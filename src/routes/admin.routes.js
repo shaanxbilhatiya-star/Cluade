@@ -5,6 +5,7 @@ const db = require('../db');
 const auth = require('../auth');
 const hotels = require('../hotels');
 const dine = require('../dinein');
+const movieProperty = require('../movieProperty');
 const park = require('../waterpark');
 const storage = require('../storage');
 const { notify } = require('../bookings');
@@ -390,10 +391,32 @@ router.get('/admin/tmdb/movie/:id', auth.requireAdmin, async (ctx) => {
 });
 
 // ── Movies ───────────────────────────────────────────────────────────────────
+/** The cinema's own property details (name, rating, photos, amenities, policies). */
+router.get('/admin/movies/property', auth.requireAdmin, () => {
+  return { settings: movieProperty.settings() };
+});
+
+router.put('/admin/movies/property', auth.requireAdmin, (ctx) => {
+  const body = Object.assign({}, ctx.body);
+  if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('movies', 'property', body.coverPhoto);
+  const photos = resolvePhotoList(body.photos, 'movies', 'property');
+  if (photos !== undefined) body.photos = photos;
+
+  const settings = movieProperty.saveSettings(body);
+  return { settings };
+});
+
+/** Poster/backdrop arrive as data: URLs when the admin uploads their own; save them to disk. */
+function resolveMovieImages(body, slug) {
+  if (isDataUrl(body.posterUrl)) body.posterUrl = saveUploadedImage('movies', `${slug}-poster`, body.posterUrl);
+  if (isDataUrl(body.backdropUrl)) body.backdropUrl = saveUploadedImage('movies', `${slug}-backdrop`, body.backdropUrl);
+}
+
 router.post('/admin/movies', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['title', 'status']);
   const slug = slugify(ctx.body.slug || ctx.body.title);
   if (db.findOne('movies', (m) => m.slug === slug)) throw new HttpError(409, 'A movie with that name already exists');
+  resolveMovieImages(ctx.body, slug);
 
   const movie = db.insert('movies', Object.assign(
     {
@@ -423,7 +446,9 @@ router.post('/admin/movies', auth.requireAdmin, (ctx) => {
 });
 
 router.put('/admin/movies/:id', auth.requireAdmin, (ctx) => {
-  if (!db.byId('movies', ctx.params.id)) throw new HttpError(404, 'Movie not found');
+  const existing = db.byId('movies', ctx.params.id);
+  if (!existing) throw new HttpError(404, 'Movie not found');
+  resolveMovieImages(ctx.body, existing.slug);
   return { movie: db.update('movies', ctx.params.id, pick(ctx.body, MOVIE_FIELDS)) };
 });
 

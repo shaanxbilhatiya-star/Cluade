@@ -83,6 +83,7 @@
     home: function (city) { return request('GET', '/home' + (city ? '?city=' + encodeURIComponent(city) : '')); },
     search: function (q) { return request('GET', '/search?q=' + encodeURIComponent(q)); },
     movies: function (query) { return request('GET', '/movies' + (query ? '?' + query : '')); },
+    movieProperty: function () { return request('GET', '/movies/property'); },
     movie: function (id) { return request('GET', '/movies/' + id); },
     movieShowtimes: function (id, params) {
       var qs = new URLSearchParams(params || {}).toString();

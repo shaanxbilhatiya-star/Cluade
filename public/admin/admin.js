@@ -448,9 +448,65 @@
 
   // ── Movies ───────────────────────────────────────────────────────────────
   async function pageMovies(content, topActions) {
-    topActions.innerHTML = '<button class="btn" data-action="new-movie">' + icon('plus', 17) + ' Add movie</button>';
+    topActions.innerHTML =
+      '<button class="btn btn--ghost" data-action="edit-property">' + icon('building', 17) + ' Property details</button> ' +
+      '<button class="btn" data-action="new-movie">' + icon('plus', 17) + ' Add movie</button>';
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
     var data = await API.movies('');
+    var propData = await API.get('/admin/movies/property');
+    var s = propData.settings;
+
+    // ── Property details (the cinema itself — same shape as Dine-In/Water Park/Hotel) ──
+    function propertyForm() {
+      return h('<div class="form-grid">' +
+        field('Cinema name', 'name', s.name, { span: true, placeholder: 'CineFlex: Kingfisher' }) +
+        field('Tagline', 'tagline', s.tagline, { span: true, placeholder: 'The best way to watch the movies you love' }) +
+        field('Area', 'area', s.area, { placeholder: 'Nagpur Road' }) +
+        field('City', 'city', s.city || 'Mandla') +
+        field('Address', 'address', s.address, { type: 'textarea', span: true }) +
+        field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.3' }) +
+        field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+        imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
+        galleryField('Property photos', 'photos', s.photos, {
+          hint: 'Shown in the hero at the top of the Cinemas tab. Add more than one and guests can swipe through them.',
+        }) +
+        field('Amenities (comma separated)', 'amenities', (s.amenities || []).join(', '),
+          { type: 'textarea', span: true, placeholder: 'Dolby Atmos, Recliners, Free parking' }) +
+        field('Policies (one per line)', 'policies', (s.policies || []).join('\n'),
+          { type: 'textarea', span: true, placeholder: 'Outside food not allowed\nArrive 15 minutes before showtime' }) +
+        field('Status', 'active', s.active === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'Live (visible to customers)' },
+          { value: 'false', label: 'Hidden' },
+        ] }) +
+        '</div>');
+    }
+
+    function propertyPayload(body) {
+      var raw = readForm(body);
+      return {
+        name: raw.name || '', tagline: raw.tagline || '', area: raw.area || '', city: raw.city || '',
+        address: raw.address || '', rating: Number(raw.rating) || 0, reviewCount: Number(raw.reviewCount) || 0,
+        coverPhoto: raw.coverPhoto || '', photos: (raw.photos || '').split('\n').filter(Boolean),
+        amenities: csvList(raw.amenities),
+        policies: (raw.policies || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
+        active: raw.active === 'true',
+      };
+    }
+
+    function editProperty() {
+      var m = modal({ title: 'Movies property details', body: propertyForm(), confirmLabel: 'Save property' });
+      bindImageField(m.body, 'coverPhoto');
+      bindGalleryField(m.body, 'photos');
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var res = await API.put('/admin/movies/property', propertyPayload(m.body));
+          s = res.settings;
+          toast('Property details saved — live for customers now', 'success');
+          navigate('movies');
+        });
+      });
+    }
+    topActions.querySelector('[data-action="edit-property"]').addEventListener('click', editProperty);
 
     var nowPlaying  = data.movies.filter(function (m) { return m.status === 'now_playing'; });
     var comingSoon  = data.movies.filter(function (m) { return m.status === 'coming_soon'; });
@@ -572,8 +628,8 @@
           '<p style="font-size:11.5px;color:var(--muted);margin:0">Most shows in Mandla run in <strong>2D</strong>. Confirm with the theatre before selecting IMAX or 3D.</p>' +
         '</div>' +
         field('Cast', 'cast', (m.cast || []).join(', '), { span: true, hint: 'Comma separated' }) +
-        field('Poster URL', 'posterUrl', m.posterUrl || '/img/posters/_placeholder.svg', { span: true }) +
-        field('Backdrop URL', 'backdropUrl', m.backdropUrl || '/img/posters/_placeholder.svg', { span: true }) +
+        imageField('Poster', 'posterUrl', m.posterUrl, { hint: 'Upload your own — this replaces whatever TMDB filled in, and TMDB re-fetch will not overwrite it.' }) +
+        imageField('Backdrop', 'backdropUrl', m.backdropUrl, { hint: 'Upload your own — this replaces whatever TMDB filled in, and TMDB re-fetch will not overwrite it.' }) +
         field('Trailer URL', 'trailerUrl', m.trailerUrl, { span: true }) +
         field('Synopsis', 'synopsis', m.synopsis, { type: 'textarea', span: true }) +
         '<div class=\"form-row col-span\" style=\"background:#f0fdf4;border:1.5px solid #16a34a44;border-radius:10px;padding:14px 14px 10px;margin-top:4px\">' +
@@ -631,6 +687,8 @@
             navigate('movies');
           });
         });
+        bindImageField(m.body, 'posterUrl');
+        bindImageField(m.body, 'backdropUrl');
         wireTmdbSearch(m.body);
         wireFormatPills(m.body);
       }
@@ -656,6 +714,8 @@
           navigate('movies');
         });
       });
+      bindImageField(m.body, 'posterUrl');
+      bindImageField(m.body, 'backdropUrl');
       wireTmdbSearch(m.body);
       wireFormatPills(m.body);
     });
@@ -687,6 +747,23 @@
         }
         hiddenInput.value = selected.join(', ');
       });
+    }
+
+    /** Updates an imageField()'s hidden input AND its visible preview, since set()/setR() alone leave the old thumbnail showing. */
+    function setImageField(body, name, url) {
+      var hidden = body.querySelector('input[type="hidden"][name="' + name + '"]');
+      if (hidden) hidden.value = url || '';
+      var wrap = body.querySelector('[data-imgfield="' + name + '"]');
+      if (!wrap) return;
+      var preview = wrap.querySelector('.img-field__preview');
+      if (!preview) return;
+      if (url) {
+        preview.classList.remove('img-field__preview--empty');
+        preview.innerHTML = '<img src="' + esc(url) + '" alt="">';
+      } else {
+        preview.classList.add('img-field__preview--empty');
+        preview.innerHTML = icon('sparkle', 22);
+      }
     }
 
     function wireTmdbSearch(body) {
@@ -769,8 +846,8 @@
           set('genres', mv.genres.join(', '));
           set('languages', mv.languages.join(', '));
           set('cast', mv.cast.join(', '));
-          set('posterUrl', mv.posterUrl);
-          set('backdropUrl', mv.backdropUrl);
+          setImageField(body, 'posterUrl', mv.posterUrl);
+          setImageField(body, 'backdropUrl', mv.backdropUrl);
           set('trailerUrl', mv.trailerUrl);
           set('synopsis', mv.synopsis);
           set('tmdbId', mv.tmdbId);
@@ -803,8 +880,8 @@
             setR('genres', mv.genres.join(', '));
             setR('languages', mv.languages.join(', '));
             setR('cast', mv.cast.join(', '));
-            setR('posterUrl', mv.posterUrl);
-            setR('backdropUrl', mv.backdropUrl);
+            setImageField(body, 'posterUrl', mv.posterUrl);
+            setImageField(body, 'backdropUrl', mv.backdropUrl);
             setR('trailerUrl', mv.trailerUrl);
             setR('synopsis', mv.synopsis);
             setR('tmdbId', mv.tmdbId);
