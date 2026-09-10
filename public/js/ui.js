@@ -454,6 +454,15 @@
    * that has its own admin-managed Property Details (Waterpark, Dine-In,
    * Hotel), so all three look and behave the same way.
    */
+  /**
+   * Generic property hero: a photo carousel with a name/location text overlay,
+   * a rating pill and a photo count badge — the same shape as the hotel's own
+   * hero. Used by any tab that has its own admin-managed Property Details
+   * (Waterpark, Dine-In, Hotel, Cinemas), so all of them look and behave the
+   * same way.
+   *
+   * p: { photos, coverPhoto, rating, reviewCount, name, location }
+   */
   function propertyHero(p) {
     var photos = (p.photos || []).filter(Boolean);
     if (p.coverPhoto) photos = [p.coverPhoto].concat(photos.filter(function (x) { return x !== p.coverPhoto; }));
@@ -470,6 +479,12 @@
     return '<div class="hotel-hero">' +
       media +
       '<div class="hotel-hero__veil"></div>' +
+      (p.name || p.location
+        ? '<div class="hotel-hero__text">' +
+          (p.name ? '<h2>' + esc(p.name) + '</h2>' : '') +
+          (p.location ? '<p>' + icon('map-pin', 14) + esc(p.location) + '</p>' : '') +
+        '</div>'
+        : '') +
       (p.rating
         ? '<span class="hotel-hero__rating">' + icon('star', 13) + Number(p.rating).toFixed(1) +
           (p.reviewCount ? '<small>' + p.reviewCount + '</small>' : '') + '</span>'

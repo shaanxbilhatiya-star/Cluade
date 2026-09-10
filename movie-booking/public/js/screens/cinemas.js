@@ -103,8 +103,26 @@
           UI.appbar({ title: info.name, back: true, alignLeft: true, logo: false }) +
           '<div class="scroll">' +
             (info.coverPhoto
-              ? '<div style="padding:0 16px"><img src="' + UI.esc(info.coverPhoto) + '" alt="" ' +
-                'style="width:100%;height:160px;object-fit:cover;border-radius:14px" loading="lazy"></div>'
+              ? '<div style="padding:0 16px">' +
+                  '<div style="position:relative;border-radius:14px;overflow:hidden">' +
+                    '<img src="' + UI.esc(info.coverPhoto) + '" alt="" ' +
+                      'style="width:100%;height:160px;object-fit:cover;display:block" loading="lazy">' +
+                    '<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,0) 55%)"></div>' +
+                    (info.rating
+                      ? '<span style="position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:4px;' +
+                        'background:#16a34a;color:#fff;font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:999px">' +
+                        UI.icon('star', 12) + ' ' + UI.esc(info.rating) +
+                        (info.reviewCount ? ' · ' + UI.esc(info.reviewCount) : '') + '</span>'
+                      : '') +
+                    '<div style="position:absolute;left:14px;right:14px;bottom:10px;color:#fff">' +
+                      '<h2 style="margin:0;font-size:18px;font-weight:800">' + UI.esc(info.name) + '</h2>' +
+                      (info.area || info.city
+                        ? '<p style="margin:3px 0 0;font-size:13px;display:flex;align-items:center;gap:5px;opacity:.92">' +
+                          UI.icon('map-pin', 13) + UI.esc([info.area, info.city].filter(Boolean).join(', ')) + '</p>'
+                        : '') +
+                    '</div>' +
+                  '</div>' +
+                '</div>'
               : '') +
             '<div style="padding:0 16px 4px">' +
               '<div style="display:flex;align-items:flex-start;gap:12px">' +

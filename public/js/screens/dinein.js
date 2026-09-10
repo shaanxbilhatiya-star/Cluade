@@ -110,7 +110,10 @@
           UI.appbar({ title: 'Dine-In' }) +
           '<div class="scroll">' +
 
-            UI.propertyHero(s) +
+            UI.propertyHero(Object.assign({}, s, {
+              name: s.restaurantName,
+              location: s.address,
+            })) +
 
             '<div class="dine-hero">' +
               '<h2 class="dine-hero__name">' + UI.esc(s.restaurantName) + '</h2>' +

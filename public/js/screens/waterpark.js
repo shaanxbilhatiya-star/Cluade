@@ -146,7 +146,10 @@
           UI.appbar({ title: s.headline || 'Water Park' }) +
           '<div class="scroll">' +
 
-            UI.propertyHero(s) +
+            UI.propertyHero(Object.assign({}, s, {
+              name: s.headline || s.parkName,
+              location: [s.parkName, s.address].filter(Boolean).join(' \u00B7 '),
+            })) +
 
             '<div class="wp-hero">' +
               (s.subline ? '<span class="wp-hero__kicker">' + UI.esc(s.subline) + '</span>' : '') +
