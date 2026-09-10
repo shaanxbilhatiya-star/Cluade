@@ -235,6 +235,101 @@ function resolveDineOffer(offers, code, { billAmount, discountPercent, maxDiscou
   return preview.offerDiscount > 0 ? offer : null;
 }
 
+/**
+ * Water park day out.
+ *
+ * A package is already discounted against its own value breakup, so there is
+ * no percentage to apply here: `baseAmount` is what the guest pays for the
+ * bundle (or for their per-person selection) and `actualValue` is what the
+ * same items cost individually. The difference is the saving the poster
+ * advertises, and because it arrives computed from qty x rate it can never
+ * disagree with the line items it is printed beside.
+ *
+ * The returned object keeps the shared bill keys (tickets, food,
+ * convenienceFee, gst, discount, total) so the generic bill renderers and the
+ * admin tables keep working unchanged: the day out is `tickets`, the add-ons
+ * are `food`.
+ *
+ * @param {object} input
+ * @param {number} input.baseAmount    package price x qty, or the per-person total
+ * @param {number} input.actualValue   the same items at counter rates
+ * @param {number} input.addOnAmount   fish spa, bull ride, photography, ...
+ * @param {number} input.convenienceFeePercent
+ * @param {number} input.gstPercent
+ * @param {object|null} input.offer    coupon, applied after the bundle saving
+ */
+function computeWaterparkTotals({
+  baseAmount = 0,
+  actualValue = 0,
+  addOnAmount = 0,
+  convenienceFeePercent = 0,
+  gstPercent = 0,
+  offer = null,
+} = {}) {
+  const base = Math.max(0, round(Number(baseAmount) || 0));
+  const addOns = Math.max(0, round(Number(addOnAmount) || 0));
+  const value = Math.max(base, round(Number(actualValue) || 0));
+  const subtotal = base + addOns;
+
+  /** What the bundle already saved, before any coupon. */
+  const packageSaving = Math.max(0, value - base);
+
+  // A coupon applies to what is actually payable, so a package discount and a
+  // coupon can never combine to more than the order itself.
+  let offerDiscount = 0;
+  if (offer) {
+    if (subtotal >= (offer.minAmount || 0)) {
+      offerDiscount =
+        offer.discountType === 'percent'
+          ? Math.min(round((subtotal * offer.discountValue) / 100), offer.maxDiscount || Infinity)
+          : Math.min(offer.discountValue, offer.maxDiscount || Infinity);
+      offerDiscount = Math.min(offerDiscount, subtotal);
+    }
+  }
+
+  const payableBeforeFees = Math.max(0, subtotal - offerDiscount);
+  const convenienceFee = round((payableBeforeFees * Math.max(0, Number(convenienceFeePercent) || 0)) / 100);
+  const gst = round(((payableBeforeFees + convenienceFee) * Math.max(0, Number(gstPercent) || 0)) / 100);
+  const total = Math.max(0, round(payableBeforeFees + convenienceFee + gst));
+
+  return {
+    baseAmount: base,
+    addOnAmount: addOns,
+    actualValue: value,
+    subtotal,
+    packageSaving,
+    offerDiscount,
+    /** Shared key: what came off the payable amount at checkout. */
+    discount: offerDiscount,
+    /** What the guest saved in total against walking up and buying it all. */
+    totalSaving: packageSaving + offerDiscount,
+    convenienceFee,
+    gst,
+    total,
+    offerCode: offer && offerDiscount > 0 ? offer.code : null,
+    /** Effective saving against the counter price, for the "you save" line. */
+    savingPercent: value + addOns > 0 ? Math.round(((packageSaving + offerDiscount) / (value + addOns)) * 100) : 0,
+
+    // Shared bill shape: the day out is the ticket, the add-ons are the extras.
+    tickets: base,
+    food: addOns,
+  };
+}
+
+/** Offer codes usable on a water park order: appliesTo 'waterpark' (or 'all'). */
+function resolveWaterparkOffer(offers, code, { baseAmount, addOnAmount, actualValue } = {}) {
+  if (!code) return null;
+  const offer = offers.find(
+    (o) =>
+      o.code.toUpperCase() === String(code).toUpperCase() &&
+      o.active !== false &&
+      (o.appliesTo === 'waterpark' || o.appliesTo === 'all')
+  );
+  if (!offer) return null;
+  const preview = computeWaterparkTotals({ baseAmount, addOnAmount, actualValue, offer });
+  return preview.offerDiscount > 0 ? offer : null;
+}
+
 module.exports = {
   computeTotals,
   resolveOffer,
@@ -242,6 +337,8 @@ module.exports = {
   resolveHotelOffer,
   computeDineTotals,
   resolveDineOffer,
+  computeWaterparkTotals,
+  resolveWaterparkOffer,
   CONVENIENCE_FEE_PER_SEAT,
   GST_RATE,
   CURRENCY,

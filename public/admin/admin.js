@@ -56,7 +56,7 @@
     host.hidden = false;
     host.innerHTML =
       '<div class="modal-host__backdrop" data-close></div>' +
-      '<div class="modal" role="dialog" aria-modal="true">' +
+      '<div class="modal' + (options.wide ? ' modal--wide' : '') + '" role="dialog" aria-modal="true">' +
         '<div class="modal__head"><h2 class="modal__title">' + esc(options.title) + '</h2>' +
           '<button class="btn btn--line btn--sm" data-close>Close</button></div>' +
         '<div class="modal__body"></div>' +
@@ -111,6 +111,7 @@
     { id: 'verify', label: 'Verify Ticket', icon: 'qr' },
     { id: 'hotel', label: 'Hotel & Rooms', icon: 'bed' },
     { id: 'dinein', label: 'Dine-In', icon: 'dine' },
+    { id: 'waterpark', label: 'Water Park', icon: 'waves' },
     { id: 'food', label: 'Food & Drinks', icon: 'food' },
     { id: 'offers', label: 'Offers', icon: 'tag' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle' },
@@ -169,6 +170,14 @@
         (stats.dine
           ? card('Dine-In reservations', String(stats.dine.reservations),
               stats.dine.reservedBills + ' billed with a booking · ' + stats.dine.walkinBills + ' walk-in')
+          : '') +
+        (stats.park
+          ? card('Water park revenue', money(stats.park.revenue),
+              stats.park.bookings + ' pass(es) · ' + money(stats.park.savingGiven) + ' saved for guests')
+          : '') +
+        (stats.park
+          ? card('Water park guests', String(stats.park.guests),
+              stats.park.packageBookings + ' on a package · ' + stats.park.individualBookings + ' per-person')
           : '') +
       '</div>' +
 
@@ -1550,11 +1559,12 @@
         field('Subtitle', 'subtitle', o.subtitle, { span: true }) +
         field('Code', 'code', o.code, { placeholder: 'CINEWED' }) +
         field('Applies to', 'appliesTo', o.appliesTo || 'all', { options: [
-          { value: 'all', label: 'Everything (tickets, food, stays, dine-in)' },
+          { value: 'all', label: 'Everything (tickets, food, stays, dine-in, water park)' },
           { value: 'tickets', label: 'Tickets only' },
           { value: 'food', label: 'Food only' },
           { value: 'hotel', label: 'Hotel stays only' },
           { value: 'dinein', label: 'Dine-In bills only' },
+          { value: 'waterpark', label: 'Water park passes only' },
         ] }) +
         field('Discount type', 'discountType', o.discountType || 'percent', { options: [
           { value: 'percent', label: 'Percentage' }, { value: 'flat', label: 'Flat amount' },
@@ -1996,6 +2006,1086 @@
           await API.del('/admin/dine-in/reservations/' + del.getAttribute('data-del'));
           toast('Reservation deleted', 'success');
           navigate('dinein');
+        } catch (err) { toast(err.message, 'error'); }
+      }
+    });
+  }
+
+  // ── Water park ───────────────────────────────────────────────────────────
+
+  /* The Family Fun Day console.
+
+     Everything on this page is editable, and there is exactly one rate card
+     behind all of it. A package does not store what it is worth — it stores
+     quantities against rate-card lines, and the value breakup, the total actual
+     value and the "you save" figure are all computed. So changing the adult
+     entry rate here moves both packages, the per-person builder and every
+     future quote at the same time, and the poster's own arithmetic can never
+     drift from its line items.                                                */
+  async function pageWaterpark(content, topActions) {
+    topActions.innerHTML =
+      '<button class="btn btn--ghost" data-action="reset-notices">' + icon('refresh', 17) + ' Reset notices</button> ' +
+      '<button class="btn btn--line" data-action="edit-settings">' + icon('edit', 17) + ' Park settings</button> ' +
+      '<button class="btn" data-action="new-booking">' + icon('plus', 17) + ' Sell a pass</button>';
+
+    content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
+    var data = await API.get('/admin/waterpark');
+    var s = data.settings;
+    var st = data.stats;
+    var items = data.items;
+    var sellable = items.filter(function (i) { return i.active !== false; });
+    var addOns = data.addOns;
+    var liveAddOns = addOns.filter(function (a) { return a.active !== false; });
+
+    var UNIT_LABELS = {
+      adult: 'per adult',
+      child: 'per child',
+      guest: 'per guest',
+      booking: 'per booking',
+    };
+
+    function unitLabel(unit) { return UNIT_LABELS[unit] || 'per guest'; }
+    function pct(n) { return (Number(n) || 0) + '%'; }
+    function itemOf(id) {
+      return items.filter(function (i) { return i.id === id; })[0] || null;
+    }
+
+    // ── Package cards, with the full value breakup ──
+    function packCard(p) {
+      var cls = 'wp-pack' + (p.active === false ? ' wp-pack--off' : '') +
+        (p.overpriced || p.brokenLines ? ' wp-pack--warn' : '');
+
+      var rows = p.lines.map(function (l) {
+        return '<tr>' +
+          '<td' + (l.missing ? ' class="wp-break__missing"' : '') + '>' + esc(l.label) +
+            (l.entry ? ' <span class="pill pill--grey">gate</span>' : '') + '</td>' +
+          '<td class="num">' + l.qty + '</td>' +
+          '<td class="num">' + money(l.rate) + '</td>' +
+          '<td class="num">' + money(l.value) + '</td></tr>';
+      }).join('');
+
+      return '<div class="' + cls + '">' +
+        '<div class="wp-pack__head">' +
+          '<div class="wp-pack__code">' + esc(p.code || '?') + '</div>' +
+          '<div class="wp-pack__id">' +
+            '<div class="wp-pack__name">' + esc(p.name) + '</div>' +
+            '<div class="wp-pack__sub">' + esc(p.composition || '') +
+              (p.composition ? ' \u00B7 ' : '') + p.guests + ' guest(s)' +
+              (p.sold ? ' \u00B7 ' + p.sold + ' sold' : '') + '</div>' +
+          '</div>' +
+          (p.active === false
+            ? '<span class="pill pill--red">Off sale</span>'
+            : '<span class="pill pill--green">On sale</span>') +
+        '</div>' +
+
+        '<table class="wp-break">' +
+          '<thead><tr><th>Particulars</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Value</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+          '<tfoot><tr><td colspan="3">Total actual value</td>' +
+            '<td class="num">' + money(p.actualValue) + '</td></tr></tfoot>' +
+        '</table>' +
+
+        '<div class="wp-prices">' +
+          '<div class="wp-price"><div class="wp-price__label">Package price</div>' +
+            '<div class="wp-price__value">' + money(p.price) + '</div></div>' +
+          (p.overpriced
+            ? '<div class="wp-price wp-price--loss"><div class="wp-price__label">Costs more</div>' +
+              '<div class="wp-price__value">+' + money(p.price - p.actualValue) + '</div></div>'
+            : '<div class="wp-price wp-price--save"><div class="wp-price__label">You save</div>' +
+              '<div class="wp-price__value">' + money(p.saving) + '</div></div>') +
+        '</div>' +
+
+        '<div class="wp-pack__foot">' +
+          '<div class="hint">' +
+            (p.brokenLines
+              ? '<strong style="color:var(--danger)">' + p.brokenLines + ' line(s) point at a deleted rate \u2014 fix before selling.</strong>'
+              : p.overpriced
+                ? '<strong style="color:var(--danger)">Priced above its own value \u2014 guests save nothing.</strong>'
+                : pct(p.savingPercent) + ' off the counter price') +
+          '</div>' +
+          '<button class="btn btn--line btn--sm" data-pack-edit="' + esc(p.id) + '">Edit</button> ' +
+          '<button class="btn btn--line btn--sm" data-pack-del="' + esc(p.id) + '">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // ── Today's gate load ──
+    function slotCard(slot) {
+      var used = s.capacityPerSlot - slot.seatsLeft;
+      var fill = s.capacityPerSlot > 0 ? Math.min(100, Math.round((used / s.capacityPerSlot) * 100)) : 0;
+      var cls = 'wp-slot' + (slot.full ? ' wp-slot--full' : fill >= 70 ? ' wp-slot--busy' : '');
+      return '<div class="' + cls + '">' +
+        '<div class="wp-slot__time">' + esc(slot.label) + '</div>' +
+        '<div class="wp-slot__meta">' + (slot.full ? 'Full' : slot.seatsLeft + ' left') +
+          ' \u00B7 ' + used + '/' + s.capacityPerSlot + '</div>' +
+        '<div class="wp-slot__bar"><div class="wp-slot__fill" style="width:' + fill + '%"></div></div>' +
+      '</div>';
+    }
+
+    function noticeBlock(label, text, when) {
+      return '<div style="margin-bottom:16px">' +
+        '<div class="label">' + esc(label) + '</div>' +
+        '<div class="hint" style="margin:0 0 6px">' + esc(when) + '</div>' +
+        '<div class="wp-notice">' +
+          (text ? esc(text) : '<span class="hint">Empty \u2014 this banner is hidden from customers.</span>') +
+        '</div></div>';
+    }
+
+    // ── Page ──
+    var html =
+      '<div class="cards">' +
+        card('Pass revenue', money(st.revenue), st.bookings + ' pass(es) sold \u00B7 ' + st.guests + ' guest(s)') +
+        card('Today at the gate', String(st.todayGuests) + ' guests', money(st.todayRevenue) + ' taken today') +
+        card('Packages vs per-person', st.packageBookings + ' / ' + st.individualBookings,
+          st.counterSales + ' sold at the counter') +
+        card('Savings given', money(st.savingGiven), 'what the bundle pricing cost against counter rates') +
+        card('Add-on revenue', money(st.addOnRevenue), 'fish spa, rides, photography') +
+        card('Upcoming visits', String(st.upcoming), st.checkedIn + ' checked in \u00B7 ' + st.cancelled + ' cancelled') +
+      '</div>' +
+
+      '<div class="panel"><div class="panel__head">' +
+        '<h2 class="panel__title">' + esc(s.parkName) + ' \u2014 ' + esc(s.headline) + '</h2>' +
+        (s.active === false
+          ? '<span class="pill pill--red">Tab hidden</span>'
+          : '<span class="pill pill--green">Live</span>') +
+      '</div><div class="panel__body">' +
+        '<div class="grid-2">' +
+          '<div>' +
+            '<div class="label">How it is sold</div>' +
+            '<div style="font-size:13.5px;line-height:1.6">Guests either take a <strong>package</strong> at a flat ' +
+              'price, or ' + (s.allowIndividual === false ? '<strong>(per-person booking is switched off)</strong>' :
+              'build the day <strong>person by person</strong> at counter rates') + '. Both price from the one rate ' +
+              'card below, so a package is only ever a deal because its parts really do cost more \u2014 that ' +
+              'difference is the "you save" figure, and it is computed, never typed.</div>' +
+            '<div class="hint" style="margin-top:10px">' + esc(s.validityNote || '') + '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="label">Park</div>' +
+            '<div>' + esc(s.address || '\u2014') + '</div>' +
+            '<div class="cell-sub">' + esc(s.phone || '\u2014') + '</div>' +
+            '<div class="cell-sub">Open ' + time12(s.openTime) + '\u2013' + time12(s.closeTime) +
+              ' \u00B7 entry every ' + s.slotMinutes + ' min \u00B7 ' + s.capacityPerSlot + ' guests per slot</div>' +
+            '<div class="cell-sub">Bookable ' + s.advanceDays + ' day(s) ahead \u00B7 max ' +
+              s.maxGuestsPerBooking + ' guests per booking</div>' +
+            '<div class="cell-sub">' +
+              (s.convenienceFeePercent || s.gstPercent
+                ? 'Booking fee ' + pct(s.convenienceFeePercent) + ' \u00B7 tax ' + pct(s.gstPercent)
+                : 'No booking fee or tax added \u2014 prices are all inclusive') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top:16px"><div class="label">What\'s included</div><div class="wp-incl">' +
+          ((s.inclusions || []).length
+            ? (s.inclusions || []).map(function (i) { return '<span class="pill">' + esc(i) + '</span>'; }).join('')
+            : '<span class="hint">None listed</span>') +
+        '</div></div>' +
+      '</div></div>' +
+
+      '<div class="panel"><div class="panel__head">' +
+        '<h2 class="panel__title">' + data.packages.length + ' package(s)</h2>' +
+        '<button class="btn btn--sm" data-action="new-pack">' + icon('plus', 16) + ' Add package</button>' +
+      '</div><div class="panel__body">' +
+        (data.packages.length
+          ? '<div class="wp-packs">' + data.packages.map(packCard).join('') + '</div>'
+          : '<div class="empty-state">No packages yet. Add one to start selling bundles.</div>') +
+      '</div></div>' +
+
+      '<div class="panel"><div class="panel__head">' +
+        '<h2 class="panel__title">Rate card</h2>' +
+        '<span class="hint" style="flex:1;margin:0 0 0 12px">Every package line and every per-person booking is priced from here</span>' +
+        '<button class="btn btn--sm" data-action="new-item">' + icon('plus', 16) + ' Add line</button>' +
+      '</div><div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Particulars</th><th>Applies</th><th class="num">Rate</th><th>Gate entry</th>' +
+          '<th>Used by</th><th class="num">Sold</th><th class="num">Revenue</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + (items.length ? items.map(function (i) {
+          return '<tr>' +
+            '<td class="cell-strong">' + esc(i.label) + '</td>' +
+            '<td>' + esc(unitLabel(i.unit)) + '</td>' +
+            '<td class="num cell-strong">' + money(i.rate) + '</td>' +
+            '<td>' + (i.entry ? '<span class="pill pill--purple">Admits a guest</span>' : '<span class="hint">extra</span>') + '</td>' +
+            '<td>' + (i.usedBy.length
+              ? i.usedBy.map(function (n) { return '<span class="pill pill--grey">' + esc(n) + '</span>'; }).join(' ')
+              : '<span class="hint">per-person only</span>') + '</td>' +
+            '<td class="num">' + i.sales.qty + '</td>' +
+            '<td class="num">' + money(i.sales.revenue) + '</td>' +
+            '<td>' + (i.active === false ? '<span class="pill pill--red">Off</span>' : '<span class="pill pill--green">On</span>') + '</td>' +
+            '<td style="white-space:nowrap">' +
+              '<button class="btn btn--line btn--sm" data-item-edit="' + esc(i.id) + '">Edit</button> ' +
+              '<button class="btn btn--line btn--sm" data-item-del="' + esc(i.id) + '">Delete</button></td>' +
+          '</tr>';
+        }).join('') : '<tr><td colspan="9" class="empty-state">The rate card is empty.</td></tr>') +
+      '</tbody></table></div></div></div>' +
+
+      '<div class="panel"><div class="panel__head">' +
+        '<h2 class="panel__title">Add-ons</h2>' +
+        '<span class="hint" style="flex:1;margin:0 0 0 12px">Sold on top of a package or a per-person day</span>' +
+        '<button class="btn btn--sm" data-action="new-addon">' + icon('plus', 16) + ' Add add-on</button>' +
+      '</div><div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Add-on</th><th>Variant</th><th class="num">Price</th>' +
+          '<th class="num">Sold</th><th class="num">Revenue</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + (addOns.length ? addOns.map(function (a) {
+          return '<tr>' +
+            '<td class="cell-strong">' + esc(a.label) + '</td>' +
+            '<td>' + (a.note ? esc(a.note) : '<span class="hint">\u2014</span>') + '</td>' +
+            '<td class="num cell-strong">' + money(a.price) + '</td>' +
+            '<td class="num">' + a.sales.qty + '</td>' +
+            '<td class="num">' + money(a.sales.revenue) + '</td>' +
+            '<td>' + (a.active === false ? '<span class="pill pill--red">Off</span>' : '<span class="pill pill--green">On</span>') + '</td>' +
+            '<td style="white-space:nowrap">' +
+              '<button class="btn btn--line btn--sm" data-addon-edit="' + esc(a.id) + '">Edit</button> ' +
+              '<button class="btn btn--line btn--sm" data-addon-del="' + esc(a.id) + '">Delete</button></td>' +
+          '</tr>';
+        }).join('') : '<tr><td colspan="7" class="empty-state">No add-ons yet.</td></tr>') +
+      '</tbody></table></div></div></div>' +
+
+      '<div class="grid-2">' +
+        '<div class="panel" style="margin:0">' +
+          '<div class="panel__head"><h2 class="panel__title">Gate load today</h2>' +
+            '<span class="hint">' + esc(data.today) + '</span></div>' +
+          '<div class="panel__body">' +
+            (data.todaySlots.length
+              ? '<div class="wp-slots">' + data.todaySlots.map(slotCard).join('') + '</div>'
+              : '<div class="empty-state">No entry slots left today.</div>') +
+          '</div>' +
+        '</div>' +
+        '<div class="panel" style="margin:0">' +
+          '<div class="panel__head"><h2 class="panel__title">Customer notices</h2>' +
+            '<span class="hint">tokens filled in</span></div>' +
+          '<div class="panel__body">' +
+            noticeBlock('Package selected', data.previews.package, 'Shown against a package before paying.') +
+            noticeBlock('Per-person booking', data.previews.individual, 'The "a package is cheaper" nudge.') +
+            noticeBlock('On the pass', data.previews.paid, 'Printed on the confirmed pass.') +
+            noticeBlock('Slot full', data.previews.soldOut, 'Shown when the chosen entry slot has filled.') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel"><div class="panel__head">' +
+        '<h2 class="panel__title">' + data.bookings.length + ' pass(es)</h2>' +
+        '<div class="toolbar" style="margin-left:auto">' +
+          '<input class="input" data-filter-text placeholder="Search reference, guest or phone">' +
+          '<select class="input" data-filter-status>' +
+            '<option value="">All statuses</option>' +
+            '<option value="confirmed">Confirmed</option>' +
+            '<option value="cancelled">Cancelled</option>' +
+            '<option value="checkedin">Checked in</option>' +
+            '<option value="pending-gate">Not yet arrived</option>' +
+          '</select>' +
+        '</div>' +
+      '</div><div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
+        '<thead><tr><th>Reference</th><th>Guest</th><th>Visit</th><th>What they bought</th>' +
+          '<th class="num">Guests</th><th class="num">Paid</th><th class="num">Saved</th>' +
+          '<th>Payment</th><th>Gate</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody data-rows>' + (data.bookings.length ? data.bookings.map(function (b) {
+          var bought = b.mode === 'package'
+            ? '<span class="pill pill--purple">' + esc(b.packageCode || '?') + '</span> ' + esc(b.packageName || '') +
+              (b.packageQty > 1 ? ' \u00D7' + b.packageQty : '')
+            : '<span class="pill">Per person</span>';
+          var extras = (b.addOns || []).length
+            ? '<div class="cell-sub">+ ' + (b.addOns || []).map(function (a) {
+                return esc(a.label) + (a.note ? ' (' + esc(a.note) + ')' : '') + ' \u00D7' + a.qty;
+              }).join(', ') + '</div>'
+            : '';
+          var searchable = [b.reference, b.customerName, b.guest && b.guest.name, b.guest && b.guest.phone]
+            .filter(Boolean).join(' ').toLowerCase();
+          var gateState = b.checkedInAt ? 'checkedin' : 'pending-gate';
+
+          return '<tr data-search="' + esc(searchable) + '" data-status="' + esc(b.status) + '" data-gate="' + gateState + '">' +
+            '<td class="mono cell-strong">' + esc(b.reference) + '</td>' +
+            '<td><div class="cell-strong">' + esc((b.guest && b.guest.name) || b.customerName) + '</div>' +
+              '<div class="cell-sub">' + esc((b.guest && b.guest.phone) || b.customerName) +
+              (b.source === 'counter' ? ' \u00B7 counter' : '') + '</div></td>' +
+            '<td>' + esc(b.dateLabel) + '<div class="cell-sub">' + esc(b.timeLabel) + '</div></td>' +
+            '<td>' + bought + extras + '</td>' +
+            '<td class="num">' + ((b.guests && b.guests.total) || 0) + '</td>' +
+            '<td class="num cell-strong">' + money(b.amounts && b.amounts.total) + '</td>' +
+            '<td class="num">' + (b.amounts && b.amounts.totalSaving ? money(b.amounts.totalSaving) : '\u2014') + '</td>' +
+            '<td>' + esc((b.payment && b.payment.methodLabel) || '\u2014') +
+              (b.payment && b.payment.status === 'pending' ? ' <span class="pill">due</span>' : '') + '</td>' +
+            '<td>' + (b.checkedInAt
+              ? '<span class="pill pill--green">In at ' + esc(time12(new Date(b.checkedInAt).toTimeString().slice(0, 5))) + '</span>'
+              : b.status === 'confirmed' ? '<span class="pill pill--grey">Not arrived</span>' : '\u2014') + '</td>' +
+            '<td>' + (b.status === 'confirmed'
+              ? '<span class="pill pill--green">Confirmed</span>'
+              : '<span class="pill pill--red">Cancelled</span>') + '</td>' +
+            '<td style="white-space:nowrap">' +
+              (b.status === 'confirmed' && !b.checkedInAt
+                ? '<button class="btn btn--ghost btn--sm" data-checkin="' + esc(b.id) + '">Check in</button> '
+                : '') +
+              (b.checkedInAt
+                ? '<button class="btn btn--line btn--sm" data-undo-checkin="' + esc(b.id) + '">Undo</button> '
+                : '') +
+              (b.status === 'confirmed'
+                ? '<button class="btn btn--line btn--sm" data-cancel="' + esc(b.id) + '">Cancel</button> '
+                : '') +
+              '<button class="btn btn--line btn--sm" data-del="' + esc(b.id) + '">Delete</button></td>' +
+          '</tr>';
+        }).join('') : '<tr><td colspan="11" class="empty-state">No passes sold yet.</td></tr>') +
+      '</tbody></table></div></div></div>';
+
+    /* Rendered into a wrapper we own, so the delegated listener below is thrown
+       away with the markup instead of stacking up on every visit to the tab. */
+    content.innerHTML = '';
+    var view = h('<div>' + html + '</div>');
+    content.appendChild(view);
+
+    // ── Ledger filtering ──
+    var textFilter = view.querySelector('[data-filter-text]');
+    var statusFilter = view.querySelector('[data-filter-status]');
+    function applyFilter() {
+      var q = (textFilter.value || '').trim().toLowerCase();
+      var want = statusFilter.value;
+      view.querySelectorAll('[data-rows] tr[data-search]').forEach(function (tr) {
+        var okText = !q || tr.getAttribute('data-search').indexOf(q) !== -1;
+        var okStatus = !want ||
+          (want === 'checkedin' || want === 'pending-gate'
+            ? tr.getAttribute('data-gate') === want && tr.getAttribute('data-status') === 'confirmed'
+            : tr.getAttribute('data-status') === want);
+        tr.hidden = !(okText && okStatus);
+      });
+    }
+    if (textFilter) textFilter.addEventListener('input', applyFilter);
+    if (statusFilter) statusFilter.addEventListener('change', applyFilter);
+
+    // ── A reusable quantity editor over the rate card ──
+    /**
+     * One row per sellable rate-card line with an editable quantity. This is
+     * the same control the package editor and the per-person counter booking
+     * use, which is why "everything editable" means the same thing in both.
+     */
+    function qtyEditor(list, quantities, opts) {
+      var o = opts || {};
+      return '<div class="wp-lines">' + list.map(function (i) {
+        var qty = quantities[i.id] || 0;
+        var price = i.rate !== undefined ? i.rate : i.price;
+        return '<div class="wp-line">' +
+          '<div class="wp-line__text">' +
+            '<div class="wp-line__label">' + esc(i.label) + (i.note ? ' <span class="hint">(' + esc(i.note) + ')</span>' : '') + '</div>' +
+            '<div class="wp-line__meta">' + money(price) + ' ' +
+              (i.rate !== undefined ? esc(unitLabel(i.unit)) : 'each') +
+              (i.entry ? ' \u00B7 admits a guest' : '') + '</div>' +
+          '</div>' +
+          '<div class="wp-line__qty"><input class="input" type="number" min="0" max="99" ' +
+            'data-' + (o.attr || 'qty') + '="' + esc(i.id) + '" data-rate="' + price + '" ' +
+            'data-unit="' + esc(i.unit || '') + '" value="' + qty + '"></div>' +
+          '<div class="wp-line__value' + (qty ? '' : ' wp-line__value--zero') + '" ' +
+            'data-value-for="' + esc(i.id) + '">' + (qty ? money(price * qty) : '\u2014') + '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    /** Reads a quantity editor back out as [{itemId|id, qty}]. */
+    function readQty(body, attr, key) {
+      var out = [];
+      body.querySelectorAll('[data-' + attr + ']').forEach(function (inp) {
+        var qty = Math.max(0, Math.round(Number(inp.value) || 0));
+        if (qty > 0) {
+          var row = { qty: qty };
+          row[key] = inp.getAttribute('data-' + attr);
+          out.push(row);
+        }
+      });
+      return out;
+    }
+
+    /** Repaints the per-line value column as quantities change. */
+    function refreshValues(body, attr) {
+      body.querySelectorAll('[data-' + attr + ']').forEach(function (inp) {
+        var rate = Number(inp.getAttribute('data-rate')) || 0;
+        var qty = Math.max(0, Number(inp.value) || 0);
+        var cell = body.querySelector('[data-value-for="' + inp.getAttribute('data-' + attr) + '"]');
+        if (!cell) return;
+        cell.textContent = qty ? money(rate * qty) : '\u2014';
+        cell.className = 'wp-line__value' + (qty ? '' : ' wp-line__value--zero');
+      });
+    }
+
+    /** Fills quantities from a head count, using each line's "applies to". */
+    function autofill(body, attr, adults, children) {
+      body.querySelectorAll('[data-' + attr + ']').forEach(function (inp) {
+        var unit = inp.getAttribute('data-unit');
+        var qty = unit === 'adult' ? adults
+          : unit === 'child' ? children
+          : unit === 'booking' ? (adults + children > 0 ? 1 : 0)
+          : adults + children;
+        inp.value = qty;
+      });
+      refreshValues(body, attr);
+    }
+
+    // ── Park settings ──
+    function settingsForm() {
+      var tokenHint = 'Tokens: ' + data.noticeTokens.map(function (t) { return '{' + t + '}'; }).join('  ');
+      return h('<div class="form-grid">' +
+        field('Water park tab', 'active', s.active === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'Live (guests can book)' },
+          { value: 'false', label: 'Hidden (booking switched off)' },
+        ] }) +
+        field('Per-person booking', 'allowIndividual', s.allowIndividual === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'Allowed \u2014 guests can build their own day' },
+          { value: 'false', label: 'Packages only' },
+        ], hint: 'Turning this off leaves the packages on sale.' }) +
+        field('Park name', 'parkName', s.parkName) +
+        field('Headline', 'headline', s.headline, { placeholder: 'Family Fun Day' }) +
+        field('Tagline', 'tagline', s.tagline, { span: true }) +
+        field('Sub-line', 'subline', s.subline, { span: true }) +
+        field('Address', 'address', s.address, { span: true }) +
+        field('Phone', 'phone', s.phone) +
+        field('Validity note', 'validityNote', s.validityNote, { hint: 'Printed under the packages and on the pass.' }) +
+        field('What\'s included (comma separated)', 'inclusions', (s.inclusions || []).join(', '), {
+          span: true, placeholder: 'Water Park Entry, Movie Tickets, Costume',
+          hint: 'The "what\'s included" strip. Presentation only \u2014 what a guest is charged for comes from the package lines.',
+        }) +
+
+        '<div class="col-span"><div class="label" style="margin-top:6px">Entry slots &amp; capacity</div></div>' +
+        field('Opens', 'openTime', s.openTime, { placeholder: '10:00' }) +
+        field('Closes', 'closeTime', s.closeTime, { placeholder: '18:00' }) +
+        field('Entry slot length (minutes)', 'slotMinutes', s.slotMinutes, { type: 'number' }) +
+        field('Guests per slot', 'capacityPerSlot', s.capacityPerSlot, { type: 'number' }) +
+        field('Bookable days ahead', 'advanceDays', s.advanceDays, { type: 'number', hint: '0 means same day only.' }) +
+        field('Maximum guests per booking', 'maxGuestsPerBooking', s.maxGuestsPerBooking, { type: 'number' }) +
+        field('Maximum packages per booking', 'maxPackagesPerBooking', s.maxPackagesPerBooking, { type: 'number' }) +
+
+        '<div class="col-span"><div class="label" style="margin-top:6px">Charges on top</div></div>' +
+        field('Booking fee (%)', 'convenienceFeePercent', s.convenienceFeePercent, {
+          type: 'number', hint: '0 means no fee \u2014 the package price is what they pay.',
+        }) +
+        field('Tax (%)', 'gstPercent', s.gstPercent, { type: 'number', hint: '0 means prices are tax inclusive.' }) +
+
+        '<div class="col-span"><div class="label" style="margin-top:6px">Customer notices</div>' +
+          '<div class="hint">' + esc(tokenHint) + '</div></div>' +
+        field('Package selected', 'packageNotice', s.packageNotice, { type: 'textarea', span: true }) +
+        field('Per-person booking', 'individualNotice', s.individualNotice, {
+          type: 'textarea', span: true, hint: 'Use {bestSaving} to quote the best package saving automatically.',
+        }) +
+        field('On the pass', 'paidNotice', s.paidNotice, { type: 'textarea', span: true }) +
+        field('Slot full', 'soldOutNotice', s.soldOutNotice, { type: 'textarea', span: true }) +
+      '</div>');
+    }
+
+    function settingsPayload(body) {
+      var raw = readForm(body);
+      return {
+        active: raw.active === 'true',
+        allowIndividual: raw.allowIndividual === 'true',
+        parkName: raw.parkName,
+        headline: raw.headline,
+        tagline: raw.tagline,
+        subline: raw.subline,
+        address: raw.address,
+        phone: raw.phone,
+        validityNote: raw.validityNote,
+        inclusions: csvList(raw.inclusions),
+        openTime: raw.openTime,
+        closeTime: raw.closeTime,
+        slotMinutes: Number(raw.slotMinutes),
+        capacityPerSlot: Number(raw.capacityPerSlot),
+        advanceDays: Number(raw.advanceDays),
+        maxGuestsPerBooking: Number(raw.maxGuestsPerBooking),
+        maxPackagesPerBooking: Number(raw.maxPackagesPerBooking),
+        convenienceFeePercent: Number(raw.convenienceFeePercent),
+        gstPercent: Number(raw.gstPercent),
+        packageNotice: raw.packageNotice,
+        individualNotice: raw.individualNotice,
+        paidNotice: raw.paidNotice,
+        soldOutNotice: raw.soldOutNotice,
+      };
+    }
+
+    // ── Rate-card line editor ──
+    function itemForm(item) {
+      var i = item || { label: '', rate: 0, unit: 'guest', entry: false, active: true };
+      return h('<div class="form-grid">' +
+        field('Particulars', 'label', i.label, { span: true, placeholder: 'Water Park Entry \u2013 Adult' }) +
+        field('Rate (\u20B9)', 'rate', i.rate, { type: 'number' }) +
+        field('Applies to', 'unit', i.unit, { options: [
+          { value: 'adult', label: 'Per adult' },
+          { value: 'child', label: 'Per child' },
+          { value: 'guest', label: 'Per guest (adults and children)' },
+          { value: 'booking', label: 'Per booking (one per order)' },
+        ], hint: 'Used to fill quantities from a head count.' }) +
+        field('Gate entry', 'entry', i.entry ? 'true' : 'false', { options: [
+          { value: 'false', label: 'No \u2014 an extra' },
+          { value: 'true', label: 'Yes \u2014 this ticket admits a guest' },
+        ], hint: 'Entry lines are what capacity and the head count are counted on. Only per-adult or per-child lines can admit a guest.' }) +
+        field('Status', 'active', i.active === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'On sale' },
+          { value: 'false', label: 'Off sale' },
+        ] }) +
+        (item ? '<div class="col-span"><div class="hint">Changing this rate immediately moves every package that uses it, ' +
+          'and every per-person booking made from here on.</div></div>' : '') +
+      '</div>');
+    }
+
+    function itemPayload(body) {
+      var raw = readForm(body);
+      return {
+        label: raw.label,
+        rate: Number(raw.rate),
+        unit: raw.unit,
+        entry: raw.entry === 'true',
+        active: raw.active === 'true',
+      };
+    }
+
+    // ── Add-on editor ──
+    function addOnForm(addOn) {
+      var a = addOn || { label: '', note: '', price: 0, active: true };
+      return h('<div class="form-grid">' +
+        field('Add-on', 'label', a.label, { placeholder: 'Massage Chair' }) +
+        field('Variant', 'note', a.note, { placeholder: '15 min', hint: 'Optional \u2014 distinguishes two prices for the same thing.' }) +
+        field('Price (\u20B9)', 'price', a.price, { type: 'number' }) +
+        field('Status', 'active', a.active === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'On sale' },
+          { value: 'false', label: 'Off sale' },
+        ] }) +
+      '</div>');
+    }
+
+    function addOnPayload(body) {
+      var raw = readForm(body);
+      return { label: raw.label, note: raw.note, price: Number(raw.price), active: raw.active === 'true' };
+    }
+
+    // ── Package editor, with a live value breakup ──
+    function packForm(pkg) {
+      var p = pkg || { code: '', name: '', composition: '', adults: 2, children: 0, price: 0, badge: '', active: true, lines: [] };
+      var quantities = {};
+      (p.lines || []).forEach(function (l) { quantities[l.itemId] = l.qty; });
+
+      /* A line the package already uses is listed even if that rate has since
+         been taken off sale — otherwise saving the package would silently drop
+         it, quietly changing what the guest gets. */
+      var editable = sellable.slice();
+      (p.lines || []).forEach(function (l) {
+        var known = editable.filter(function (i) { return i.id === l.itemId; }).length;
+        if (known) return;
+        var offSale = itemOf(l.itemId);
+        if (offSale) editable.push(offSale);
+      });
+
+      var body = h('<div>' +
+        '<div class="form-grid">' +
+          field('Package letter', 'code', p.code, { placeholder: 'A', hint: 'Shown in the badge on the card.' }) +
+          field('Name', 'name', p.name, { placeholder: 'Family of 3' }) +
+          field('Composition', 'composition', p.composition, { placeholder: '2 Adults + 1 Child', span: true }) +
+          field('Adults', 'adults', p.adults, { type: 'number' }) +
+          field('Children', 'children', p.children, { type: 'number' }) +
+          field('Package price (\u20B9)', 'price', p.price, { type: 'number', hint: 'The flat price guests pay.' }) +
+          field('Badge', 'badge', p.badge, { placeholder: 'Save big' }) +
+          field('Status', 'active', p.active === false ? 'false' : 'true', { options: [
+            { value: 'true', label: 'On sale' },
+            { value: 'false', label: 'Off sale' },
+          ] }) +
+        '</div>' +
+        '<div class="label" style="margin-top:4px">Value breakup</div>' +
+        '<div class="hint" style="margin:0 0 10px">Set a quantity against each rate-card line. The total actual value ' +
+          'and the saving are computed from these \u2014 they are never typed in.</div>' +
+        '<div style="margin-bottom:10px"><button class="btn btn--line btn--sm" data-action="autofill">' +
+          icon('refresh', 15) + ' Fill quantities from the head count</button></div>' +
+        qtyEditor(editable, quantities, { attr: 'qty' }) +
+        '<div class="wp-live" data-live>' +
+          '<div class="wp-live__row">Total actual value <strong data-live-value>\u2014</strong></div>' +
+          '<div class="wp-live__row">Package price <strong data-live-price>\u2014</strong></div>' +
+          '<div class="wp-live__row">You save <strong data-live-save>\u2014</strong></div>' +
+          '<div class="wp-live__row"><span data-live-warn class="wp-live__err"></span></div>' +
+        '</div>' +
+        '<div class="hint" style="margin-top:10px">Entry tickets must add up to the head count above, or the gate would ' +
+          'turn a guest away holding a valid pass.</div>' +
+      '</div>');
+
+      function recompute() {
+        refreshValues(body, 'qty');
+        var value = 0;
+        var entries = 0;
+        body.querySelectorAll('[data-qty]').forEach(function (inp) {
+          var qty = Math.max(0, Number(inp.value) || 0);
+          value += (Number(inp.getAttribute('data-rate')) || 0) * qty;
+          var item = itemOf(inp.getAttribute('data-qty'));
+          if (item && item.entry) entries += qty;
+        });
+        var price = Math.max(0, Number(body.querySelector('[name="price"]').value) || 0);
+        var heads = Math.max(0, Number(body.querySelector('[name="adults"]').value) || 0) +
+          Math.max(0, Number(body.querySelector('[name="children"]').value) || 0);
+
+        body.querySelector('[data-live-value]').textContent = money(value);
+        body.querySelector('[data-live-price]').textContent = money(price);
+        body.querySelector('[data-live-save]').textContent = money(Math.max(0, value - price));
+
+        var warn = '';
+        if (price > value) warn = 'This costs ' + money(price - value) + ' MORE than its parts \u2014 guests would save nothing.';
+        else if (entries && heads && entries !== heads) {
+          warn = entries + ' entry ticket(s) for ' + heads + ' guest(s) \u2014 these must match.';
+        } else if (!heads) warn = 'Set how many adults and children this package is for.';
+        body.querySelector('[data-live-warn]').textContent = warn;
+      }
+
+      body.addEventListener('input', recompute);
+      body.addEventListener('change', recompute);
+      body.querySelector('[data-action="autofill"]').addEventListener('click', function () {
+        autofill(
+          body, 'qty',
+          Math.max(0, Number(body.querySelector('[name="adults"]').value) || 0),
+          Math.max(0, Number(body.querySelector('[name="children"]').value) || 0)
+        );
+        recompute();
+      });
+      recompute();
+      return body;
+    }
+
+    function packPayload(body) {
+      var raw = readForm(body);
+      return {
+        code: raw.code,
+        name: raw.name,
+        composition: raw.composition,
+        adults: Number(raw.adults),
+        children: Number(raw.children),
+        price: Number(raw.price),
+        badge: raw.badge,
+        active: raw.active === 'true',
+        lines: readQty(body, 'qty', 'itemId'),
+      };
+    }
+
+    // ── Counter booking builder ──
+    /**
+     * Sells a pass at the desk. Supports both modes, and every quantity is
+     * editable in either — a walk-up family of five can take the family-of-four
+     * package plus one extra adult, or be priced entirely per person.
+     *
+     * The total is always fetched from the server rather than added up here, so
+     * the clerk can never quote a figure the booking endpoint disagrees with.
+     */
+    function bookingForm() {
+      var packOptions = data.packages
+        .filter(function (p) { return p.active !== false && !p.brokenLines; })
+        .map(function (p) {
+          return { value: p.id, label: (p.code ? p.code + ' \u2014 ' : '') + p.name + ' (' + money(p.price) + ', ' + p.guests + ' guests)' };
+        });
+
+      var body = h('<div>' +
+        '<div class="form-grid">' +
+          field('How are they buying?', 'mode', packOptions.length ? 'package' : 'individual', { options: [].concat(
+            packOptions.length ? [{ value: 'package', label: 'A package' }] : [],
+            s.allowIndividual === false ? [] : [{ value: 'individual', label: 'Per person \u2014 build it line by line' }]
+          ) }) +
+          field('Visit date', 'date', data.today, { type: 'date' }) +
+          '<div class="form-row"><label class="label">Entry slot</label>' +
+            '<select class="input" name="time" data-slots><option value="">Loading\u2026</option></select>' +
+            '<div class="hint" data-slot-hint></div></div>' +
+          field('Guest name', 'guestName', '', { placeholder: 'Name for the pass' }) +
+          field('Phone', 'guestPhone', '', { placeholder: '93030 17878' }) +
+          field('Payment taken', 'paymentMethod', 'cash', { options: [
+            { value: 'cash', label: 'Cash at counter' },
+            { value: 'upi', label: 'UPI at counter' },
+            { value: 'card', label: 'Card at counter' },
+          ] }) +
+          field('Link to customer account', 'customerEmail', '', {
+            placeholder: 'optional email', hint: 'If they have an app account, the pass appears there too.',
+          }) +
+          field('Offer code', 'offerCode', '', { placeholder: 'optional' }) +
+        '</div>' +
+
+        '<div data-section="package">' +
+          (packOptions.length
+            ? '<div class="form-grid">' +
+                field('Package', 'packageId', packOptions[0].value, { options: packOptions }) +
+                field('How many of it', 'packageQty', 1, { type: 'number' }) +
+              '</div>' +
+              '<div class="label">Extra guests or extras, at counter rates</div>' +
+              '<div class="hint" style="margin:0 0 10px">Leave at zero unless the group is bigger than the package, ' +
+                'or wants something it does not include.</div>' +
+              qtyEditor(sellable, {}, { attr: 'extra' })
+            : '<div class="hint">No packages are on sale \u2014 sell per person instead.</div>') +
+        '</div>' +
+
+        '<div data-section="individual" hidden>' +
+          '<div class="form-grid">' +
+            field('Adults', 'fillAdults', 2, { type: 'number' }) +
+            field('Children', 'fillChildren', 1, { type: 'number' }) +
+          '</div>' +
+          '<div style="margin-bottom:10px"><button class="btn btn--line btn--sm" data-action="autofill-ind">' +
+            icon('refresh', 15) + ' Fill quantities from that head count</button></div>' +
+          '<div class="hint" style="margin:0 0 10px">Every line is editable \u2014 drop the costume for the adults, ' +
+            'give only one child the jumping section, whatever they actually want.</div>' +
+          qtyEditor(sellable, {}, { attr: 'line' }) +
+        '</div>' +
+
+        '<div class="label" style="margin-top:16px">Add-ons</div>' +
+        (liveAddOns.length ? qtyEditor(liveAddOns, {}, { attr: 'addon' }) : '<div class="hint">No add-ons on sale.</div>') +
+
+        '<div class="form-row" style="margin-top:14px"><label class="label">Note</label>' +
+          '<input class="input" name="notes" placeholder="Anything the gate should know"></div>' +
+
+        '<div class="wp-live wp-live--total" data-quote>' +
+          '<div class="wp-live__row">Total <strong data-q-total>\u2014</strong></div>' +
+          '<div class="wp-live__row">Guests <strong data-q-guests>\u2014</strong></div>' +
+          '<div class="wp-live__row">They save <strong data-q-save>\u2014</strong></div>' +
+        '</div>' +
+        '<div class="hint" data-q-detail></div>' +
+        '<div class="error" data-q-error hidden></div>' +
+      '</div>');
+
+      var modeSel = body.querySelector('[name="mode"]');
+      var dateInput = body.querySelector('[name="date"]');
+      var slotSel = body.querySelector('[data-slots]');
+      var slotHint = body.querySelector('[data-slot-hint]');
+      var seq = 0;
+      var quoteTimer = null;
+
+      function currentMode() { return modeSel ? modeSel.value : 'individual'; }
+
+      function syncSections() {
+        var mode = currentMode();
+        body.querySelector('[data-section="package"]').hidden = mode !== 'package';
+        body.querySelector('[data-section="individual"]').hidden = mode !== 'individual';
+      }
+
+      /** The payload both the live quote and the final sale are built from. */
+      function payload() {
+        var raw = readForm(body);
+        var order = {
+          mode: currentMode(),
+          date: raw.date,
+          time: raw.time,
+          addOns: readQty(body, 'addon', 'id'),
+          offerCode: raw.offerCode || undefined,
+        };
+        if (order.mode === 'package') {
+          order.packageId = raw.packageId;
+          order.packageQty = Number(raw.packageQty) || 1;
+          order.extras = readQty(body, 'extra', 'itemId');
+        } else {
+          order.lines = readQty(body, 'line', 'itemId');
+        }
+        return order;
+      }
+
+      /** Tomorrow, as a YYYY-MM-DD key. */
+      function dayAfter(key) {
+        var d = new Date(key + 'T00:00:00');
+        d.setDate(d.getDate() + 1);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+
+      async function loadSlots(opts) {
+        slotSel.innerHTML = '<option value="">Loading\u2026</option>';
+        try {
+          var res = await API.get('/waterpark/slots?date=' + encodeURIComponent(dateInput.value));
+          if (!res.slots.length) {
+            /* By late afternoon today has no slots left at all. Roll the form
+               on to tomorrow once, rather than leaving the clerk on a date
+               with nothing to sell. */
+            if (!(opts && opts.rolled) && dateInput.value === data.today && s.advanceDays > 0) {
+              dateInput.value = dayAfter(data.today);
+              return loadSlots({ rolled: true });
+            }
+            slotSel.innerHTML = '<option value="">No slots left</option>';
+            slotHint.textContent = 'Nothing bookable on that date \u2014 pick another day.';
+            quote(); // the price does not depend on the slot, so still show it
+            return;
+          }
+          slotSel.innerHTML = res.slots.map(function (slot) {
+            return '<option value="' + esc(slot.time) + '"' + (slot.full ? ' disabled' : '') + '>' +
+              esc(slot.label) + ' \u00B7 ' + (slot.full ? 'full' : slot.seatsLeft + ' left') + '</option>';
+          }).join('');
+          var firstOpen = res.slots.filter(function (x) { return !x.full; })[0];
+          if (firstOpen) slotSel.value = firstOpen.time;
+          slotHint.textContent = res.slots.length + ' slot(s) on ' + res.dateLabel;
+        } catch (err) {
+          slotSel.innerHTML = '<option value="">Could not load slots</option>';
+          slotHint.textContent = err.message;
+        }
+        quote();
+      }
+
+      /** Server-priced, debounced, and guarded by a sequence number so a slow
+          earlier response can never overwrite a newer one. */
+      function quote() {
+        clearTimeout(quoteTimer);
+        quoteTimer = setTimeout(async function () {
+          var mine = ++seq;
+          var errBox = body.querySelector('[data-q-error]');
+          try {
+            var res = await API.post('/admin/waterpark/quote', payload());
+            if (mine !== seq) return;
+            errBox.hidden = true;
+            body.querySelector('[data-q-total]').textContent = money(res.amounts.total);
+            body.querySelector('[data-q-guests]').textContent = String(res.order.guests.total);
+            body.querySelector('[data-q-save]').textContent = res.amounts.totalSaving
+              ? money(res.amounts.totalSaving) : '\u2014';
+
+            var bits = [];
+            bits.push('Day out ' + money(res.amounts.baseAmount));
+            if (res.amounts.addOnAmount) bits.push('add-ons ' + money(res.amounts.addOnAmount));
+            if (res.amounts.offerDiscount) bits.push('offer \u2212' + money(res.amounts.offerDiscount));
+            if (res.amounts.convenienceFee) bits.push('fee ' + money(res.amounts.convenienceFee));
+            if (res.amounts.gst) bits.push('tax ' + money(res.amounts.gst));
+            if (res.offerRejected) bits.push('that offer code does not apply');
+            if (res.slot && res.slot.seatsLeft < res.order.guests.total) {
+              bits.push('only ' + res.slot.seatsLeft + ' space(s) left in that slot');
+            }
+            body.querySelector('[data-q-detail]').textContent = bits.join(' \u00B7 ');
+          } catch (err) {
+            if (mine !== seq) return;
+            body.querySelector('[data-q-total]').textContent = '\u2014';
+            body.querySelector('[data-q-guests]').textContent = '\u2014';
+            body.querySelector('[data-q-save]').textContent = '\u2014';
+            body.querySelector('[data-q-detail]').textContent = '';
+            errBox.hidden = false;
+            errBox.textContent = err.message;
+          }
+        }, 260);
+      }
+
+      body.addEventListener('input', function (event) {
+        if (event.target.hasAttribute && (event.target.hasAttribute('data-qty') ||
+          event.target.hasAttribute('data-extra') || event.target.hasAttribute('data-line') ||
+          event.target.hasAttribute('data-addon'))) {
+          refreshValues(body, 'extra');
+          refreshValues(body, 'line');
+          refreshValues(body, 'addon');
+        }
+        quote();
+      });
+      body.addEventListener('change', function (event) {
+        if (event.target === modeSel) syncSections();
+        if (event.target === dateInput) { loadSlots(); return; }
+        quote();
+      });
+      body.querySelector('[data-action="autofill-ind"]').addEventListener('click', function () {
+        autofill(
+          body, 'line',
+          Math.max(0, Number(body.querySelector('[name="fillAdults"]').value) || 0),
+          Math.max(0, Number(body.querySelector('[name="fillChildren"]').value) || 0)
+        );
+        quote();
+      });
+
+      syncSections();
+      loadSlots();
+      return { body: body, payload: payload };
+    }
+
+    // ── Top action wiring ──
+    topActions.querySelector('[data-action="edit-settings"]').addEventListener('click', function () {
+      var m = modal({ title: 'Water park settings', body: settingsForm(), confirmLabel: 'Save changes', wide: true });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          await API.put('/admin/waterpark/settings', settingsPayload(m.body));
+          toast('Water park settings saved \u2014 live for guests now', 'success');
+          navigate('waterpark');
+        });
+      });
+    });
+
+    topActions.querySelector('[data-action="reset-notices"]').addEventListener('click', async function () {
+      var ok = await confirmDialog(
+        'Reset all notices?',
+        'The four customer notices go back to their default wording. Your prices, packages and add-ons are not touched.',
+        'Reset notices'
+      );
+      if (!ok) return;
+      try {
+        await API.post('/admin/waterpark/notices/reset', {});
+        toast('Notices reset', 'success');
+        navigate('waterpark');
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    topActions.querySelector('[data-action="new-booking"]').addEventListener('click', function () {
+      var form = bookingForm();
+      var m = modal({ title: 'Sell a pass at the counter', body: form.body, confirmLabel: 'Take payment & issue pass', wide: true });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var raw = readForm(m.body);
+          var res = await API.post('/admin/waterpark/bookings', Object.assign(form.payload(), {
+            guestName: raw.guestName,
+            guestPhone: raw.guestPhone,
+            paymentMethod: raw.paymentMethod,
+            customerEmail: raw.customerEmail || undefined,
+            notes: raw.notes,
+          }));
+          toast('Pass ' + res.booking.reference + ' issued \u00B7 ' + money(res.booking.amounts.total) + ' taken', 'success');
+          navigate('waterpark');
+        });
+      });
+    });
+
+    // ── In-page action wiring ──
+    view.addEventListener('click', async function (event) {
+      var target = function (attr) { return event.target.closest('[' + attr + ']'); };
+      var m;
+
+      // Packages
+      if (event.target.closest('[data-action="new-pack"]')) {
+        m = modal({ title: 'New package', body: packForm(null), confirmLabel: 'Create package', wide: true });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.post('/admin/waterpark/packages', packPayload(m.body));
+            toast('Package created', 'success');
+            navigate('waterpark');
+          });
+        });
+        return;
+      }
+      var packEdit = target('data-pack-edit');
+      if (packEdit) {
+        var pkg = data.packages.filter(function (p) { return p.id === packEdit.getAttribute('data-pack-edit'); })[0];
+        m = modal({ title: 'Edit ' + pkg.name, body: packForm(pkg), confirmLabel: 'Save package', wide: true });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.put('/admin/waterpark/packages/' + pkg.id, packPayload(m.body));
+            toast('Package saved \u2014 the new value breakup is live', 'success');
+            navigate('waterpark');
+          });
+        });
+        return;
+      }
+      var packDel = target('data-pack-del');
+      if (packDel) {
+        var delId = packDel.getAttribute('data-pack-del');
+        var delPack = data.packages.filter(function (p) { return p.id === delId; })[0];
+        var okPack = await confirmDialog(
+          'Delete ' + delPack.name + '?',
+          delPack.sold
+            ? 'It has already sold ' + delPack.sold + ' time(s), so it will be taken off sale instead of deleted — issued passes name it.'
+            : 'It is removed from the tab straight away.',
+          delPack.sold ? 'Take off sale' : 'Delete'
+        );
+        if (!okPack) return;
+        try {
+          var res = await API.del('/admin/waterpark/packages/' + delId);
+          toast(res.deleted ? 'Package deleted' : 'Package taken off sale', 'success');
+          navigate('waterpark');
+        } catch (err) { toast(err.message, 'error'); }
+        return;
+      }
+
+      // Rate card
+      if (event.target.closest('[data-action="new-item"]')) {
+        m = modal({ title: 'New rate-card line', body: itemForm(null), confirmLabel: 'Add line' });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.post('/admin/waterpark/items', itemPayload(m.body));
+            toast('Rate-card line added', 'success');
+            navigate('waterpark');
+          });
+        });
+        return;
+      }
+      var itemEdit = target('data-item-edit');
+      if (itemEdit) {
+        var item = itemOf(itemEdit.getAttribute('data-item-edit'));
+        m = modal({ title: 'Edit ' + item.label, body: itemForm(item), confirmLabel: 'Save rate' });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.put('/admin/waterpark/items/' + item.id, itemPayload(m.body));
+            toast('Rate saved \u2014 every package using it has been repriced', 'success');
+            navigate('waterpark');
+          });
+        });
+        return;
+      }
+      var itemDel = target('data-item-del');
+      if (itemDel) {
+        var dItem = itemOf(itemDel.getAttribute('data-item-del'));
+        var okItem = await confirmDialog(
+          'Delete "' + dItem.label + '"?',
+          dItem.usedBy.length
+            ? 'It is part of ' + dItem.usedBy.join(', ') + '. Those packages must drop it first — switching it off sale is usually what you want instead.'
+            : 'It disappears from the per-person builder. Passes already sold keep the rate they were charged.',
+          'Delete line'
+        );
+        if (!okItem) return;
+        try {
+          await API.del('/admin/waterpark/items/' + dItem.id);
+          toast('Rate-card line deleted', 'success');
+          navigate('waterpark');
+        } catch (err) { toast(err.message, 'error'); }
+        return;
+      }
+
+      // Add-ons
+      if (event.target.closest('[data-action="new-addon"]')) {
+        m = modal({ title: 'New add-on', body: addOnForm(null), confirmLabel: 'Add add-on' });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.post('/admin/waterpark/addons', addOnPayload(m.body));
+            toast('Add-on added', 'success');
+            navigate('waterpark');
+          });
+        });
+        return;
+      }
+      var addEdit = target('data-addon-edit');
+      if (addEdit) {
+        var addOn = addOns.filter(function (a) { return a.id === addEdit.getAttribute('data-addon-edit'); })[0];
+        m = modal({ title: 'Edit ' + addOn.label, body: addOnForm(addOn), confirmLabel: 'Save add-on' });
+        m.confirmBtn.addEventListener('click', function () {
+          submitModal(m, async function () {
+            await API.put('/admin/waterpark/addons/' + addOn.id, addOnPayload(m.body));
+            toast('Add-on saved', 'success');
+            navigate('waterpark');
+          });
+        });
+        return;
+      }
+      var addDel = target('data-addon-del');
+      if (addDel) {
+        var okAdd = await confirmDialog('Delete this add-on?', 'It is removed from the tab. Passes already sold keep it.', 'Delete');
+        if (!okAdd) return;
+        try {
+          await API.del('/admin/waterpark/addons/' + addDel.getAttribute('data-addon-del'));
+          toast('Add-on deleted', 'success');
+          navigate('waterpark');
+        } catch (err) { toast(err.message, 'error'); }
+        return;
+      }
+
+      // Passes
+      var checkin = target('data-checkin');
+      if (checkin) {
+        try {
+          await API.post('/admin/waterpark/bookings/' + checkin.getAttribute('data-checkin') + '/checkin', {});
+          toast('Checked in \u2014 enjoy the day!', 'success');
+          navigate('waterpark');
+        } catch (err) { toast(err.message, 'error'); }
+        return;
+      }
+      var undo = target('data-undo-checkin');
+      if (undo) {
+        try {
+          await API.post('/admin/waterpark/bookings/' + undo.getAttribute('data-undo-checkin') + '/undo-checkin', {});
+          toast('Check-in undone', 'success');
+          navigate('waterpark');
+        } catch (err) { toast(err.message, 'error'); }
+        return;
+      }
+      var cancel = target('data-cancel');
+      if (cancel) {
+        var okCancel = await confirmDialog(
+          'Cancel this pass?',
+          'The entry slot is released and the guest is notified.',
+          'Cancel pass'
+        );
+        if (!okCancel) return;
+        try {
+          await API.post('/admin/waterpark/bookings/' + cancel.getAttribute('data-cancel') + '/cancel', {});
+          toast('Pass cancelled', 'success');
+          navigate('waterpark');
+        } catch (err) { toast(err.message, 'error'); }
+        return;
+      }
+      var del = target('data-del');
+      if (del) {
+        var okDel = await confirmDialog('Delete this pass?', 'It is removed from the ledger for good.', 'Delete');
+        if (!okDel) return;
+        try {
+          await API.del('/admin/waterpark/bookings/' + del.getAttribute('data-del'));
+          toast('Pass deleted', 'success');
+          navigate('waterpark');
         } catch (err) { toast(err.message, 'error'); }
       }
     });
@@ -2498,6 +3588,7 @@
     verify: pageVerify,
     hotel: pageHotel,
     dinein: pageDineIn,
+    waterpark: pageWaterpark,
     food: pageFood,
     offers: pageOffers,
     experiences: pageExperiences,

@@ -29,6 +29,7 @@ const COLLECTIONS = [
   'hotelRooms',
   'dineReservations',
   'dineBills',
+  'waterparkBookings',
   'notifications',
   'reviews',
   'seatHolds',

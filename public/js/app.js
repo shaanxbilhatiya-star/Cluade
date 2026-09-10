@@ -12,6 +12,7 @@
     { id: 'home', label: 'Movie', icon: 'home', path: '/home' },
     { id: 'hotels', label: 'Stay', icon: 'bed', path: '/hotels' },
     { id: 'dinein', label: 'Dine-In', icon: 'dine', path: '/dine-in' },
+    { id: 'waterpark', label: 'Water Park', icon: 'waves', path: '/waterpark' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle', path: '/experiences' },
     { id: 'account', label: 'Account', icon: 'user', path: '/account' },
   ];
@@ -32,6 +33,10 @@
     ['/dine-in/reserve', 'dineReserve'],
     ['/dine-in/bill', 'dineBill'],
     ['/dine-in/paid/:id', 'dinePaid'],
+    // Literal water park paths must precede /waterpark/:anything patterns.
+    ['/waterpark', 'waterpark'],
+    ['/waterpark/book', 'waterparkBook'],
+    ['/waterpark/pass/:id', 'waterparkPass'],
     ['/search', 'search'],
     ['/notifications', 'notifications'],
     ['/movies/:status', 'movieList'],

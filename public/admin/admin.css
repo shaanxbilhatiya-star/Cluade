@@ -286,3 +286,100 @@ textarea.input { resize: vertical; min-height: 84px; }
 .photo-cat-field + .photo-cat-field { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 18px; }
 .photo-cat-field .form-grid { gap: 0; }
 .photo-cat-field .label { font-size: 14px; font-weight: 700; }
+
+
+/* ── Water park ──────────────────────────────────────────────────────────── */
+/* The package editor and the counter-booking builder both show a full value
+   breakup beside their inputs, which does not fit the default 620px modal. */
+.modal--wide { max-width: 900px; }
+
+.wp-packs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 18px;
+}
+.wp-pack { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--panel); }
+.wp-pack--off { opacity: .62; }
+.wp-pack--warn { border-color: var(--danger); }
+.wp-pack__head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.wp-pack__code {
+  flex: none; width: 36px; height: 36px; border-radius: 10px;
+  background: var(--primary); color: #fff;
+  display: grid; place-items: center; font-size: 17px; font-weight: 800;
+}
+.wp-pack__id { flex: 1; min-width: 0; }
+.wp-pack__name { font-size: 15.5px; font-weight: 700; }
+.wp-pack__sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.wp-break { width: 100%; }
+.wp-break th, .wp-break td { padding: 8px 16px; font-size: 13px; border-bottom: 1px solid var(--line); }
+.wp-break thead th {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); background: transparent; font-weight: 700;
+}
+.wp-break tfoot td { font-weight: 800; border-bottom: none; border-top: 1.5px solid var(--line); background: var(--bg); }
+.wp-break td.num, .wp-break th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.wp-break tbody tr:hover { background: transparent; }
+.wp-break .wp-break__missing { color: var(--danger); font-weight: 600; }
+
+.wp-prices { display: flex; gap: 10px; padding: 14px 16px; }
+.wp-price {
+  flex: 1; padding: 10px 12px; border-radius: 11px;
+  background: var(--primary-soft); text-align: center;
+}
+.wp-price--save { background: rgba(22, 163, 74, .13); }
+.wp-price--loss { background: rgba(220, 38, 38, .12); }
+.wp-price__label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-soft); }
+.wp-price__value { font-size: 21px; font-weight: 800; margin-top: 3px; }
+.wp-price--save .wp-price__value { color: var(--success); }
+.wp-price--loss .wp-price__value { color: var(--danger); }
+.wp-pack__foot { display: flex; gap: 8px; align-items: center; padding: 0 16px 14px; }
+.wp-pack__foot .hint { margin: 0; flex: 1; }
+
+/* Quantity editor: one row per rate-card line, used by the package editor and
+   the per-person counter booking builder. */
+.wp-lines { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; }
+.wp-line { display: flex; align-items: center; gap: 12px; padding: 9px 13px; border-bottom: 1px solid var(--line); }
+.wp-line:last-child { border-bottom: none; }
+.wp-line:nth-child(even) { background: var(--bg); }
+.wp-line__text { flex: 1; min-width: 0; }
+.wp-line__label { font-size: 13.5px; font-weight: 600; }
+.wp-line__meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.wp-line__qty { flex: none; width: 74px; }
+.wp-line__qty .input { padding: 7px 9px; text-align: center; }
+.wp-line__value { flex: none; width: 84px; text-align: right; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wp-line__value--zero { color: var(--muted); font-weight: 400; }
+
+.wp-live {
+  margin-top: 14px; padding: 13px 15px; border-radius: 12px;
+  background: var(--primary-soft); display: flex; flex-wrap: wrap; gap: 8px 22px;
+}
+.wp-live__row { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.wp-live__row strong { font-size: 16px; font-weight: 800; }
+/* The clerk is taking money against this figure, so it stays on screen while
+   the rest of the long form scrolls. */
+.wp-live--total {
+  background: var(--primary); color: #fff;
+  position: sticky; bottom: -20px; z-index: 2;
+  box-shadow: 0 -6px 18px rgba(20, 20, 43, .12);
+}
+.wp-live__spacer { flex: 1; }
+.wp-live__err { color: var(--danger); font-size: 13px; font-weight: 600; }
+
+/* Today's gate load. */
+.wp-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.wp-slot { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.wp-slot--busy { border-color: var(--warning); background: rgba(217, 119, 6, .07); }
+.wp-slot--full { border-color: var(--danger); background: rgba(220, 38, 38, .07); }
+.wp-slot__time { font-size: 13.5px; font-weight: 700; }
+.wp-slot__meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.wp-slot__bar { height: 4px; border-radius: 2px; background: var(--line); margin-top: 7px; overflow: hidden; }
+.wp-slot__fill { height: 100%; background: var(--primary); }
+.wp-slot--busy .wp-slot__fill { background: var(--warning); }
+.wp-slot--full .wp-slot__fill { background: var(--danger); }
+
+.wp-notice {
+  padding: 11px 13px; border-radius: 10px; background: var(--bg);
+  font-size: 13.5px; line-height: 1.55;
+}
+.wp-incl { display: flex; flex-wrap: wrap; gap: 7px; }

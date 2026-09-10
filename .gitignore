@@ -14,3 +14,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+
+# Screenshots written by `npm run test:ui -- --shots` — regenerable artefacts.
+tools/screenshots/
