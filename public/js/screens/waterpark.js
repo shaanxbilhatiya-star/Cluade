@@ -296,7 +296,6 @@
 
       UI.actions(view, {
         'build-own': function () { App.navigate('/waterpark/book?mode=individual'); },
-        promo: function (el) { App.navigate(el.getAttribute('data-path')); },
       });
 
       view.addEventListener('click', function (event) {

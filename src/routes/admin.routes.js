@@ -1271,53 +1271,24 @@ router.delete('/admin/waterpark/bookings/:id', auth.requireAdmin, (ctx) => {
   return { deleted: true, id: ctx.params.id };
 });
 
-// ── Promo sliders (the auto-scrolling banner on each tab) ────────────────────
-/** Filename stem for an uploaded slide image. */
-function slideSlug(body) {
-  const base = `${body.section || 'slide'}-${body.title || 'slide'}`;
-  return base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'slide';
-}
-
-/** Mutates body.imageUrl in place: a data: URL becomes a saved file path. */
-function resolveSlideImage(body) {
-  if (isDataUrl(body.imageUrl)) body.imageUrl = saveUploadedImage('promos', slideSlug(body), body.imageUrl);
-}
-
-/** Every section, its slider settings and its slides (inactive ones included). */
+// ── Tab sliders (the auto-scrolling photo strip on each tab) ─────────────────
+/** Every section with its photos, interval and on/off state. */
 router.get('/admin/promos', auth.requireAdmin, () => promos.adminPayload());
 
-/** Whether a tab's slider shows, and how fast it advances. */
-router.put('/admin/promos/:section/settings', auth.requireAdmin, (ctx) => {
-  const settings = promos.saveSliderSettings(ctx.params.section, ctx.body || {});
-  return { section: ctx.params.section, settings, slider: promos.publicSlider(ctx.params.section) };
-});
-
-router.post('/admin/promos', auth.requireAdmin, (ctx) => {
+/**
+ * Saves one tab's slider: its photos, whether it shows and how fast it
+ * advances. Freshly uploaded photos arrive as data: URLs and are written to
+ * disk here, exactly as the hotel galleries do.
+ */
+router.put('/admin/promos/:section', auth.requireAdmin, (ctx) => {
+  const section = promos.assertSection(ctx.params.section);
   const body = Object.assign({}, ctx.body);
-  resolveSlideImage(body);
-  const slide = promos.saveSlide(body);
-  ctx.state.status = 201;
-  return { slide, slides: promos.slidesFor(slide.section, { includeInactive: true }) };
-});
 
-router.put('/admin/promos/slides/:id', auth.requireAdmin, (ctx) => {
-  const body = Object.assign({}, ctx.body, { id: ctx.params.id });
-  resolveSlideImage(body);
-  const slide = promos.saveSlide(body);
-  return { slide, slides: promos.slidesFor(slide.section, { includeInactive: true }) };
-});
+  const photos = resolvePhotoList(body.photos, 'promos', section, promos.MAX_PHOTOS);
+  if (photos !== undefined) body.photos = photos;
 
-router.delete('/admin/promos/slides/:id', auth.requireAdmin, (ctx) => {
-  const slide = promos.removeSlide(ctx.params.id);
-  // A starter slide must stay deleted across restarts.
-  markSeedRemoved(slide.id);
-  return { deleted: true, id: slide.id, slides: promos.slidesFor(slide.section, { includeInactive: true }) };
-});
-
-/** Reorders by swapping with the neighbour, so order numbers stay implicit. */
-router.post('/admin/promos/slides/:id/move', auth.requireAdmin, (ctx) => {
-  const direction = (ctx.body && ctx.body.direction) || '';
-  return promos.moveSlide(ctx.params.id, direction);
+  const saved = promos.saveSlider(section, body);
+  return { section, slider: saved, live: promos.publicSlider(section) };
 });
 
 // ── Hotel & rooms ────────────────────────────────────────────────────────────

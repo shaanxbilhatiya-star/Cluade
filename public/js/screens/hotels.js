@@ -776,7 +776,6 @@
       }
 
       UI.actions(view, {
-        promo: function (el) { App.navigate(el.getAttribute('data-path')); },
         'pick-dates': function () {
           pickDates(stay, function (range) {
             stay.checkIn = range.checkIn;
