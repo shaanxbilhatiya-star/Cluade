@@ -8,12 +8,19 @@
     { id: 'passed', label: 'Passed' },
     { id: 'cancelled', label: 'Canceled' },
   ];
+  /* `title` is what the app bar reads when this type is the selected one, so a
+     deep link from the Account screen announces where it landed. */
   var TYPES = [
-    { id: 'movie', label: 'Movie' },
-    { id: 'hotel', label: 'Stay' },
-    { id: 'food', label: 'Food' },
-    { id: 'event', label: 'Event' },
+    { id: 'movie', label: 'Movie', title: 'Movie Tickets' },
+    { id: 'hotel', label: 'Stay', title: 'Hotel Reservations' },
+    { id: 'food', label: 'Food', title: 'Food & Beverages' },
+    { id: 'event', label: 'Event', title: 'Event Tickets' },
   ];
+
+  function titleFor(typeId) {
+    var match = TYPES.filter(function (t) { return t.id === typeId; })[0];
+    return (match && match.title) || 'My Tickets';
+  }
 
   /** "Thu, 1 Oct" for a 'YYYY-MM-DD' key. */
   function stayDay(key) {
@@ -71,16 +78,20 @@
     tab: 'tickets',
     auth: true,
     render: async function (_params, query) {
+      /* Both filters are seedable from the hash, so the Account screen can link
+         straight to "Movie Tickets" (?type=movie), "Movie Food & Beverages"
+         (?type=food) or "Hotel Reservations" (?type=hotel). The chips below read
+         from this same state, so the right one starts selected. */
       var state = {
         bucket: BUCKETS.some(function (b) { return b.id === query.bucket; }) ? query.bucket : 'upcoming',
-        type: 'movie',
+        type: TYPES.some(function (t) { return t.id === query.type; }) ? query.type : 'movie',
         search: '',
       };
 
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({
-            title: 'My Ticket',
+            title: titleFor(state.type),
             right: '<button class="icon-btn" data-action="toggle-search" aria-label="Search tickets">' + UI.icon('search', 22) + '</button>',
           }) +
           '<div class="tabs" role="tablist" data-tabs>' +
@@ -173,6 +184,8 @@
         view.querySelectorAll('[data-type]').forEach(function (c) {
           c.setAttribute('aria-pressed', c === chip ? 'true' : 'false');
         });
+        var heading = view.querySelector('.appbar__title');
+        if (heading) heading.textContent = titleFor(state.type);
         load();
       });
 

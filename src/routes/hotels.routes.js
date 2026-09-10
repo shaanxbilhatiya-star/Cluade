@@ -261,14 +261,11 @@ router.post('/hotels/bookings', auth.requireAuth, (ctx) => {
     endsAt,
     amounts,
     offerCode: amounts.offerCode,
-    payment: paymentRecord(ctx.body.payment, ctx.user, amounts.total),
+    payment: paymentRecord(ctx.body.payment, amounts.total),
     reminder: { enabled: ctx.body.reminder !== false, minutesBefore: 24 * 60 },
     cancelledAt: null,
     refundAmount: 0,
   });
-
-  const earned = Math.round(amounts.total / 10);
-  db.update('users', ctx.user.id, { loyaltyPoints: (ctx.user.loyaltyPoints || 0) + earned });
 
   notify(
     ctx.user.id,
@@ -278,7 +275,7 @@ router.post('/hotels/bookings', auth.requireAuth, (ctx) => {
   );
 
   ctx.state.status = 201;
-  return { booking: expand(booking), pointsEarned: earned };
+  return { booking: expand(booking) };
 });
 
 module.exports = router;

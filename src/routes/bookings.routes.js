@@ -102,16 +102,13 @@ router.post('/bookings', auth.requireAuth, (ctx) => {
     food: foodLines,
     amounts,
     offerCode: amounts.offerCode,
-    payment: paymentRecord(payment, ctx.user, amounts.total),
+    payment: paymentRecord(payment, amounts.total),
     reminder: { enabled: reminder !== false, minutesBefore: 30 },
     cancelledAt: null,
     refundAmount: 0,
   });
 
   seats.releaseHold(hold.id);
-
-  const earned = Math.round(amounts.total / 10);
-  db.update('users', ctx.user.id, { loyaltyPoints: (ctx.user.loyaltyPoints || 0) + earned });
 
   notify(
     ctx.user.id,
@@ -121,7 +118,7 @@ router.post('/bookings', auth.requireAuth, (ctx) => {
   );
 
   ctx.state.status = 201;
-  return { booking: expand(booking), pointsEarned: earned };
+  return { booking: expand(booking) };
 });
 
 // ── Standalone food order ────────────────────────────────────────────────────
@@ -155,7 +152,7 @@ router.post('/bookings/food', auth.requireAuth, (ctx) => {
     offerCode: amounts.offerCode,
     pickup: { cinemaName: cinema.name, slot: pickupSlot, date: pickupDate, counter: `Counter ${1 + (foodLines.length % 4)}` },
     startsAt,
-    payment: paymentRecord(payment, ctx.user, amounts.total),
+    payment: paymentRecord(payment, amounts.total),
     reminder: { enabled: false, minutesBefore: 30 },
   });
 

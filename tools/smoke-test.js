@@ -113,9 +113,17 @@ async function run() {
     check('GET /api/movies/:id/showtimes groups by cinema', showtimesForMovie.body.cinemas.length > 0);
     check('showtimes response lists dates', showtimesForMovie.body.dates.length > 0);
 
-    const cinemas = await api('GET', '/api/cinemas?city=Ahmedabad');
-    check('GET /api/cinemas filters by city', cinemas.body.cinemas.every((c) => c.city === 'Ahmedabad'));
-    const cinemaId = cinemas.body.cinemas[0].id;
+    /* Take the cinema from a movie's own schedule rather than naming one: only
+       a cinema that actually hosts shows has screens to assert on. Hard-coding
+       a city here made the filter return nothing once this became a
+       single-city (Mandla) deployment, and the next line then threw. */
+    const hostCinemaId = showtimesForMovie.body.cinemas[0].cinema.id;
+    const city = showtimesForMovie.body.cinemas[0].cinema.city;
+    const cinemas = await api('GET', `/api/cinemas?city=${encodeURIComponent(city)}`);
+    check('GET /api/cinemas filters by city',
+      cinemas.body.cinemas.length > 0 && cinemas.body.cinemas.every((c) => c.city === city),
+      `city ${city}, got ${cinemas.body.cinemas.length}`);
+    const cinemaId = hostCinemaId;
     const cinemaDetail = await api('GET', `/api/cinemas/${cinemaId}`);
     check('GET /api/cinemas/:id includes screens', cinemaDetail.body.screens.length > 0);
     const cinemaShows = await api('GET', `/api/cinemas/${cinemaId}/showtimes`);
@@ -126,8 +134,11 @@ async function run() {
     check('GET /api/food/home returns rails', foodHome.body.rails.length >= 3);
     const popularRail = foodHome.body.rails.find((r) => r.key === 'popular');
     check('food rail "Most Popular" has items', Boolean(popularRail && popularRail.items.length > 0));
-    const popcorn = popularRail.items.find((i) => i.slug === 'jumbo-popcorn');
-    check('Jumbo Popcorn exists', Boolean(popcorn));
+    // Match on the category rather than one slug, so renaming an item in the
+    // catalogue does not break the suite.
+    const popcorn = popularRail.items.find((i) => /popcorn/i.test(i.name));
+    check('a popcorn item is on the popular rail', Boolean(popcorn),
+      JSON.stringify(popularRail.items.map((i) => i.slug)));
     const foodDetail = await api('GET', `/api/food/${popcorn.id}`);
     check('GET /api/food/:id returns related items', foodDetail.status === 200 && Array.isArray(foodDetail.body.related));
 
@@ -241,7 +252,7 @@ async function run() {
     check('booking keeps the held seats', created.seats.length === 3);
     check('booking applied the offer', created.amounts.discount > 0);
     check('booking totals add up', created.amounts.total === Math.round(created.amounts.tickets + created.amounts.food + created.amounts.convenienceFee + created.amounts.gst - created.amounts.discount));
-    check('booking awarded loyalty points', booking.body.pointsEarned > 0);
+    check('no loyalty points are awarded', booking.body.pointsEarned === undefined);
     check('booking payment recorded as paid', created.payment.status === 'paid');
 
     const reused = await api('POST', '/api/bookings', { token, body: { holdId, payment: { method: 'card' } } });
@@ -294,26 +305,32 @@ async function run() {
 
     // ── Account features ─────────────────────────────────────────────────────
     section('Account');
-    const watchAdd = await api('POST', '/api/me/watchlist', { token: riderToken, body: { movieId: jawan.id } });
-    check('watchlist add works', watchAdd.status === 200 && watchAdd.body.inWatchlist === true);
-    const watchList = await api('GET', '/api/me/watchlist', { token: riderToken });
-    check('watchlist returns the movie', watchList.body.movies.some((m) => m.id === jawan.id));
-    const watchToggle = await api('POST', '/api/me/watchlist', { token: riderToken, body: { movieId: jawan.id } });
-    check('watchlist toggles off', watchToggle.body.inWatchlist === false);
+    /* Watchlist, movie interests, saved payment methods and loyalty points were
+       removed from the product. These assert the endpoints and the stored
+       fields are actually gone, rather than merely hidden in the UI. */
+    const goneWatchlist = await api('GET', '/api/me/watchlist', { token: riderToken });
+    check('the watchlist endpoint is gone', goneWatchlist.status === 404, `status ${goneWatchlist.status}`);
+    const goneInterests = await api('PUT', '/api/me/interests', { token: riderToken, body: { interests: ['Action'] } });
+    check('the movie-interests endpoint is gone', goneInterests.status === 404, `status ${goneInterests.status}`);
+    const goneMethods = await api('GET', '/api/me/payment-methods', { token: riderToken });
+    check('the saved-payment-methods endpoint is gone', goneMethods.status === 404, `status ${goneMethods.status}`);
 
-    const interests = await api('PUT', '/api/me/interests', { token: riderToken, body: { interests: ['Action', 'Horror', 'NotAGenre'], preferredLanguages: ['Hindi'] } });
-    check('interests save and drop unknown genres', interests.body.interests.length === 2 && !interests.body.interests.includes('NotAGenre'));
+    const riderProfile = await api('GET', '/api/me', { token: riderToken });
+    check('the profile carries no loyalty points',
+      riderProfile.body.user.loyaltyPoints === undefined && riderProfile.body.stats.loyaltyPoints === undefined);
+    check('the profile carries no watchlist, interests or saved cards',
+      riderProfile.body.user.watchlist === undefined &&
+      riderProfile.body.user.interests === undefined &&
+      riderProfile.body.user.preferredLanguages === undefined &&
+      riderProfile.body.user.paymentMethods === undefined,
+      JSON.stringify(Object.keys(riderProfile.body.user)));
+    check('but the member ID is kept for the membership card', typeof riderProfile.body.user.memberId === 'string');
+    check('and the profile still reports bookings and spend',
+      typeof riderProfile.body.stats.totalBookings === 'number' && typeof riderProfile.body.stats.totalSpent === 'number');
 
-    const badCard = await api('POST', '/api/me/payment-methods', { token: riderToken, body: { type: 'card', label: 'My Card', last4: '12' } });
-    check('card requires 4 digits', badCard.status === 400);
-    const addCard = await api('POST', '/api/me/payment-methods', { token: riderToken, body: { type: 'card', label: 'ICICI Debit', last4: '9911', brand: 'Mastercard', expiry: '11/29' } });
-    check('payment method can be added', addCard.status === 201 && addCard.body.paymentMethod.isDefault === true);
-    const addUpi = await api('POST', '/api/me/payment-methods', { token: riderToken, body: { type: 'upi', label: 'GPay', handle: 'rider@okaxis' } });
-    check('UPI method can be added', addUpi.status === 201);
-    const makeDefault = await api('POST', `/api/me/payment-methods/${addUpi.body.paymentMethod.id}/default`, { token: riderToken });
-    check('default payment method can change', makeDefault.body.paymentMethods.find((m) => m.id === addUpi.body.paymentMethod.id).isDefault === true);
-    const delCard = await api('DELETE', `/api/me/payment-methods/${addCard.body.paymentMethod.id}`, { token: riderToken });
-    check('payment method can be deleted', delCard.body.paymentMethods.length === 1);
+    const riderHome = await api('GET', '/api/home', { token: riderToken });
+    check('the home payload no longer carries interest-based recommendations',
+      riderHome.body.recommended === undefined);
 
     const settings = await api('PATCH', '/api/me/settings', { token, body: { darkMode: true, language: 'हिन्दी', notifications: { offers: false } } });
     check('settings persist dark mode', settings.body.settings.darkMode === true);
@@ -360,7 +377,7 @@ async function run() {
 
     const newCinema = await api('POST', '/api/admin/cinemas', { token: adminToken, body: { name: 'Test Multiplex', city: 'Pune', area: 'Kothrud' } });
     check('admin can create a cinema', newCinema.status === 201);
-    const newScreen = await api('POST', '/api/admin/screens', { token: adminToken, body: { cinemaId: newCinema.body.cinema.id, name: 'Audi X', layoutPreset: 'compact', format: '2D' } });
+    const newScreen = await api('POST', '/api/admin/screens', { token: adminToken, body: { cinemaId: newCinema.body.cinema.id, name: 'Audi X', layoutPreset: 'kingfisher-standard', format: '2D' } });
     check('admin can create a screen', newScreen.status === 201 && newScreen.body.screen.layout.length > 0);
     const badLayout = await api('POST', '/api/admin/screens', { token: adminToken, body: { cinemaId: newCinema.body.cinema.id, name: 'Bad', layoutPreset: 'nope' } });
     check('screen layout preset is validated', badLayout.status === 400);
@@ -368,9 +385,12 @@ async function run() {
     const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
     const newShow = await api('POST', '/api/admin/showtimes', {
       token: adminToken,
-      body: { movieId: jawan.id, screenId: newScreen.body.screen.id, date: tomorrow, time: '14:00', basePrice: 260 },
+      body: { movieId: jawan.id, screenId: newScreen.body.screen.id, date: tomorrow, time: '14:00' },
     });
-    check('admin can create a showtime', newShow.status === 201 && newShow.body.showtime.prices.regular === 260);
+    // Prices come from the movie's own per-tier prices, not a base multiplier.
+    check('admin can create a showtime',
+      newShow.status === 201 && newShow.body.showtime.prices.platinum > 0,
+      `status ${newShow.status}: ${JSON.stringify(newShow.body.showtime?.prices)}`);
     const clashShow = await api('POST', '/api/admin/showtimes', {
       token: adminToken,
       body: { movieId: jawan.id, screenId: newScreen.body.screen.id, date: tomorrow, time: '14:00' },

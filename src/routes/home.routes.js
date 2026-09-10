@@ -58,16 +58,6 @@ router.get('/home', (ctx) => {
     Object.assign(slim(m), { isComingSoon: m.status === 'coming_soon' })
   );
 
-  let recommended = [];
-  if (ctx.user && (ctx.user.interests || []).length) {
-    const interests = new Set(ctx.user.interests.map((i) => i.toLowerCase()));
-    recommended = movies
-      .filter((m) => m.genres.some((g) => interests.has(g.toLowerCase())))
-      .sort((a, b) => b.rating - a.rating)
-      .slice(0, 10)
-      .map(slim);
-  }
-
   const cinemas = db
     .find('cinemas', (c) => c.active !== false && c.city.toLowerCase() === city.toLowerCase())
     .sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0))
@@ -91,7 +81,6 @@ router.get('/home', (ctx) => {
     hero,
     nowPlaying: nowPlaying.map(slim),
     comingSoon: comingSoon.map(slim),
-    recommended,
     cinemas,
     offers: db
       .get('offers')

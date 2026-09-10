@@ -6,6 +6,14 @@
 (function () {
   'use strict';
 
+  /** Payment options at checkout. The ids are what the API accepts. */
+  var PAY_METHODS = [
+    { id: 'upi', label: 'UPI', sub: 'GPay, PhonePe, Paytm', icon: 'wallet' },
+    { id: 'card', label: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay', icon: 'card' },
+    { id: 'netbanking', label: 'Net Banking', sub: 'All major banks', icon: 'bank' },
+    { id: 'cash', label: 'Pay at the front desk', sub: 'Settle when you check in', icon: 'cash' },
+  ];
+
   var STAY_KEY = 'cineflex.stay';
   var MONTHS_LONG = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -989,7 +997,7 @@
 
       var state = {
         offerCode: null,
-        payment: (user.paymentMethods || []).find(function (m) { return m.default; }) || null,
+        payment: 'upi',
         quote: room.quote,
         guestName: user.name || '',
         guestPhone: user.phone || '',
@@ -1090,19 +1098,14 @@
               '<span class="option__sub">' + (offers.length ? offers.length + ' code' + (offers.length === 1 ? '' : 's') + ' available' : 'Enter a code') + '</span></span>' +
               '<span class="row__chevron">' + UI.icon('chevron-right', 19) + '</span></button>';
 
-        paymentRow.innerHTML = '<button class="option" data-action="payment">' +
-          '<span class="option__icon">' +
-            UI.icon(state.payment
-              ? (state.payment.type === 'upi' ? 'phone' : state.payment.type === 'wallet' ? 'wallet'
-                : state.payment.type === 'netbanking' ? 'bank' : 'card')
-              : 'cash', 21) + '</span>' +
-          '<span class="option__text">' +
-            '<span class="option__title">' + UI.esc(state.payment ? state.payment.label : 'Pay at the front desk') + '</span>' +
-            '<span class="option__sub">' + UI.esc(state.payment
-              ? (state.payment.last4 ? '•••• ' + state.payment.last4 : state.payment.handle || String(state.payment.type || '').toUpperCase())
-              : 'Settle the bill when you check in') + '</span>' +
-          '</span>' +
-          '<span class="row__chevron">' + UI.icon('chevron-right', 19) + '</span></button>';
+        paymentRow.innerHTML = PAY_METHODS.map(function (m) {
+          return '<button class="option" data-action="method" data-id="' + m.id + '"' +
+            ' aria-pressed="' + (m.id === state.payment ? 'true' : 'false') + '">' +
+            '<span class="option__icon">' + UI.icon(m.icon, 21) + '</span>' +
+            '<span class="option__text"><span class="option__title">' + m.label + '</span>' +
+              '<span class="option__sub">' + m.sub + '</span></span>' +
+            '<span class="option__radio"></span></button>';
+        }).join('');
 
         billHost.innerHTML = q
           ? '<div class="kv"><span class="kv__key">' + UI.esc(roomsLabel(q.rooms) + ' × ' + nightsLabel(q.nights)) +
@@ -1129,7 +1132,7 @@
           (blocked
             ? '<button class="btn" disabled>Sold out</button>'
             : '<button class="btn" data-action="pay">' +
-              (state.payment ? 'Pay ' + (q ? UI.money(q.total) : '') : 'Confirm booking') + '</button>');
+              (q ? 'Pay ' + UI.money(q.total) : 'Confirm booking') + '</button>');
       }
 
       /** Always re-price on the server so the bill can never drift. */
@@ -1219,35 +1222,9 @@
           reprice();
         },
 
-        payment: function () {
-          var methods = user.paymentMethods || [];
-          var body = UI.h('<div class="offer-sheet">' +
-            methods.map(function (m) {
-              var on = state.payment && state.payment.id === m.id;
-              return '<button class="option" data-method="' + UI.esc(m.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
-                '<span class="option__icon">' +
-                  UI.icon(m.type === 'upi' ? 'phone' : m.type === 'wallet' ? 'wallet' : m.type === 'netbanking' ? 'bank' : 'card', 21) +
-                '</span>' +
-                '<span class="option__text"><span class="option__title">' + UI.esc(m.label) + '</span>' +
-                '<span class="option__sub">' + UI.esc(m.last4 ? '•••• ' + m.last4 : m.handle || String(m.type || '').toUpperCase()) + '</span></span>' +
-                '<span class="option__radio"></span></button>';
-            }).join('') +
-            '<button class="option" data-method="cash" aria-pressed="' + (state.payment ? 'false' : 'true') + '">' +
-              '<span class="option__icon">' + UI.icon('cash', 21) + '</span>' +
-              '<span class="option__text"><span class="option__title">Pay at the front desk</span>' +
-              '<span class="option__sub">Settle the bill when you check in</span></span>' +
-              '<span class="option__radio"></span></button>' +
-            '</div>');
-
-          var s = UI.sheet({ title: 'Payment method', body: body });
-          body.querySelectorAll('[data-method]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-              var id = btn.getAttribute('data-method');
-              state.payment = id === 'cash' ? null : methods.find(function (m) { return m.id === id; });
-              s.close();
-              paint();
-            });
-          });
+        method: function (btn) {
+          state.payment = btn.getAttribute('data-id');
+          paint();
         },
 
         pay: async function (el) {
@@ -1264,9 +1241,7 @@
               guestName: state.guestName.trim(),
               guestPhone: state.guestPhone.trim(),
               specialRequests: state.requests.trim(),
-              payment: state.payment
-                ? { method: state.payment.type === 'upi' ? 'upi' : 'card', methodId: state.payment.id }
-                : { method: 'cash' },
+              payment: { method: state.payment },
             }));
             App.navigate('/hotel/confirmed/' + res.booking.id, { replace: true });
           } catch (err) {
@@ -1337,9 +1312,8 @@
               '</div>' +
             '</div>' +
 
-            (res.pointsEarned || b.amounts
-              ? '<p class="reward-line">' + UI.icon('star', 15) + ' You paid ' + UI.money(b.amounts.total) +
-                ' · earned ' + Math.round(b.amounts.total / 10) + ' reward points</p>'
+            (b.amounts
+              ? '<p class="paid-line">' + UI.icon('check', 15) + ' You paid ' + UI.money(b.amounts.total) + '</p>'
               : '') +
 
             (b.guest && b.guest.name

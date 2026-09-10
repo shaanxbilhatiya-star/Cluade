@@ -167,7 +167,7 @@ router.post('/waterpark/bookings', auth.requireAuth, (ctx) => {
   // the guest seeing a price and pressing pay.
   const slot = park.assertCapacity(date, body.time, order.guests.total, s);
 
-  const payment = paymentRecord(body.payment, ctx.user, amounts.total);
+  const payment = paymentRecord(body.payment, amounts.total);
   const startsAt = park.stampFor(date, slot.time);
 
   const booking = db.insert('waterparkBookings', {

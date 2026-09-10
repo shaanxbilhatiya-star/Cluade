@@ -48,10 +48,13 @@ function section(title) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function api(method, endpoint, body) {
+async function api(method, endpoint, body, token) {
   const res = await fetch(BASE + endpoint, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: Object.assign(
+      body ? { 'Content-Type': 'application/json' } : {},
+      token ? { Authorization: `Bearer ${token}` } : {}
+    ),
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, body: await res.json().catch(() => null) };
@@ -681,6 +684,273 @@ async function run() {
     await screenshot(cdp, 'app-waterpark-individual');
     check('no console errors in the builder', cdp.consoleErrors.length === 0, cdp.consoleErrors.join(' | '));
     check('no uncaught exceptions in the builder', cdp.pageErrors.length === 0, cdp.pageErrors.join(' | '));
+
+    // ── Account screen ───────────────────────────────────────────────────────
+    section('Customer app \u2014 the Account screen is grouped as specified');
+    cdp.clearErrors();
+    await open(`${BASE}/#/account`, customer, `document.querySelector('.list .row') !== null`, 'the account rows');
+
+    /* The rows must appear in the requested order, in five separated groups:
+       (1) Movie Tickets, Movie Food & Beverages | (2) Hotel Reservations,
+       Restaurant Reservations | (3) Waterpark Bookings | (4) General |
+       (5) About. */
+    const groups = await cdp.eval(`
+      const scroll = document.querySelector('.scroll');
+      const out = [];
+      scroll.querySelectorAll('.list').forEach(list => {
+        const label = list.previousElementSibling &&
+          list.previousElementSibling.classList.contains('list__group-label')
+            ? list.previousElementSibling.textContent.trim() : null;
+        out.push({
+          label: label,
+          separated: Boolean(list.previousElementSibling &&
+            (list.previousElementSibling.classList.contains('list__sep') ||
+             list.previousElementSibling.classList.contains('profile__divider'))),
+          rows: [...list.querySelectorAll('.row__label')].map(r => r.textContent.trim()),
+        });
+      });
+      return out;
+    `);
+
+    check('there are five groups of rows', groups.length === 5,
+      JSON.stringify(groups.map((g) => g.rows)));
+    check('group 1 is Movie Tickets then Movie Food & Beverages',
+      String(groups[0] && groups[0].rows) === 'Movie Tickets,Movie Food & Beverages',
+      JSON.stringify(groups[0]));
+    check('group 2 is Hotel Reservations then Restaurant Reservations',
+      String(groups[1] && groups[1].rows) === 'Hotel Reservations,Restaurant Reservations',
+      JSON.stringify(groups[1]));
+    check('group 3 is Waterpark Bookings on its own',
+      String(groups[2] && groups[2].rows) === 'Waterpark Bookings',
+      JSON.stringify(groups[2]));
+    check('group 4 is the General section',
+      groups[3] && groups[3].label === 'General', JSON.stringify(groups[3] && groups[3].label));
+    check('group 5 is the About section',
+      groups[4] && groups[4].label === 'About', JSON.stringify(groups[4] && groups[4].label));
+    check('the first three groups are visually separated by dividers',
+      groups[0].separated && groups[1].separated && groups[2].separated,
+      JSON.stringify(groups.slice(0, 3).map((g) => g.separated)));
+
+    /* A divider that renders the same as the hairline between two rows would
+       not read as a group break at all, so measure it. */
+    const gaps = await cdp.eval(`
+      const lists = [...document.querySelectorAll('.scroll .list')];
+      const rowsIn = i => [...lists[i].querySelectorAll('.row')];
+      const bottom = el => el.getBoundingClientRect().bottom;
+      const top = el => el.getBoundingClientRect().top;
+      const g0 = rowsIn(0);
+      const withinGroup = Math.round(top(g0[1]) - bottom(g0[0]));
+      const betweenGroups = Math.round(top(rowsIn(1)[0]) - bottom(g0[g0.length - 1]));
+      return { withinGroup, betweenGroups };
+    `);
+    check('a group break is visibly wider than the gap between rows in a group',
+      gaps.betweenGroups >= gaps.withinGroup + 20,
+      `within ${gaps.withinGroup}px vs between ${gaps.betweenGroups}px`);
+
+    const accountText = await cdp.eval(`return document.querySelector('.scroll').textContent;`);
+    check('Watchlist is gone from the account screen', !/Watchlist/i.test(accountText));
+    check('Movie Interest is gone from the account screen', !/Movie Interest/i.test(accountText));
+    check('Payment Methods is gone from the account screen', !/Payment Method/i.test(accountText));
+    check('the Points stat is gone', !/Points/i.test(accountText), accountText.slice(0, 160));
+    check('Bookings and Spent stats remain',
+      (await cdp.eval(`return document.querySelectorAll('.stat').length;`)) === 2);
+    check('the two remaining stats fill the strip evenly', await cdp.eval(`
+      const cells = [...document.querySelectorAll('.stat')];
+      const widths = cells.map(c => Math.round(c.getBoundingClientRect().width));
+      return widths.length === 2 && Math.abs(widths[0] - widths[1]) <= 1 && widths[0] > 120;
+    `), await cdp.eval(`return JSON.stringify([...document.querySelectorAll('.stat')].map(c => Math.round(c.getBoundingClientRect().width)));`));
+    check('General still offers Personal Info, Notification, Security, Language and Dark Mode',
+      String(groups[3].rows) === 'Personal Info,Notification,Security,Language,Dark Mode',
+      JSON.stringify(groups[3].rows));
+    check('no console errors on the account screen', cdp.consoleErrors.length === 0, cdp.consoleErrors.join(' | '));
+    check('no uncaught exceptions on the account screen', cdp.pageErrors.length === 0, cdp.pageErrors.join(' | '));
+    await screenshot(cdp, 'app-account');
+
+    section('Customer app \u2014 every Account row lands somewhere real');
+    for (const [label, expectHash, ready, expectHeading] of [
+      ['Movie Tickets', '#/tickets?type=movie', `document.querySelector('.appbar__title') !== null`, 'Movie Tickets'],
+      ['Movie Food & Beverages', '#/tickets?type=food', `document.querySelector('.appbar__title') !== null`, 'Food & Beverages'],
+      ['Hotel Reservations', '#/tickets?type=hotel', `document.querySelector('.appbar__title') !== null`, 'Hotel Reservations'],
+      ['Restaurant Reservations', '#/account/restaurant', `document.querySelector('.appbar__title') !== null`, 'Restaurant Reservations'],
+      ['Waterpark Bookings', '#/account/waterpark', `document.querySelector('.appbar__title') !== null`, 'Waterpark Bookings'],
+    ]) {
+      cdp.clearErrors();
+      await open(`${BASE}/#/account`, customer, `document.querySelector('.list .row') !== null`, 'the account rows');
+      await cdp.eval(`
+        const row = [...document.querySelectorAll('.row')]
+          .find(r => r.querySelector('.row__label').textContent.trim() === ${JSON.stringify(label)});
+        row.click();
+        return true;
+      `);
+      await waitFor(cdp, ready, `the ${label} screen`);
+      await sleep(400);
+      const hash = await cdp.eval(`return location.hash;`);
+      const heading = await cdp.eval(`return document.querySelector('.appbar__title').textContent.trim();`);
+      check(`"${label}" opens ${expectHash}`, hash === expectHash, hash);
+      check(`and its screen is titled "${expectHeading}"`, heading === expectHeading, heading);
+      check(`and renders with no console errors`,
+        cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+        [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+    }
+
+    section('Customer app \u2014 the water park pass is listed under Account');
+    cdp.clearErrors();
+    await open(`${BASE}/#/account/waterpark`, customer, `document.querySelector('.card') !== null`, 'the pass list');
+    check('the pass bought earlier is listed',
+      await cdp.eval(`return /WP[0-9A-Z]{8}/.test(document.body.textContent);`));
+    check('it shows the package name and guest count',
+      await cdp.eval(`return /Family of 3/.test(document.body.textContent) && /3 guests/.test(document.body.textContent);`),
+      await cdp.eval(`return document.querySelector('.ticket__text').textContent;`));
+    check('tapping it opens the pass with its barcode', await cdp.eval(`
+      document.querySelector('[data-action="open"]').click();
+      return true;
+    `));
+    await waitFor(cdp, `document.querySelector('img[src*="barcode.svg"]') !== null`, 'the pass barcode');
+    check('the pass screen renders its gate barcode', true);
+    check('no console errors in the pass list', cdp.consoleErrors.length === 0, cdp.consoleErrors.join(' | '));
+
+    section('Customer app \u2014 checkout no longer offers saved cards');
+    cdp.clearErrors();
+    await open(`${BASE}/#/movie/mov_jawan`, customer, `document.querySelector('.detail-head__title') !== null`, 'the movie detail');
+    check('the watchlist heart is gone from the movie detail',
+      await cdp.eval(`return document.querySelector('[data-action="watchlist"]') === null;`));
+    check('the share button is still there',
+      await cdp.eval(`return document.querySelector('[data-action="share"]') !== null;`));
+    check('no console errors on the movie detail', cdp.consoleErrors.length === 0, cdp.consoleErrors.join(' | '));
+
+    cdp.clearErrors();
+    await open(`${BASE}/#/home`, customer, `document.querySelector('.screen') !== null`, 'home');
+    await sleep(400);
+    check('the "Because you like" rail is gone from Home',
+      await cdp.eval(`return !/Because you like/i.test(document.body.textContent);`));
+    check('Home still renders its Now Playing rail',
+      await cdp.eval(`return /Now Playing/i.test(document.body.textContent);`));
+    check('no console errors on Home', cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+    section('Admin console \u2014 the Points column is gone');
+    cdp.clearErrors();
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1500, height: 1400, deviceScaleFactor: 1, mobile: false,
+    });
+    await open(`${BASE}/admin/#customers`, admin, `document.querySelector('[data-rows] tr') !== null`, 'the customers table');
+    const custHeaders = await cdp.eval(`
+      return [...document.querySelectorAll('thead th')].map(th => th.textContent.trim());
+    `);
+    check('the customers table has no Points column', !custHeaders.includes('Points'), JSON.stringify(custHeaders));
+    check('every row has one cell per header', await cdp.eval(`
+      const headers = document.querySelectorAll('thead th').length;
+      const rows = [...document.querySelectorAll('[data-rows] tr')];
+      return rows.length > 0 && rows.every(r => r.querySelectorAll('td').length === headers);
+    `), `headers ${custHeaders.length}`);
+    check('no console errors on the customers page', cdp.consoleErrors.length === 0, cdp.consoleErrors.join(' | '));
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 420, height: 900, deviceScaleFactor: 2, mobile: true,
+    });
+
+    /* The saved-card pickers were replaced with a plain method choice in three
+       checkouts. These drive two of them for real, because a picker that fails
+       to set state would still look fine on screen. */
+    section('Customer app \u2014 the food checkout pays with a chosen method');
+    cdp.clearErrors();
+    const anItem = (await api('GET', '/api/food/home')).body.rails
+      .flatMap((r) => r.items)
+      .find((i) => i.price > 0);
+    await cdp.send('Page.navigate', { url: `${BASE}/blank-for-origin` });
+    await sleep(250);
+    await cdp.eval(`
+      localStorage.setItem('cineflex.token', ${JSON.stringify(customer)});
+      localStorage.setItem('cineflex.cart', JSON.stringify([{
+        itemId: ${JSON.stringify(anItem.id)},
+        name: ${JSON.stringify(anItem.name)},
+        price: ${anItem.price},
+        imageUrl: ${JSON.stringify(anItem.imageUrl || '')},
+        qty: 2,
+      }]));
+      return true;
+    `);
+    cdp.clearErrors();
+    await cdp.send('Page.navigate', { url: `${BASE}/#/food/cart` });
+    await waitFor(cdp, `document.querySelector('[data-action="method"]') !== null`, 'the food payment options');
+    check('the food checkout lists the payment methods',
+      (await cdp.eval(`return document.querySelectorAll('[data-action="method"]').length;`)) === 4);
+    check('no saved-card picker remains',
+      await cdp.eval(`return document.querySelector('[data-action="pick-payment"]') === null;`));
+    check('UPI is preselected',
+      await cdp.eval(`return document.querySelector('[data-action="method"][data-id="upi"]').getAttribute('aria-pressed') === 'true';`));
+    check('choosing "Pay at counter" moves the selection', await cdp.eval(`
+      document.querySelector('[data-action="method"][data-id="cash"]').click();
+      return document.querySelector('[data-action="method"][data-id="cash"]').getAttribute('aria-pressed') === 'true'
+        && document.querySelector('[data-action="method"][data-id="upi"]').getAttribute('aria-pressed') === 'false';
+    `));
+    await screenshot(cdp, 'app-food-checkout');
+
+    const ordersBefore = (await api('GET', '/api/bookings?type=food&bucket=all', null, customer)).body.bookings.length;
+    await cdp.eval(`
+      const btn = document.querySelector('[data-action="place"]');
+      if (btn) btn.click();
+      return true;
+    `);
+    await sleep(1800);
+    const ordersAfter = (await api('GET', '/api/bookings?type=food&bucket=all', null, customer)).body.bookings;
+    check('the order is actually placed', ordersAfter.length === ordersBefore + 1,
+      `${ordersBefore} -> ${ordersAfter.length}`);
+    check('and it records the chosen method as pay-at-counter',
+      ordersAfter[0] && ordersAfter[0].payment.method === 'cash' && ordersAfter[0].payment.status === 'pending',
+      ordersAfter[0] && JSON.stringify(ordersAfter[0].payment));
+    check('no console errors through the food checkout',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+    section('Customer app \u2014 the movie checkout pays with a chosen method');
+    cdp.clearErrors();
+    /* Must be a show that has not started, or the seat hold is refused with
+       "This show has already started" depending on the time of day. */
+    const showDay = new Date();
+    showDay.setDate(showDay.getDate() + 2);
+    const someShow = (await api('GET', `/api/movies/mov_jawan/showtimes?date=${showDay.toISOString().slice(0, 10)}`))
+      .body.cinemas.flatMap((c) => c.shows).find((s) => !s.isPast && !s.soldOut);
+    check('a future showtime is available to book', Boolean(someShow));
+    await open(`${BASE}/#/seats/${someShow.id}`, customer,
+      `document.querySelector('[data-seat][data-status="available"]') !== null`, 'the seat map');
+    check('the seat map renders', true);
+    await cdp.eval(`
+      const free = [...document.querySelectorAll('[data-seat][data-status="available"]')].slice(0, 2);
+      free.forEach(s => s.click());
+      return true;
+    `);
+    await sleep(300);
+    await cdp.eval(`document.querySelector('[data-action="proceed"]').click(); return true;`);
+    await waitFor(cdp, `document.querySelector('[data-action="method"]') !== null`, 'the movie payment options', 120);
+    check('the movie checkout lists the payment methods',
+      (await cdp.eval(`return document.querySelectorAll('[data-action="method"]').length;`)) === 4);
+    check('UPI is preselected there too',
+      await cdp.eval(`return document.querySelector('[data-action="method"][data-id="upi"]').getAttribute('aria-pressed') === 'true';`));
+    await screenshot(cdp, 'app-movie-checkout');
+
+    await cdp.eval(`
+      document.querySelector('[data-action="method"][data-id="netbanking"]').click();
+      return true;
+    `);
+    await sleep(200);
+    await cdp.eval(`document.querySelector('[data-action="pay"]').click(); return true;`);
+    await waitFor(cdp, `/\\/confirmed\\//.test(location.hash)`, 'the confirmation screen', 120);
+    check('paying issues a movie ticket', await cdp.eval(`return /\\/confirmed\\//.test(location.hash);`));
+    check('the confirmation shows no reward-points line',
+      await cdp.eval(`return !/reward point/i.test(document.body.textContent);`));
+    /* Read back the booking just created, by id from the confirmation URL —
+       the demo seed contains older bookings that would otherwise be picked up. */
+    const newBookingId = await cdp.eval(`return location.hash.split('/confirmed/')[1];`);
+    const movieBooking = (await api('GET', `/api/bookings/${newBookingId}`, null, customer)).body.booking;
+    check('the booking records the method chosen in the picker',
+      movieBooking && movieBooking.payment.method === 'netbanking',
+      movieBooking && JSON.stringify(movieBooking.payment));
+    check('and it carries the generic method label, not a saved card',
+      movieBooking && movieBooking.payment.methodLabel === 'Net Banking',
+      movieBooking && movieBooking.payment.methodLabel);
+    check('no console errors through the movie checkout',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
 
     section('Customer app \u2014 the other tabs still work');
     for (const [hash, ready, label] of [

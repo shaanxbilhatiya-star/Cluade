@@ -945,4 +945,78 @@
       return view;
     },
   };
+
+  // ── Waterpark bookings (from the Account tab) ─────────────────────────────
+  /* Every pass the guest has bought, newest first, each opening its own pass
+     screen with the gate barcode. */
+  window.Screens.waterparkBookings = {
+    auth: true,
+    backTo: '/account',
+    render: async function () {
+      var res = await API.waterparkBookings();
+      var bookings = res.bookings || [];
+      var upcoming = bookings.filter(function (b) { return b.status === 'confirmed' && b.upcoming; });
+      var past = bookings.filter(function (b) { return !(b.status === 'confirmed' && b.upcoming); });
+
+      function passCard(b) {
+        var pill = b.status === 'cancelled'
+          ? '<span class="status-pill status-pill--cancelled">Cancelled</span>'
+          : b.checkedInAt
+            ? '<span class="status-pill status-pill--completed">Visited</span>'
+            : '<span class="status-pill status-pill--confirmed">Confirmed</span>';
+
+        return '<article class="card">' +
+          '<button class="ticket__main" data-action="open" data-id="' + UI.esc(b.id) + '">' +
+            '<div class="ticket__text">' +
+              '<h3 class="ticket__title">' + UI.esc(b.packageName || 'Day pass') + '</h3>' +
+              '<p class="ticket__sub">' + UI.esc(b.dateLabel) + ' · entry at ' + UI.esc(b.timeLabel) + '</p>' +
+              '<p class="ticket__seats">' + b.guests.total + ' guest' + (b.guests.total === 1 ? '' : 's') +
+                ' · ' + UI.money(b.amounts.total) + ' · ' + UI.esc(b.reference) + '</p>' +
+              '<div style="margin-top:7px">' + pill + '</div>' +
+            '</div>' +
+            '<span class="row__chevron">' + UI.icon('chevron-right', 20) + '</span>' +
+          '</button>' +
+        '</article>';
+      }
+
+      var view = UI.h(
+        '<div class="screen">' +
+          UI.appbar({ title: 'Waterpark Bookings', back: true }) +
+          '<div class="scroll">' +
+
+            (!bookings.length
+              ? UI.empty({
+                  icon: 'waves',
+                  title: 'No water park passes yet',
+                  text: 'Book a family package or build your own day and your pass will live here.',
+                  action: 'browse',
+                  actionLabel: 'Open Water Park',
+                })
+              : '') +
+
+            (upcoming.length
+              ? '<div class="section">' + UI.sectionHead('Upcoming visits') +
+                  '<div class="stack">' + upcoming.map(passCard).join('') + '</div>' +
+                '</div>'
+              : '') +
+
+            (past.length
+              ? '<div class="section">' + UI.sectionHead(upcoming.length ? 'Earlier' : 'Your passes') +
+                  '<div class="stack">' + past.map(passCard).join('') + '</div>' +
+                '</div>'
+              : '') +
+
+            '<div class="spacer-24"></div>' +
+          '</div>' +
+        '</div>'
+      );
+
+      UI.actions(view, {
+        browse: function () { App.navigate('/waterpark'); },
+        open: function (el) { App.navigate('/waterpark/pass/' + el.getAttribute('data-id')); },
+      });
+
+      return view;
+    },
+  };
 })();

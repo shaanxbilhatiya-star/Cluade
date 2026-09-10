@@ -832,4 +832,99 @@
       return view;
     },
   };
+
+  // ── Restaurant reservations (from the Account tab) ─────────────────────────
+  /* The guest's own restaurant history: tables they have booked, and bills they
+     have settled in the app. Reached from Account rather than from the Dine-In
+     tab, which is for the booking-and-paying flow itself. */
+  window.Screens.restaurantBookings = {
+    auth: true,
+    backTo: '/account',
+    render: async function () {
+      var res = await Promise.all([API.dineReservations(), API.dineBills()]);
+      var reservations = res[0].reservations || [];
+      var bills = res[1].bills || [];
+      var totalSaved = res[1].totalSaved || 0;
+
+      function reservationCard(r) {
+        var pill = r.status === 'cancelled'
+          ? '<span class="status-pill status-pill--cancelled">Cancelled</span>'
+          : r.billId
+            ? '<span class="status-pill status-pill--completed">Bill settled</span>'
+            : r.expired
+              ? '<span class="status-pill status-pill--cancelled">Expired</span>'
+              : '<span class="status-pill status-pill--confirmed">Confirmed</span>';
+
+        return '<article class="card">' +
+          '<button class="ticket__main" data-action="open-tab">' +
+            '<div class="ticket__text">' +
+              '<h3 class="ticket__title">' + UI.esc(slotLabel(r)) + '</h3>' +
+              '<p class="ticket__sub">' + UI.esc(partyLine(r)) + '</p>' +
+              '<p class="ticket__seats">' + UI.esc(r.reference) + '</p>' +
+              '<div style="margin-top:7px">' + pill + '</div>' +
+            '</div>' +
+            '<span class="row__chevron">' + UI.icon('chevron-right', 20) + '</span>' +
+          '</button>' +
+        '</article>';
+      }
+
+      function billCard(b) {
+        return '<article class="card">' +
+          '<button class="ticket__main" data-action="open-bill" data-id="' + UI.esc(b.id) + '">' +
+            '<div class="ticket__text">' +
+              '<h3 class="ticket__title">' + UI.money(b.amounts.total) + ' paid</h3>' +
+              '<p class="ticket__sub">' + UI.esc(UI.shortDate(b.paidAt || b.createdAt)) +
+                ' · ' + (b.mode === 'reserved' ? 'Reserved table' : 'Walk-in') +
+                ' · ' + b.amounts.discountPercent + '% off</p>' +
+              '<p class="ticket__seats">' + UI.esc(b.reference) +
+                (b.amounts.discount ? ' · saved ' + UI.money(b.amounts.discount) : '') + '</p>' +
+            '</div>' +
+            '<span class="row__chevron">' + UI.icon('chevron-right', 20) + '</span>' +
+          '</button>' +
+        '</article>';
+      }
+
+      var view = UI.h(
+        '<div class="screen">' +
+          UI.appbar({ title: 'Restaurant Reservations', back: true }) +
+          '<div class="scroll">' +
+
+            (!reservations.length && !bills.length
+              ? UI.empty({
+                  icon: 'dine',
+                  title: 'No restaurant bookings yet',
+                  text: 'Reserve a table ahead of your visit and settle the bill from your seat.',
+                  action: 'open-tab',
+                  actionLabel: 'Open Dine-In',
+                })
+              : '') +
+
+            (reservations.length
+              ? '<div class="section">' + UI.sectionHead('Table reservations') +
+                  '<div class="stack">' + reservations.map(reservationCard).join('') + '</div>' +
+                '</div>'
+              : '') +
+
+            (bills.length
+              ? '<div class="section">' + UI.sectionHead('Bills paid in the app') +
+                  (totalSaved
+                    ? noticeBanner('You have saved ' + UI.money(totalSaved) + ' on restaurant bills so far.')
+                    : '') +
+                  '<div class="stack" style="margin-top:12px">' + bills.map(billCard).join('') + '</div>' +
+                '</div>'
+              : '') +
+
+            '<div class="spacer-24"></div>' +
+          '</div>' +
+        '</div>'
+      );
+
+      UI.actions(view, {
+        'open-tab': function () { App.navigate('/dine-in'); },
+        'open-bill': function (el) { App.navigate('/dine-in/paid/' + el.getAttribute('data-id')); },
+      });
+
+      return view;
+    },
+  };
 })();

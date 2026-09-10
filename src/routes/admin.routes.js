@@ -488,7 +488,9 @@ router.get('/admin/screens', auth.requireAdmin, (ctx) => {
 router.post('/admin/screens', auth.requireAdmin, (ctx) => {
   requireFields(ctx.body, ['cinemaId', 'name']);
   if (!db.byId('cinemas', ctx.body.cinemaId)) throw new HttpError(404, 'Cinema not found');
-  const preset = ctx.body.layoutPreset || 'standard';
+  // Must name a preset that actually exists, or creating a screen without an
+  // explicit layout would always 400.
+  const preset = ctx.body.layoutPreset || 'kingfisher-standard';
   if (!LAYOUTS[preset]) throw new HttpError(400, `Layout must be one of: ${Object.keys(LAYOUTS).join(', ')}`);
 
   const screen = db.insert('screens', {

@@ -2,7 +2,6 @@
 const db = require('../db');
 const auth = require('../auth');
 const { Router, HttpError } = require('../router');
-const { LANGUAGES, GENRES } = require('../catalog');
 
 const router = new Router();
 
@@ -27,8 +26,6 @@ router.get('/me', auth.requireAuth, (ctx) => {
       moviesWatched: bookings.filter((b) => b.type === 'movie' && b.status === 'completed').length,
       upcoming: bookings.filter((b) => b.status === 'confirmed' && new Date(b.startsAt) > new Date()).length,
       totalSpent: spent,
-      loyaltyPoints: user.loyaltyPoints || 0,
-      watchlistCount: (user.watchlist || []).length,
     },
   };
 });
@@ -54,106 +51,6 @@ router.patch('/me/settings', auth.requireAuth, (ctx) => {
     notifications: Object.assign({}, current.notifications, ctx.body.notifications || {}),
   };
   return { settings: db.update('users', user.id, { settings: next }).settings };
-});
-
-// ── Watchlist ────────────────────────────────────────────────────────────────
-router.get('/me/watchlist', auth.requireAuth, (ctx) => {
-  const ids = me(ctx).watchlist || [];
-  return { movies: ids.map((id) => db.byId('movies', id)).filter(Boolean) };
-});
-
-router.post('/me/watchlist', auth.requireAuth, (ctx) => {
-  const movie = db.byId('movies', ctx.body.movieId);
-  if (!movie) throw new HttpError(404, 'Movie not found');
-  const user = me(ctx);
-  const list = new Set(user.watchlist || []);
-  const wasAdded = !list.has(movie.id);
-  if (wasAdded) list.add(movie.id);
-  else list.delete(movie.id);
-  db.update('users', user.id, { watchlist: [...list] });
-  return { inWatchlist: wasAdded, watchlist: [...list] };
-});
-
-router.delete('/me/watchlist/:movieId', auth.requireAuth, (ctx) => {
-  const user = me(ctx);
-  const list = (user.watchlist || []).filter((id) => id !== ctx.params.movieId);
-  db.update('users', user.id, { watchlist: list });
-  return { watchlist: list };
-});
-
-// ── Movie interests ──────────────────────────────────────────────────────────
-router.get('/me/interests', auth.requireAuth, (ctx) => {
-  const user = me(ctx);
-  return {
-    interests: user.interests || [],
-    preferredLanguages: user.preferredLanguages || [],
-    allGenres: GENRES,
-    allLanguages: LANGUAGES,
-  };
-});
-
-router.put('/me/interests', auth.requireAuth, (ctx) => {
-  const interests = Array.isArray(ctx.body.interests)
-    ? ctx.body.interests.filter((g) => GENRES.includes(g))
-    : me(ctx).interests || [];
-  const preferredLanguages = Array.isArray(ctx.body.preferredLanguages)
-    ? ctx.body.preferredLanguages.filter((l) => LANGUAGES.includes(l))
-    : me(ctx).preferredLanguages || [];
-  const user = db.update('users', ctx.user.id, { interests, preferredLanguages });
-  return { interests: user.interests, preferredLanguages: user.preferredLanguages };
-});
-
-// ── Payment methods ──────────────────────────────────────────────────────────
-const PAYMENT_TYPES = ['card', 'upi', 'wallet', 'netbanking'];
-
-router.get('/me/payment-methods', auth.requireAuth, (ctx) => ({
-  paymentMethods: me(ctx).paymentMethods || [],
-}));
-
-router.post('/me/payment-methods', auth.requireAuth, (ctx) => {
-  const { type, label, last4, brand, expiry, handle, bank } = ctx.body;
-  if (!PAYMENT_TYPES.includes(type)) throw new HttpError(400, `Payment type must be one of: ${PAYMENT_TYPES.join(', ')}`);
-  if (!label || String(label).trim().length < 2) throw new HttpError(400, 'Give this payment method a label');
-  if (type === 'card' && !/^\d{4}$/.test(String(last4 || ''))) {
-    throw new HttpError(400, 'Enter the last 4 digits of the card');
-  }
-  if (type === 'upi' && !/^[\w.\-]{2,}@[\w.\-]{2,}$/.test(String(handle || ''))) {
-    throw new HttpError(400, 'Enter a valid UPI ID, e.g. name@bank');
-  }
-
-  const user = me(ctx);
-  const list = [...(user.paymentMethods || [])];
-  const method = {
-    id: db.id('pm'),
-    type,
-    label: String(label).trim(),
-    last4: type === 'card' ? String(last4) : undefined,
-    brand: brand || undefined,
-    expiry: expiry || undefined,
-    handle: handle || undefined,
-    bank: bank || undefined,
-    isDefault: list.length === 0,
-  };
-  list.push(method);
-  db.update('users', user.id, { paymentMethods: list });
-  ctx.state.status = 201;
-  return { paymentMethod: method, paymentMethods: list };
-});
-
-router.post('/me/payment-methods/:id/default', auth.requireAuth, (ctx) => {
-  const user = me(ctx);
-  const list = (user.paymentMethods || []).map((m) => Object.assign({}, m, { isDefault: m.id === ctx.params.id }));
-  if (!list.some((m) => m.isDefault)) throw new HttpError(404, 'Payment method not found');
-  db.update('users', user.id, { paymentMethods: list });
-  return { paymentMethods: list };
-});
-
-router.delete('/me/payment-methods/:id', auth.requireAuth, (ctx) => {
-  const user = me(ctx);
-  const list = (user.paymentMethods || []).filter((m) => m.id !== ctx.params.id);
-  if (list.length && !list.some((m) => m.isDefault)) list[0].isDefault = true;
-  db.update('users', user.id, { paymentMethods: list });
-  return { paymentMethods: list };
 });
 
 // ── Notifications ────────────────────────────────────────────────────────────
