@@ -1,5 +1,10 @@
-/* My Tickets tab (Upcoming / Passed / Canceled × Movie / Food / Event) and the
-   full ticket view with its scannable barcode. */
+/* One booking list, scoped to a single booking type, plus the full ticket view
+   with its scannable barcode.
+
+   Each type is its own section reached from the Account screen — Movie Tickets,
+   Movie Food & Beverages, Hotel Reservations — so this screen shows exactly one
+   of them and has no type switcher. The only filter here is the status of the
+   bookings within that section: Upcoming / Passed / Canceled. */
 (function () {
   'use strict';
 
@@ -8,13 +13,14 @@
     { id: 'passed', label: 'Passed' },
     { id: 'cancelled', label: 'Canceled' },
   ];
-  /* `title` is what the app bar reads when this type is the selected one, so a
-     deep link from the Account screen announces where it landed. */
+
+  /* The bookings collection is polymorphic; these are the only types anything
+     ever writes to it. `title` is what the app bar reads, so each section
+     announces which one it is. */
   var TYPES = [
-    { id: 'movie', label: 'Movie', title: 'Movie Tickets' },
-    { id: 'hotel', label: 'Stay', title: 'Hotel Reservations' },
-    { id: 'food', label: 'Food', title: 'Food & Beverages' },
-    { id: 'event', label: 'Event', title: 'Event Tickets' },
+    { id: 'movie', title: 'Movie Tickets' },
+    { id: 'hotel', title: 'Hotel Reservations' },
+    { id: 'food', title: 'Food & Beverages' },
   ];
 
   function titleFor(typeId) {
@@ -75,13 +81,12 @@
   }
 
   window.Screens.tickets = {
-    tab: 'tickets',
     auth: true,
+    backTo: '/account',
     render: async function (_params, query) {
-      /* Both filters are seedable from the hash, so the Account screen can link
-         straight to "Movie Tickets" (?type=movie), "Movie Food & Beverages"
-         (?type=food) or "Hotel Reservations" (?type=hotel). The chips below read
-         from this same state, so the right one starts selected. */
+      /* The section is chosen by whoever linked here: the Account screen passes
+         ?type=movie|food|hotel. The Movie tab's Tickets popup passes nothing and
+         gets movie tickets, which is what that tab is about. */
       var state = {
         bucket: BUCKETS.some(function (b) { return b.id === query.bucket; }) ? query.bucket : 'upcoming',
         type: TYPES.some(function (t) { return t.id === query.type; }) ? query.type : 'movie',
@@ -92,7 +97,8 @@
         '<div class="screen">' +
           UI.appbar({
             title: titleFor(state.type),
-            right: '<button class="icon-btn" data-action="toggle-search" aria-label="Search tickets">' + UI.icon('search', 22) + '</button>',
+            back: true,
+            right: '<button class="icon-btn" data-action="toggle-search" aria-label="Search bookings">' + UI.icon('search', 22) + '</button>',
           }) +
           '<div class="tabs" role="tablist" data-tabs>' +
             BUCKETS.map(function (b) {
@@ -104,11 +110,6 @@
               '<input type="search" placeholder="Search by title or reference" data-search autocomplete="off">' +
             '</div>' +
           '</div>' +
-          '<div class="chips" data-types>' +
-            TYPES.map(function (t) {
-              return '<button class="chip" data-type="' + t.id + '" aria-pressed="' + (t.id === state.type ? 'true' : 'false') + '">' + t.label + '</button>';
-            }).join('') +
-          '</div>' +
           '<div class="scroll"><div class="stack" data-list style="margin-top:14px"></div><div class="spacer-24"></div></div>' +
         '</div>'
       );
@@ -117,9 +118,6 @@
       var cache = {};
 
       function emptyFor() {
-        if (state.type === 'event') {
-          return UI.empty({ icon: 'sparkle', title: 'No event tickets', text: 'Fan shows, premieres and live events will appear here once you book one.' });
-        }
         if (state.type === 'hotel') {
           if (state.bucket === 'upcoming') {
             return UI.empty({
@@ -174,18 +172,6 @@
         view.querySelectorAll('[data-bucket]').forEach(function (t) {
           t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
         });
-        load();
-      });
-
-      view.querySelector('[data-types]').addEventListener('click', function (event) {
-        var chip = event.target.closest('[data-type]');
-        if (!chip) return;
-        state.type = chip.getAttribute('data-type');
-        view.querySelectorAll('[data-type]').forEach(function (c) {
-          c.setAttribute('aria-pressed', c === chip ? 'true' : 'false');
-        });
-        var heading = view.querySelector('.appbar__title');
-        if (heading) heading.textContent = titleFor(state.type);
         load();
       });
 

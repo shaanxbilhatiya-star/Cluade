@@ -788,10 +788,19 @@ async function run() {
       const heading = await cdp.eval(`return document.querySelector('.appbar__title').textContent.trim();`);
       check(`"${label}" opens ${expectHash}`, hash === expectHash, hash);
       check(`and its screen is titled "${expectHeading}"`, heading === expectHeading, heading);
+      /* Each row is its own section, so nothing on it may offer to switch to a
+         different booking type — that is what made it feel like a tab. */
+      check(`and it shows no booking-type switcher`,
+        await cdp.eval(`return document.querySelector('[data-types]') === null
+          && document.querySelector('[data-type]') === null;`));
+      check(`and it offers a way back to Account`,
+        await cdp.eval(`return document.querySelector('[data-action="back"]') !== null;`));
       check(`and renders with no console errors`,
         cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
         [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
     }
+
+
 
     section('Customer app \u2014 the water park pass is listed under Account');
     cdp.clearErrors();
@@ -951,6 +960,36 @@ async function run() {
     check('no console errors through the movie checkout',
       cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
       [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+    /* Runs after both checkouts above, so a food order and a movie ticket both
+       exist in the polymorphic bookings collection. That is what makes this
+       meaningful: it proves each section filters, rather than showing the same
+       list under a different heading. */
+    section('Customer app \u2014 each section shows only its own bookings');
+    cdp.clearErrors();
+    await open(`${BASE}/#/tickets?type=food`, customer, `document.querySelector('[data-list]') !== null`, 'the food section');
+    await waitFor(cdp, `document.querySelector('[data-list] .card') !== null`, 'the food order to list');
+    const foodSection = await cdp.eval(`return document.querySelector('[data-list]').textContent;`);
+    check('the Food & Beverages section lists the food order',
+      /Food/i.test(foodSection), foodSection.slice(0, 140));
+    check('and does not list the movie ticket', !/Jawan/i.test(foodSection), foodSection.slice(0, 140));
+    check('the status tabs are still offered inside a section',
+      (await cdp.eval(`return document.querySelectorAll('[data-bucket]').length;`)) === 3);
+    check('no console errors in the food section',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+    await screenshot(cdp, 'app-section-food');
+
+    cdp.clearErrors();
+    await open(`${BASE}/#/tickets?type=movie`, customer, `document.querySelector('[data-list]') !== null`, 'the movie section');
+    await waitFor(cdp, `document.querySelector('[data-list] .card') !== null`, 'the movie ticket to list');
+    const movieSection = await cdp.eval(`return document.querySelector('[data-list]').textContent;`);
+    check('the Movie Tickets section lists the movie ticket', /Jawan/i.test(movieSection), movieSection.slice(0, 140));
+    check('and does not list the food order', !/Food & Beverages/i.test(movieSection), movieSection.slice(0, 140));
+    check('no console errors in the movie section',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+    await screenshot(cdp, 'app-section-movie');
 
     section('Customer app \u2014 the other tabs still work');
     for (const [hash, ready, label] of [
