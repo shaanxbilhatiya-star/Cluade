@@ -154,7 +154,6 @@ router.get('/dine-in', (ctx) => {
     settings: dine.publicSettings(s),
     /** Admin-managed promo slider for this tab. */
     slider: promos.publicSlider('dinein'),
-    tabPhotos: promos.publicTabPhotos('dinein'),
     /** The two tiers, exactly as the admin has configured them. */
     tiers: {
       reserved: {

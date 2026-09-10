@@ -150,7 +150,6 @@ router.get('/hotels', (ctx) => {
     phone: hotel.phone || FALLBACK_PHONE,
     /** Admin-managed promo slider for this tab, and the shared scroll speed. */
     slider: promos.publicSlider('stay'),
-    tabPhotos: promos.publicTabPhotos('stay'),
     stay,
     count: rooms.length,
     // Cheapest nightly rate, used for the "from ₹x" line on the tab header.

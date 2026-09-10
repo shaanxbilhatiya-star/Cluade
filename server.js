@@ -20,7 +20,6 @@ const promos = require('./src/promos');
 const { releaseExpiredHolds } = require('./src/seats');
 const { generateComboImages } = require('./tools/generate-combo-images');
 const { generateHotelImages } = require('./tools/generate-hotel-images');
-const { generatePromoImages } = require('./tools/generate-promo-images');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -40,9 +39,7 @@ seed.ensureRollingShowtimes();
 seed.reseedFood(); // Always sync food catalog from catalog.js
 seed.ensureExperiences(); // Seed the Experiences tab once; admin edits persist after that
 seed.ensureHotels(); // Seed the hotel + room types once; admin pricing/photos persist after that
-promos.ensureSlides(); // Starter promo slides per tab; admin edits/deletions persist
 generateHotelImages(); // Draw the room/hotel artwork if it is missing
-generatePromoImages(); // Draw the slider artwork if it is missing (before seeding slides)
 generateComboImages().catch(err => console.warn("[combo-images] Failed:", err.message));
 
 // ── Router ───────────────────────────────────────────────────────────────────
@@ -83,7 +80,6 @@ api.get('/api/health', () => ({
     dineReservations: db.get('dineReservations').length,
     dineBills: db.get('dineBills').length,
     waterparkBookings: db.get('waterparkBookings').length,
-    promoSlides: db.get('promoSlides').length,
   },
 }));
 

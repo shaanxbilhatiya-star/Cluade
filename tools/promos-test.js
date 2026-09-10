@@ -2,9 +2,10 @@
 /**
  * Tab slider end-to-end test.
  *
- * Proves the promo slider is genuinely admin-driven: what the admin saves is
- * what each customer tab is served, a slide is only tappable to an in-app path,
- * and the scroll speed is a setting rather than a constant.
+ * A slider is a list of photos the admin uploads, per tab, plus how fast it
+ * advances and whether it shows at all. This proves the photos the admin saves
+ * are the photos each tab is served, that an upload is written to disk rather
+ * than stored as a giant data: URL, and that the scroll speed is a setting.
  *
  *   npm run test:promos
  */
@@ -70,6 +71,10 @@ const TABS = [
   { section: 'waterpark', endpoint: '/api/waterpark' },
 ];
 
+/** A 1x1 PNG, as the admin photo picker would send it. */
+const PNG_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
+
 async function run() {
   const env = Object.assign({}, process.env, { PORT: String(PORT), DATA_DIR, HOST: '127.0.0.1' });
   delete env.NODE_OPTIONS;
@@ -90,28 +95,92 @@ async function run() {
     const adminToken = adminLogin.body.token;
     if (!adminToken) throw new Error('Could not sign in as admin');
 
-    // ── Defaults ──────────────────────────────────────────────────────────────
-    section('Every tab ships with a working slider');
+    // ── Empty by default ──────────────────────────────────────────────────────
+    section('A tab has no slider until the admin adds photos');
     const all = await api('GET', '/api/promos');
     check('GET /api/promos succeeds', all.status === 200, `status ${all.status}`);
     check('it covers all four tabs', all.body.sections.length === 4,
       JSON.stringify(all.body.sections.map((s) => s.section)));
-    check('health counts the new collection', (await api('GET', '/api/health')).body.counts.promoSlides > 0);
-
-    for (const tab of TABS) {
-      const one = await api('GET', `/api/promos/${tab.section}`);
-      check(`${tab.section}: has its own slider`, one.status === 200 && one.body.section === tab.section);
-      check(`${tab.section}: is on by default`, one.body.active === true);
-      check(`${tab.section}: auto-scrolls every 4.5s by default`, one.body.intervalMs === 4500, `got ${one.body.intervalMs}`);
-      check(`${tab.section}: ships at least one slide`, one.body.slides.length > 0, `got ${one.body.slides.length}`);
-      check(`${tab.section}: every slide has an image`, one.body.slides.every((s) => Boolean(s.imageUrl)));
-      check(`${tab.section}: no slide links outside the app`,
-        one.body.slides.every((s) => !s.ctaPath || s.ctaPath.startsWith('/')),
-        JSON.stringify(one.body.slides.map((s) => s.ctaPath)));
-    }
+    check('every slider starts empty, so nothing is invented for the admin',
+      all.body.sections.every((s) => s.photos.length === 0),
+      JSON.stringify(all.body.sections.map((s) => s.photos.length)));
+    check('an empty slider reports itself inactive, so the tab renders nothing',
+      all.body.sections.every((s) => s.active === false));
+    check('the default speed is 4.5s', all.body.sections.every((s) => s.intervalMs === 4500));
 
     const unknown = await api('GET', '/api/promos/nope');
     check('an unknown section is refused', unknown.status === 400, `status ${unknown.status}`);
+
+    // ── Adding photos ─────────────────────────────────────────────────────────
+    section('Adding photos to a tab');
+    const added = await api('PUT', '/api/admin/promos/waterpark', {
+      token: adminToken,
+      body: { photos: ['/img/banners/best-ticket-offers.svg', '/img/banners/popcorn-party.svg'] },
+    });
+    check('photos can be saved for a tab', added.status === 200, `status ${added.status}: ${added.body?.error}`);
+    check('both are stored, in the order given',
+      JSON.stringify(added.body.slider.photos) ===
+        JSON.stringify(['/img/banners/best-ticket-offers.svg', '/img/banners/popcorn-party.svg']),
+      JSON.stringify(added.body.slider.photos));
+
+    const live = await api('GET', '/api/promos/waterpark');
+    check('the tab is served them immediately', live.body.photos.length === 2);
+    check('and the slider is now active', live.body.active === true);
+    check('the water park tab payload carries them too',
+      (await api('GET', '/api/waterpark')).body.slider.photos.length === 2);
+
+    section('The order the admin sets is the order guests swipe');
+    const reordered = await api('PUT', '/api/admin/promos/waterpark', {
+      token: adminToken,
+      body: { photos: ['/img/banners/popcorn-party.svg', '/img/banners/best-ticket-offers.svg'] },
+    });
+    check('reordering is just saving a reordered list', reordered.status === 200);
+    check('and the app sees the new order',
+      (await api('GET', '/api/promos/waterpark')).body.photos[0] === '/img/banners/popcorn-party.svg');
+
+    section('Removing photos');
+    const trimmed = await api('PUT', '/api/admin/promos/waterpark', {
+      token: adminToken, body: { photos: ['/img/banners/popcorn-party.svg'] },
+    });
+    check('a photo can be removed', trimmed.body.slider.photos.length === 1);
+    check('one photo still shows (as a still, not a scroller)',
+      (await api('GET', '/api/promos/waterpark')).body.photos.length === 1);
+    const emptied = await api('PUT', '/api/admin/promos/waterpark', { token: adminToken, body: { photos: [] } });
+    check('all photos can be removed', emptied.body.slider.photos.length === 0);
+    check('and the tab then shows no slider at all',
+      (await api('GET', '/api/promos/waterpark')).body.active === false);
+    await api('PUT', '/api/admin/promos/waterpark', {
+      token: adminToken,
+      body: { photos: ['/img/banners/best-ticket-offers.svg', '/img/banners/popcorn-party.svg'] },
+    });
+
+    // ── Uploads ───────────────────────────────────────────────────────────────
+    section('An uploaded photo is written to disk, not stored as a data: URL');
+    const uploaded = await api('PUT', '/api/admin/promos/movie', {
+      token: adminToken, body: { photos: [PNG_DATA_URL, '/img/banners/combo-saver.svg'] },
+    });
+    check('an upload is accepted', uploaded.status === 200, `status ${uploaded.status}: ${uploaded.body?.error}`);
+    const savedPath = uploaded.body.slider.photos[0];
+    check('it comes back as an /uploads path', /^\/uploads\/promos\//.test(savedPath || ''), savedPath);
+    check('the file is actually served', (await fetch(BASE + savedPath)).status === 200);
+    check('an existing path alongside it is left alone',
+      uploaded.body.slider.photos[1] === '/img/banners/combo-saver.svg');
+    check('the Movie tab is served the uploaded photo',
+      (await api('GET', '/api/home')).body.slider.photos[0] === savedPath);
+
+    const junk = await api('PUT', '/api/admin/promos/movie', {
+      token: adminToken, body: { photos: ['data:text/html,<script>alert(1)</script>'] },
+    });
+    check('a non-image data: URL is refused', junk.status === 400, junk.body?.error);
+
+    section('There is a cap on how many photos a slider holds');
+    const many = await api('PUT', '/api/admin/promos/dinein', {
+      token: adminToken,
+      body: { photos: Array.from({ length: 25 }, (_v, i) => `/img/banners/combo-saver.svg?x=${i}`) },
+    });
+    check('a huge list is capped rather than rejected', many.status === 200);
+    check(`it keeps at most ${10} photos`, many.body.slider.photos.length === 10,
+      String(many.body.slider.photos.length));
 
     // ── Embedded in the tab payloads ──────────────────────────────────────────
     section('Each tab payload carries its own slider, so the app needs no extra call');
@@ -126,178 +195,91 @@ async function run() {
     }
 
     // ── Admin payload ─────────────────────────────────────────────────────────
-    section('The admin sees every section, including hidden slides');
+    section('The admin page gets everything it needs in one call');
     const adminView = await api('GET', '/api/admin/promos', { token: adminToken });
     check('GET /api/admin/promos succeeds', adminView.status === 200, `status ${adminView.status}`);
     check('it requires an admin', (await api('GET', '/api/admin/promos')).status === 401);
-    check('it lists all four sections', adminView.body.sections.length === 4);
-    check('each section carries its settings and slides',
-      adminView.body.sections.every((s) => s.settings && Array.isArray(s.slides) && s.label));
-    check('it reports how many slides are live', adminView.body.sections.every((s) => typeof s.liveCount === 'number'));
-    check('it exposes the interval bounds for the form',
-      adminView.body.intervalBounds.min === 1500 && adminView.body.intervalBounds.max === 30000);
-
-    // ── Adding a slide ────────────────────────────────────────────────────────
-    section('Adding a slide puts it on the tab');
-    const before = (await api('GET', '/api/promos/waterpark')).body.slides.length;
-    const created = await api('POST', '/api/admin/promos', {
-      token: adminToken,
-      body: {
-        section: 'waterpark',
-        title: 'Monsoon splash',
-        subtitle: 'Half price on rainy weekdays',
-        imageUrl: '/img/banners/weekend-cashback.svg',
-        ctaLabel: 'Book now',
-        ctaPath: '/waterpark',
-      },
-    });
-    check('a slide can be added', created.status === 201, `status ${created.status}: ${created.body?.error}`);
-    check('it lands at the end of the order',
-      created.body.slides[created.body.slides.length - 1].id === created.body.slide.id);
-
-    const afterAdd = await api('GET', '/api/promos/waterpark');
-    check('the tab serves it immediately', afterAdd.body.slides.length === before + 1);
-    check('with its heading, link and artwork intact', (() => {
-      const s = afterAdd.body.slides.find((x) => x.id === created.body.slide.id);
-      return s && s.title === 'Monsoon splash' && s.ctaPath === '/waterpark' &&
-        s.imageUrl === '/img/banners/weekend-cashback.svg';
+    check('it lists all four sections with labels', adminView.body.sections.length === 4 &&
+      adminView.body.sections.every((s) => s.label));
+    check('each section carries its photos, speed and on/off state',
+      adminView.body.sections.every((s) => Array.isArray(s.photos) &&
+        typeof s.intervalMs === 'number' && typeof s.active === 'boolean'));
+    check('it exposes the interval bounds and photo cap for the form',
+      adminView.body.intervalBounds.min === 1500 && adminView.body.intervalBounds.max === 30000 &&
+      adminView.body.maxPhotos === 10);
+    check('a hidden slider still shows its photos to the admin', await (async () => {
+      await api('PUT', '/api/admin/promos/stay', {
+        token: adminToken, body: { photos: ['/img/banners/weekend-cashback.svg'], active: false },
+      });
+      const view = await api('GET', '/api/admin/promos', { token: adminToken });
+      const stay = view.body.sections.find((s) => s.id === 'stay');
+      return stay.photos.length === 1 && stay.active === false;
     })());
-    check('and the water park tab payload shows it too',
-      (await api('GET', '/api/waterpark')).body.slider.slides.some((s) => s.title === 'Monsoon splash'));
-
-    // ── Validation ────────────────────────────────────────────────────────────
-    section('A slide cannot be saved in a broken state');
-    const noImage = await api('POST', '/api/admin/promos', {
-      token: adminToken, body: { section: 'movie', title: 'No art' },
-    });
-    check('a slide without an image is refused', noImage.status === 400, noImage.body?.error);
-
-    const badSection = await api('POST', '/api/admin/promos', {
-      token: adminToken, body: { section: 'lobby', imageUrl: '/img/logo.svg' },
-    });
-    check('an unknown section is refused', badSection.status === 400, badSection.body?.error);
-
-    const jsLink = await api('POST', '/api/admin/promos', {
-      token: adminToken, body: { section: 'movie', imageUrl: '/img/logo.svg', ctaPath: 'javascript:alert(1)' },
-    });
-    check('a javascript: link is refused', jsLink.status === 400, jsLink.body?.error);
-
-    const external = await api('POST', '/api/admin/promos', {
-      token: adminToken, body: { section: 'movie', imageUrl: '/img/logo.svg', ctaPath: 'https://example.com' },
-    });
-    check('an external link is refused', external.status === 400, external.body?.error);
-
-    const protocolRelative = await api('POST', '/api/admin/promos', {
-      token: adminToken, body: { section: 'movie', imageUrl: '/img/logo.svg', ctaPath: '//example.com' },
-    });
-    check('a protocol-relative link is refused', protocolRelative.status === 400, protocolRelative.body?.error);
-
-    const relative = await api('POST', '/api/admin/promos', {
-      token: adminToken, body: { section: 'movie', imageUrl: '/img/logo.svg', ctaPath: 'waterpark' },
-    });
-    check('a link without a leading slash is refused', relative.status === 400, relative.body?.error);
-
-    const danglingLabel = await api('POST', '/api/admin/promos', {
-      token: adminToken, body: { section: 'movie', imageUrl: '/img/logo.svg', ctaLabel: 'Go' },
-    });
-    check('a button label with nowhere to go is refused', danglingLabel.status === 400, danglingLabel.body?.error);
-
-    // ── Editing and hiding ────────────────────────────────────────────────────
-    section('Editing and hiding a slide');
-    const edited = await api('PUT', `/api/admin/promos/slides/${created.body.slide.id}`, {
-      token: adminToken, body: { title: 'Monsoon splash \u2014 now 50% off' },
-    });
-    check('a slide can be edited', edited.status === 200 && /50% off/.test(edited.body.slide.title));
-    check('editing does not lose the rest of the slide',
-      edited.body.slide.ctaPath === '/waterpark' && edited.body.slide.imageUrl === '/img/banners/weekend-cashback.svg');
-    check('the tab serves the new wording',
-      (await api('GET', '/api/promos/waterpark')).body.slides.some((s) => /50% off/.test(s.title)));
-
-    const hidden = await api('PUT', `/api/admin/promos/slides/${created.body.slide.id}`, {
-      token: adminToken, body: { active: false },
-    });
-    check('a slide can be hidden', hidden.status === 200);
-    check('a hidden slide is not served to the app',
-      !(await api('GET', '/api/promos/waterpark')).body.slides.some((s) => s.id === created.body.slide.id));
-    check('but the admin still sees it', (await api('GET', '/api/admin/promos', { token: adminToken }))
-      .body.sections.find((s) => s.id === 'waterpark').slides.some((s) => s.id === created.body.slide.id));
-    await api('PUT', `/api/admin/promos/slides/${created.body.slide.id}`, { token: adminToken, body: { active: true } });
-
-    // ── Ordering ──────────────────────────────────────────────────────────────
-    section('Reordering slides');
-    const order0 = (await api('GET', '/api/promos/waterpark')).body.slides.map((s) => s.id);
-    const moved = await api('POST', `/api/admin/promos/slides/${order0[0]}/move`, {
-      token: adminToken, body: { direction: 'down' },
-    });
-    check('a slide can be moved down', moved.status === 200 && moved.body.moved === true);
-    const order1 = (await api('GET', '/api/promos/waterpark')).body.slides.map((s) => s.id);
-    check('the order the app sees actually changes',
-      order1[0] === order0[1] && order1[1] === order0[0], `${order0.join(',')} -> ${order1.join(',')}`);
-    check('moving it back restores the order', await (async () => {
-      await api('POST', `/api/admin/promos/slides/${order0[0]}/move`, { token: adminToken, body: { direction: 'up' } });
-      const back = (await api('GET', '/api/promos/waterpark')).body.slides.map((s) => s.id);
-      return back.join(',') === order0.join(',');
-    })());
-    const offTop = await api('POST', `/api/admin/promos/slides/${order0[0]}/move`, {
-      token: adminToken, body: { direction: 'up' },
-    });
-    check('moving the first slide up is a no-op, not an error',
-      offTop.status === 200 && offTop.body.moved === false, `status ${offTop.status}`);
-    const badDirection = await api('POST', `/api/admin/promos/slides/${order0[0]}/move`, {
-      token: adminToken, body: { direction: 'sideways' },
-    });
-    check('an unknown direction is refused', badDirection.status === 400);
+    check('while the app is served nothing for it',
+      (await api('GET', '/api/promos/stay')).body.photos.length === 0);
+    await api('PUT', '/api/admin/promos/stay', { token: adminToken, body: { active: true } });
+    check('switching it back on restores the photo',
+      (await api('GET', '/api/promos/stay')).body.photos.length === 1);
 
     // ── Scroll speed ──────────────────────────────────────────────────────────
     section('The scroll speed is a setting, not a constant');
-    const faster = await api('PUT', '/api/admin/promos/stay/settings', {
-      token: adminToken, body: { intervalMs: 2000 },
-    });
-    check('the interval can be changed', faster.status === 200 && faster.body.settings.intervalMs === 2000);
+    const faster = await api('PUT', '/api/admin/promos/stay', { token: adminToken, body: { intervalMs: 2000 } });
+    check('the interval can be changed', faster.status === 200 && faster.body.slider.intervalMs === 2000);
     check('the Stay tab is served the new speed',
       (await api('GET', '/api/hotels')).body.slider.intervalMs === 2000);
-    check('other tabs are unaffected',
-      (await api('GET', '/api/promos/movie')).body.intervalMs === 4500);
+    check('other tabs are unaffected', (await api('GET', '/api/promos/movie')).body.intervalMs === 4500);
+    check('changing the speed does not disturb the photos',
+      (await api('GET', '/api/promos/stay')).body.photos.length === 1);
 
-    const tooFast = await api('PUT', '/api/admin/promos/stay/settings', { token: adminToken, body: { intervalMs: 200 } });
+    const tooFast = await api('PUT', '/api/admin/promos/stay', { token: adminToken, body: { intervalMs: 200 } });
     check('an unreadably fast interval is refused', tooFast.status === 400, tooFast.body?.error);
-    const tooSlow = await api('PUT', '/api/admin/promos/stay/settings', { token: adminToken, body: { intervalMs: 120000 } });
+    const tooSlow = await api('PUT', '/api/admin/promos/stay', { token: adminToken, body: { intervalMs: 120000 } });
     check('an absurdly slow interval is refused', tooSlow.status === 400, tooSlow.body?.error);
     check('and the rejected values did not stick',
       (await api('GET', '/api/promos/stay')).body.intervalMs === 2000);
-    await api('PUT', '/api/admin/promos/stay/settings', { token: adminToken, body: { intervalMs: 4500 } });
 
-    // ── The kill switch ───────────────────────────────────────────────────────
-    section('A slider can be switched off per tab');
-    const off = await api('PUT', '/api/admin/promos/dinein/settings', { token: adminToken, body: { active: false } });
-    check('the Dine-In slider can be switched off', off.status === 200);
-    const offSlider = await api('GET', '/api/promos/dinein');
-    check('it reports itself inactive', offSlider.body.active === false);
-    check('and serves no slides, so the tab renders nothing', offSlider.body.slides.length === 0);
-    check('the Dine-In tab payload agrees', (await api('GET', '/api/dine-in')).body.slider.active === false);
-    check('other tabs keep their sliders', (await api('GET', '/api/promos/movie')).body.slides.length > 0);
-    await api('PUT', '/api/admin/promos/dinein/settings', { token: adminToken, body: { active: true } });
-    check('switching it back on restores the slides',
-      (await api('GET', '/api/promos/dinein')).body.slides.length > 0);
+    const badSection = await api('PUT', '/api/admin/promos/lobby', { token: adminToken, body: { intervalMs: 3000 } });
+    check('an unknown section cannot be configured', badSection.status === 400, badSection.body?.error);
 
-    // ── Deleting ──────────────────────────────────────────────────────────────
-    section('Deleting a slide');
-    const del = await api('DELETE', `/api/admin/promos/slides/${created.body.slide.id}`, { token: adminToken });
-    check('a slide can be deleted', del.status === 200 && del.body.deleted === true);
-    check('and the tab stops serving it',
-      !(await api('GET', '/api/promos/waterpark')).body.slides.some((s) => s.id === created.body.slide.id));
-    check('deleting it twice is a clean 404',
-      (await api('DELETE', `/api/admin/promos/slides/${created.body.slide.id}`, { token: adminToken })).status === 404);
+    // ── Persistence ───────────────────────────────────────────────────────────
+    section('Photos survive a restart');
+    const beforeRestart = (await api('GET', '/api/promos/waterpark')).body.photos;
+    child.kill('SIGTERM');
+    await new Promise((r) => setTimeout(r, 700));
+    const restarted = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
+      env, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    restarted.stdout.on('data', (d) => serverLog.push(d.toString()));
+    restarted.stderr.on('data', (d) => serverLog.push(d.toString()));
+    await waitForServer(restarted);
+    const afterRestart = (await api('GET', '/api/promos/waterpark')).body.photos;
+    check('the slider photos are still there after a restart',
+      JSON.stringify(afterRestart) === JSON.stringify(beforeRestart),
+      `${JSON.stringify(beforeRestart)} -> ${JSON.stringify(afterRestart)}`);
+    check('and no starter photos are added behind the admin\u2019s back',
+      (await api('GET', '/api/promos/waterpark')).body.photos.length === beforeRestart.length);
+    restarted.kill('SIGTERM');
+
+    // ── Permissions ───────────────────────────────────────────────────────────
+    const relaunched = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
+      env, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    relaunched.stdout.on('data', (d) => serverLog.push(d.toString()));
+    relaunched.stderr.on('data', (d) => serverLog.push(d.toString()));
+    await waitForServer(relaunched);
 
     section('Guests cannot edit sliders');
     const login = await api('POST', '/api/auth/login', { body: { email: 'andrew@example.com', password: '1234' } });
     const userToken = login.body.token;
-    check('a customer cannot add a slide',
-      (await api('POST', '/api/admin/promos', { token: userToken, body: { section: 'movie', imageUrl: '/img/logo.svg' } })).status === 403);
+    check('a customer cannot change the photos',
+      (await api('PUT', '/api/admin/promos/movie', { token: userToken, body: { photos: [] } })).status === 403);
     check('a customer cannot change the speed',
-      (await api('PUT', '/api/admin/promos/movie/settings', { token: userToken, body: { intervalMs: 2000 } })).status === 403);
+      (await api('PUT', '/api/admin/promos/movie', { token: userToken, body: { intervalMs: 2000 } })).status === 403);
     check('an anonymous visitor cannot either',
-      (await api('PUT', '/api/admin/promos/movie/settings', { body: { intervalMs: 2000 } })).status === 401);
+      (await api('PUT', '/api/admin/promos/movie', { body: { intervalMs: 2000 } })).status === 401);
+    check('but anyone may read a slider, since the app needs it',
+      (await api('GET', '/api/promos/movie')).status === 200);
+    relaunched.kill('SIGTERM');
   } catch (err) {
     failed += 1;
     failures.push(`Harness error: ${err.message}`);
