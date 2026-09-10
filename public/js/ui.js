@@ -335,6 +335,52 @@
       '</div></div>';
   }
 
+  /** How long autoplay stands down after the reader swipes for themselves. */
+  var CAROUSEL_RESUME_MS = 6000;
+
+  /**
+   * The admin-managed promo slider that sits at the top of a tab.
+   *
+   * Takes the `slider` block the tab payload carries: { active, intervalMs,
+   * slides }. Renders nothing at all when the admin has switched it off or has
+   * not added any slides, so a tab never shows an empty band. Slides with a
+   * link become buttons handled by `data-action="promo"`; the rest are inert.
+   */
+  function promoSlider(slider) {
+    if (!slider || slider.active === false) return '';
+    var slides = slider.slides || [];
+    if (!slides.length) return '';
+
+    var cards = slides.map(function (slide) {
+      var linked = Boolean(slide.ctaPath);
+      var tag = linked ? 'button' : 'div';
+      var attrs = linked ? ' data-action="promo" data-path="' + esc(slide.ctaPath) + '"' : '';
+      var caption = slide.title || slide.subtitle
+        ? '<div class="promo__text">' +
+            (slide.title ? '<strong class="promo__title">' + esc(slide.title) + '</strong>' : '') +
+            (slide.subtitle ? '<span class="promo__sub">' + esc(slide.subtitle) + '</span>' : '') +
+            (slide.ctaLabel ? '<span class="promo__cta">' + esc(slide.ctaLabel) + icon('chevron-right', 15) + '</span>' : '') +
+          '</div>'
+        : '';
+
+      return '<div class="carousel__slide">' +
+        '<' + tag + ' class="promo' + (linked ? ' promo--linked' : '') + '"' + attrs + '>' +
+          '<img class="promo__img" src="' + esc(slide.imageUrl) + '" alt="' + esc(slide.title || '') + '" ' +
+            'loading="lazy" data-fallback="/img/banners/best-ticket-offers.svg">' +
+          (caption ? '<div class="promo__veil"></div>' + caption : '') +
+        '</' + tag + '>' +
+      '</div>';
+    });
+
+    /* A single slide has nothing to advance to, so it renders as a still with no
+       dots and no timer. */
+    if (cards.length === 1) return '<div class="promo-slider promo-slider--single">' + cards[0] + '</div>';
+
+    return '<div class="promo-slider">' +
+      carousel(cards, { autoplay: slider.intervalMs || 4500 }) +
+      '</div>';
+  }
+
   /** Wires dot indicators (and optional autoplay) for every carousel in root. */
   function initCarousels(root) {
     root.querySelectorAll('[data-carousel]').forEach(function (car) {
@@ -342,11 +388,30 @@
       var dots = Array.prototype.slice.call(car.querySelectorAll('.carousel__dot'));
       if (!track || dots.length < 2) return;
 
+      /**
+       * Distance from one slide to the next, measured rather than assumed.
+       * The gap differs per carousel — the rails leave 12px between cards while
+       * the hero sliders set `gap: 0` — so hard-coding it made the dots and the
+       * autoplay target drift further out of step with every extra slide.
+       */
+      function stepSize() {
+        var first = track.children[0];
+        if (!first) return 0;
+        var second = track.children[1];
+        if (second) {
+          var delta = second.getBoundingClientRect().left - first.getBoundingClientRect().left;
+          if (delta > 0) return delta;
+        }
+        return first.getBoundingClientRect().width;
+      }
+
+      function currentIndex() {
+        var step = stepSize();
+        return step > 0 ? Math.round(track.scrollLeft / step) : 0;
+      }
+
       function sync() {
-        var slide = track.firstElementChild;
-        if (!slide) return;
-        var step = slide.getBoundingClientRect().width + 12;
-        var index = Math.round(track.scrollLeft / step);
+        var index = currentIndex();
         dots.forEach(function (dot, i) { dot.setAttribute('aria-current', i === index ? 'true' : 'false'); });
       }
 
@@ -356,18 +421,26 @@
       });
 
       var interval = Number(car.getAttribute('data-autoplay'));
-      if (interval > 0) {
-        var timer = setInterval(function () {
-          if (!document.body.contains(car)) { clearInterval(timer); return; }
-          if (document.hidden) return;
-          var slide = track.firstElementChild;
-          if (!slide) return;
-          var step = slide.getBoundingClientRect().width + 12;
-          var next = Math.round(track.scrollLeft / step) + 1;
-          if (next >= dots.length) next = 0;
-          track.scrollTo({ left: next * step, behavior: 'smooth' });
-        }, interval);
-      }
+      if (!(interval > 0)) return;
+
+      /* Autoplay that keeps advancing while someone is swiping fights them for
+         control, so it stands down for a moment after any manual input. */
+      var touchedAt = 0;
+      ['pointerdown', 'touchstart', 'wheel'].forEach(function (name) {
+        track.addEventListener(name, function () { touchedAt = Date.now(); }, { passive: true });
+      });
+
+      var timer = setInterval(function () {
+        if (!document.body.contains(car)) { clearInterval(timer); return; }
+        if (document.hidden) return;
+        if (Date.now() - touchedAt < CAROUSEL_RESUME_MS) return;
+
+        var step = stepSize();
+        if (!step) return;
+        var next = currentIndex() + 1;
+        if (next >= dots.length) next = 0;
+        track.scrollTo({ left: next * step, behavior: 'smooth' });
+      }, interval);
     });
   }
 
@@ -426,6 +499,7 @@
     timeAgo: timeAgo, runtime: runtime, initials: initials, toDate: toDate,
     toast: toast, sheet: sheet, confirm: confirmSheet,
     appbar: appbar, sectionHead: sectionHead, posterImg: posterImg, movieCard: movieCard,
+    promoSlider: promoSlider,
     foodCard: foodCard, empty: empty, row: row, statusPill: statusPill,
     spinnerBlock: spinnerBlock, carousel: carousel, initCarousels: initCarousels,
     actions: actions, showAdultWarning: showAdultWarning, MONTHS: MONTHS, DOW: DOW, CURRENCY: CURRENCY,

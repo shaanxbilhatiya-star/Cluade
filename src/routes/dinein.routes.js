@@ -21,6 +21,7 @@
 const db = require('../db');
 const auth = require('../auth');
 const dine = require('../dinein');
+const promos = require('../promos');
 const { computeDineTotals, resolveDineOffer } = require('../pricing');
 const { paymentRecord, notify } = require('../bookings');
 const { Router, HttpError } = require('../router');
@@ -151,6 +152,8 @@ router.get('/dine-in', (ctx) => {
 
   return {
     settings: dine.publicSettings(s),
+    /** Admin-managed promo slider for this tab. */
+    slider: promos.publicSlider('dinein'),
     /** The two tiers, exactly as the admin has configured them. */
     tiers: {
       reserved: {
