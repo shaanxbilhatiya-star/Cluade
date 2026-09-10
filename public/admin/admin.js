@@ -1877,6 +1877,7 @@
       return h('<div class="form-grid">' +
         field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.3' }) +
         field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+        field('Tagline', 'tagline', s.tagline, { span: true, placeholder: 'Great food, great vibes — right inside the resort' }) +
         imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
         galleryField('Property photos', 'photos', s.photos, {
           hint: 'Shown in the hero at the top of the Dine-In tab. Add more than one and guests can swipe through them.',
@@ -1893,6 +1894,7 @@
       return {
         rating: Number(raw.rating) || 0,
         reviewCount: Number(raw.reviewCount) || 0,
+        tagline: raw.tagline || '',
         coverPhoto: raw.coverPhoto || '',
         photos: (raw.photos || '').split('\n').filter(Boolean),
         amenities: csvList(raw.amenities),
@@ -2935,6 +2937,7 @@
       return h('<div class="form-grid">' +
         field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.5' }) +
         field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+        field('Tagline', 'tagline', s.tagline, { span: true, placeholder: 'Splash into a day of fun for the whole family' }) +
         imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
         galleryField('Property photos', 'photos', s.photos, {
           hint: 'Shown in the hero at the top of the Waterpark tab. Add more than one and guests can swipe through them.',
@@ -2951,6 +2954,7 @@
       return {
         rating: Number(raw.rating) || 0,
         reviewCount: Number(raw.reviewCount) || 0,
+        tagline: raw.tagline || '',
         coverPhoto: raw.coverPhoto || '',
         photos: (raw.photos || '').split('\n').filter(Boolean),
         amenities: csvList(raw.amenities),
