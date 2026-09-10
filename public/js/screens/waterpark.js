@@ -148,34 +148,21 @@
 
             UI.propertyHero(Object.assign({}, s, {
               name: s.headline || s.parkName,
-              location: [s.parkName, s.address].filter(Boolean).join(' \u00B7 '),
-              tagline: s.tagline,
+              location: [s.parkName, s.address].filter(Boolean).join(', '),
             })) +
 
-            (!(s.photos && s.photos.length) && !s.coverPhoto
-              ? '<div class="wp-hero">' +
-                  (s.subline ? '<span class="wp-hero__kicker">' + UI.esc(s.subline) + '</span>' : '') +
-                  '<h2 class="wp-hero__title">' + UI.esc(s.headline) + '</h2>' +
-                  (s.tagline ? '<p class="wp-hero__tagline">' + UI.esc(s.tagline) + '</p>' : '') +
-                  '<div class="wp-hero__meta">' + UI.icon('map-pin', 15) +
-                    '<span>' + UI.esc(s.parkName) + (s.address ? ' \u00B7 ' + UI.esc(s.address) : '') + '</span></div>' +
-                  '<div class="wp-hero__meta">' + UI.icon('clock', 15) +
-                    '<span>Open ' + UI.esc(s.openTime) + ' \u2013 ' + UI.esc(s.closeTime) +
-                    ' \u00B7 entry every ' + s.slotMinutes + ' min</span></div>' +
-                  (data.bestSaving
-                    ? '<div class="wp-hero__save">' + UI.icon('tag', 16) +
-                      '<span>Save up to ' + UI.money(data.bestSaving) + ' with a family package</span></div>'
-                    : '') +
-                '</div>'
-              : '<div class="wp-hero wp-hero--compact">' +
-                  '<div class="wp-hero__meta">' + UI.icon('clock', 15) +
-                    '<span>Open ' + UI.esc(s.openTime) + ' \u2013 ' + UI.esc(s.closeTime) +
-                    ' \u00B7 entry every ' + s.slotMinutes + ' min</span></div>' +
-                  (data.bestSaving
-                    ? '<div class="wp-hero__save">' + UI.icon('tag', 16) +
-                      '<span>Save up to ' + UI.money(data.bestSaving) + ' with a family package</span></div>'
-                    : '') +
-                '</div>') +
+            (s.tagline ? '<p class="hotel-tagline">' + UI.esc(s.tagline) + '</p>' : '') +
+
+            '<div class="wp-hero">' +
+              (s.subline ? '<span class="wp-hero__kicker">' + UI.esc(s.subline) + '</span>' : '') +
+              '<div class="wp-hero__meta">' + UI.icon('clock', 15) +
+                '<span>Open ' + UI.esc(s.openTime) + ' \u2013 ' + UI.esc(s.closeTime) +
+                ' \u00B7 entry every ' + s.slotMinutes + ' min</span></div>' +
+              (data.bestSaving
+                ? '<div class="wp-hero__save">' + UI.icon('tag', 16) +
+                  '<span>Save up to ' + UI.money(data.bestSaving) + ' with a family package</span></div>'
+                : '') +
+            '</div>' +
 
             /* Passes the guest already holds, so they can pull one up at the gate. */
             (data.myBookings && data.myBookings.length

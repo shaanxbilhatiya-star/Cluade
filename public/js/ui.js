@@ -479,10 +479,9 @@
     return '<div class="hotel-hero">' +
       media +
       '<div class="hotel-hero__veil"></div>' +
-      (p.name || p.location || p.tagline
+      (p.name || p.location
         ? '<div class="hotel-hero__text">' +
           (p.name ? '<h2>' + esc(p.name) + '</h2>' : '') +
-          (p.tagline ? '<p class="hotel-hero__tagline">' + esc(p.tagline) + '</p>' : '') +
           (p.location ? '<p>' + icon('map-pin', 14) + esc(p.location) + '</p>' : '') +
         '</div>'
         : '') +
