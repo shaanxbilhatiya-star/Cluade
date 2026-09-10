@@ -113,12 +113,15 @@
             UI.propertyHero(Object.assign({}, s, {
               name: s.restaurantName,
               location: s.address,
+              tagline: s.tagline,
             })) +
 
             '<div class="dine-hero">' +
-              '<h2 class="dine-hero__name">' + UI.esc(s.restaurantName) + '</h2>' +
-              (s.tagline ? '<p class="dine-hero__tagline">' + UI.esc(s.tagline) + '</p>' : '') +
-              (s.address ? '<div class="dine-hero__meta">' + UI.icon('map-pin', 15) + '<span>' + UI.esc(s.address) + '</span></div>' : '') +
+              (!(s.photos && s.photos.length) && !s.coverPhoto
+                ? '<h2 class="dine-hero__name">' + UI.esc(s.restaurantName) + '</h2>' +
+                  (s.tagline ? '<p class="dine-hero__tagline">' + UI.esc(s.tagline) + '</p>' : '') +
+                  (s.address ? '<div class="dine-hero__meta">' + UI.icon('map-pin', 15) + '<span>' + UI.esc(s.address) + '</span></div>' : '')
+                : '') +
               '<div class="dine-hero__meta">' + UI.icon('clock', 15) +
                 '<span>Open ' + UI.esc(s.openTime) + ' – ' + UI.esc(s.closeTime) + '</span></div>' +
               '<div class="dine-hero__actions">' +
