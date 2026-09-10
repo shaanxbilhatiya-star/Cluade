@@ -62,10 +62,10 @@ function seedMovies() {
         cast: m.cast,
         synopsis: m.synopsis,
         trailerUrl: m.trailerUrl,
-        // No auto-generated poster/backdrop art — demo movies ship blank so the
-        // admin's own uploads are the only images that ever appear, instead of
-        // placeholder art nobody asked for.
-        posterUrl: '',
+        // Coming Soon movies ship with their generated poster so the card rail
+        // looks populated. Backdrop (landscape hero) is always blank — those
+        // auto-generated wide images were never wanted.
+        posterUrl: m.status === 'coming_soon' ? `/img/posters/${m.slug}.svg` : '',
         backdropUrl: '',
         accentColor: m.art.colors[1],
         active: true,
@@ -698,18 +698,17 @@ function ensureHotels() {
  * artwork disappears on the next boot with no admin action needed.
  */
 function clearGeneratedPosterArt() {
-  const GENERATED_RE = /^\/img\/(posters|backdrops)\//;
+  // Only wipe backdropUrl (the wide landscape images nobody asked for).
+  // posterUrl is intentionally kept — Coming Soon cards need it.
+  const BACKDROP_RE = /^\/img\/backdrops\//;
   let cleared = 0;
   for (const movie of db.get('movies')) {
-    const patch = {};
-    if (GENERATED_RE.test(movie.posterUrl || '')) patch.posterUrl = '';
-    if (GENERATED_RE.test(movie.backdropUrl || '')) patch.backdropUrl = '';
-    if (Object.keys(patch).length) {
-      db.update('movies', movie.id, patch);
+    if (BACKDROP_RE.test(movie.backdropUrl || '')) {
+      db.update('movies', movie.id, { backdropUrl: '' });
       cleared += 1;
     }
   }
-  if (cleared) console.log(`[seed] cleared auto-generated poster/backdrop art on ${cleared} movie(s)`);
+  if (cleared) console.log(`[seed] cleared auto-generated backdrop art on ${cleared} movie(s)`);
 }
 
 module.exports = {
