@@ -1915,47 +1915,6 @@
     }
 
     // ── Property details ──
-    function propertyForm() {
-      return h('<div class="form-grid">' +
-        field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.5' }) +
-        field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
-        imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
-        galleryField('Property photos', 'photos', s.photos, {
-          hint: 'Shown in the hero at the top of the Waterpark tab. Add more than one and guests can swipe through them.',
-        }) +
-        field('Amenities (comma separated)', 'amenities', (s.amenities || []).join(', '),
-          { type: 'textarea', span: true, placeholder: 'Lifeguards on duty, Changing rooms, Free parking' }) +
-        field('Policies (one per line)', 'policies', (s.policies || []).join('\n'),
-          { type: 'textarea', span: true, placeholder: 'Costume compulsory in pools\nNo outside food or drinks' }) +
-        '</div>');
-    }
-
-    function propertyPayload(body) {
-      var raw = readForm(body);
-      return {
-        rating: Number(raw.rating) || 0,
-        reviewCount: Number(raw.reviewCount) || 0,
-        coverPhoto: raw.coverPhoto || '',
-        photos: (raw.photos || '').split('\n').filter(Boolean),
-        amenities: csvList(raw.amenities),
-        policies: (raw.policies || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
-      };
-    }
-
-    function editProperty() {
-      var m = modal({ title: 'Water park property details', body: propertyForm(), confirmLabel: 'Save property' });
-      bindImageField(m.body, 'coverPhoto');
-      bindGalleryField(m.body, 'photos');
-      m.confirmBtn.addEventListener('click', function () {
-        submitModal(m, async function () {
-          var res = await API.put('/admin/waterpark/settings', propertyPayload(m.body));
-          s = res.settings;
-          toast('Property details saved — live for customers now', 'success');
-          navigate('waterpark');
-        });
-      });
-    }
-
     function settingsForm() {
       return h('<div class="form-grid">' +
         field('Dine-In tab', 'active', s.active === false ? 'false' : 'true', { options: [
@@ -2969,6 +2928,48 @@
       syncSections();
       loadSlots();
       return { body: body, payload: payload };
+    }
+
+    // ── Property details helpers ──
+    function propertyForm() {
+      return h('<div class="form-grid">' +
+        field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.5' }) +
+        field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+        imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
+        galleryField('Property photos', 'photos', s.photos, {
+          hint: 'Shown in the hero at the top of the Waterpark tab. Add more than one and guests can swipe through them.',
+        }) +
+        field('Amenities (comma separated)', 'amenities', (s.amenities || []).join(', '),
+          { type: 'textarea', span: true, placeholder: 'Lifeguards on duty, Changing rooms, Free parking' }) +
+        field('Policies (one per line)', 'policies', (s.policies || []).join('\n'),
+          { type: 'textarea', span: true, placeholder: 'Costume compulsory in pools\nNo outside food or drinks' }) +
+        '</div>');
+    }
+
+    function propertyPayload(body) {
+      var raw = readForm(body);
+      return {
+        rating: Number(raw.rating) || 0,
+        reviewCount: Number(raw.reviewCount) || 0,
+        coverPhoto: raw.coverPhoto || '',
+        photos: (raw.photos || '').split('\n').filter(Boolean),
+        amenities: csvList(raw.amenities),
+        policies: (raw.policies || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
+      };
+    }
+
+    function editProperty() {
+      var m = modal({ title: 'Water park property details', body: propertyForm(), confirmLabel: 'Save property' });
+      bindImageField(m.body, 'coverPhoto');
+      bindGalleryField(m.body, 'photos');
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var res = await API.put('/admin/waterpark/settings', propertyPayload(m.body));
+          s = res.settings;
+          toast('Property details saved — live for customers now', 'success');
+          navigate('waterpark');
+        });
+      });
     }
 
     // ── Top action wiring ──
