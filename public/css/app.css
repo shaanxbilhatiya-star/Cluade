@@ -1828,38 +1828,11 @@ body.photo-viewer-open { overflow: hidden; }
 .promo-slider--single { padding: 12px 16px 0; }
 
 .promo {
-  position: relative; display: block; width: 100%;
-  padding: 0; overflow: hidden; text-align: left;
+  display: block; width: 100%;
+  overflow: hidden;
   border-radius: var(--radius-lg);
   background: var(--bg-sunken);
   box-shadow: var(--shadow-card);
 }
-.promo--linked { cursor: pointer; }
-.promo--linked:active { transform: scale(.99); }
-.promo__img {
-  display: block; width: 100%; height: 148px;
-  object-fit: cover;
-}
-/* Sits under the caption only, so an untitled slide shows the artwork clean. */
-.promo__veil {
-  position: absolute; inset: 0;
-  background: linear-gradient(90deg, rgba(12, 10, 24, .78) 0%, rgba(12, 10, 24, .45) 55%, rgba(12, 10, 24, 0) 100%);
-  pointer-events: none;
-}
-.promo__text {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 4px;
-  padding: 16px 18px;
-  max-width: 78%;
-  color: #fff;
-  pointer-events: none;
-}
-.promo__title { font-size: 17px; font-weight: 800; letter-spacing: -.2px; line-height: 1.2; }
-.promo__sub { font-size: 12.5px; line-height: 1.45; opacity: .92; }
-.promo__cta {
-  display: inline-flex; align-items: center; gap: 2px; align-self: flex-start;
-  margin-top: 7px; padding: 6px 10px 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .95); color: var(--primary-700);
-  font-size: 12px; font-weight: 800;
-}
+/* Whatever ratio the admin uploaded, shown whole and uncropped. */
+.promo__img { display: block; width: 100%; height: auto; }

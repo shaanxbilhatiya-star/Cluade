@@ -339,41 +339,30 @@
   var CAROUSEL_RESUME_MS = 6000;
 
   /**
-   * The admin-managed promo slider that sits at the top of a tab.
+   * The admin-managed photo slider that sits at the top of a tab.
    *
    * Takes the `slider` block the tab payload carries: { active, intervalMs,
-   * slides }. Renders nothing at all when the admin has switched it off or has
-   * not added any slides, so a tab never shows an empty band. Slides with a
-   * link become buttons handled by `data-action="promo"`; the rest are inert.
+   * photos }. Renders nothing at all when the admin has switched it off or has
+   * not added photos, so a tab never shows an empty band.
+   *
+   * The photos are finished creatives, so they are shown whole: full width, at
+   * whatever ratio they were uploaded at, with nothing drawn over them.
    */
   function promoSlider(slider) {
     if (!slider || slider.active === false) return '';
-    var slides = slider.slides || [];
-    if (!slides.length) return '';
+    var photos = (slider.photos || []).filter(Boolean);
+    if (!photos.length) return '';
 
-    var cards = slides.map(function (slide) {
-      var linked = Boolean(slide.ctaPath);
-      var tag = linked ? 'button' : 'div';
-      var attrs = linked ? ' data-action="promo" data-path="' + esc(slide.ctaPath) + '"' : '';
-      var caption = slide.title || slide.subtitle
-        ? '<div class="promo__text">' +
-            (slide.title ? '<strong class="promo__title">' + esc(slide.title) + '</strong>' : '') +
-            (slide.subtitle ? '<span class="promo__sub">' + esc(slide.subtitle) + '</span>' : '') +
-            (slide.ctaLabel ? '<span class="promo__cta">' + esc(slide.ctaLabel) + icon('chevron-right', 15) + '</span>' : '') +
-          '</div>'
-        : '';
-
+    var cards = photos.map(function (src) {
       return '<div class="carousel__slide">' +
-        '<' + tag + ' class="promo' + (linked ? ' promo--linked' : '') + '"' + attrs + '>' +
-          '<img class="promo__img" src="' + esc(slide.imageUrl) + '" alt="' + esc(slide.title || '') + '" ' +
-            'loading="lazy" data-fallback="/img/banners/best-ticket-offers.svg">' +
-          (caption ? '<div class="promo__veil"></div>' + caption : '') +
-        '</' + tag + '>' +
+        '<div class="promo">' +
+          '<img class="promo__img" src="' + esc(src) + '" alt="" loading="lazy">' +
+        '</div>' +
       '</div>';
     });
 
-    /* A single slide has nothing to advance to, so it renders as a still with no
-       dots and no timer. */
+    /* One photo has nothing to advance to, so it renders as a still with no dots
+       and no timer. */
     if (cards.length === 1) return '<div class="promo-slider promo-slider--single">' + cards[0] + '</div>';
 
     return '<div class="promo-slider">' +

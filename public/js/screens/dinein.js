@@ -241,7 +241,6 @@
       }
 
       UI.actions(view, {
-        promo: function (el) { App.navigate(el.getAttribute('data-path')); },
         reserve: function () { App.navigate('/dine-in/reserve'); },
         pay: function () { App.navigate('/dine-in/bill'); },
         signin: function () { App.navigate('/login'); },

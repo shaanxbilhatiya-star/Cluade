@@ -153,7 +153,6 @@
       );
 
       UI.actions(view, {
-        promo: function (el) { App.navigate(el.getAttribute('data-path')); },
         city: function () { cityPicker(data.cities.length ? data.cities : [data.city], data.city); },
         notifications: function () { App.navigate('/notifications'); },
         search: function () { App.navigate('/search'); },
