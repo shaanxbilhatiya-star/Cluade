@@ -42,6 +42,33 @@ const INTERVAL_BOUNDS = { min: 1500, max: 30000 };
 const MAX_PHOTOS = 10;
 
 // ── Sections ────────────────────────────────────────────────────────────────
+/**
+ * A photo must be something the app can actually load: an uploaded file or a
+ * local path. By this point the route has written any recognised upload to disk
+ * and swapped in its /uploads path.
+ *
+ * A data: URL still being here therefore means the upload was NOT recognised, so
+ * the message names that instead of talking about paths — the admin picked a
+ * file, watched it preview correctly, and needs to know it was the format that
+ * stopped it, not the path.
+ */
+function assertStorablePhoto(photo) {
+  const value = String(photo || '').trim();
+
+  if (value.startsWith('data:')) {
+    const kind = /^data:([^;,]+)/.exec(value);
+    throw new HttpError(
+      400,
+      `That image could not be uploaded${kind ? ` (${kind[1]})` : ''} — use a PNG, JPEG, WEBP, GIF or AVIF file`
+    );
+  }
+
+  if (!value.startsWith('/') || value.startsWith('//')) {
+    throw new HttpError(400, 'Each slider photo must be an uploaded image or a local image path');
+  }
+  return value;
+}
+
 function isSection(id) {
   return SECTION_IDS.indexOf(String(id)) !== -1;
 }
@@ -114,16 +141,7 @@ function saveSlider(section, patch = {}) {
       .map((p) => String(p).trim())
       .filter(Boolean)
       .slice(0, MAX_PHOTOS)
-      .map((photo) => {
-        /* By this point an upload has already been written to disk and replaced
-           with its /uploads path, so anything that is not a local path is junk
-           the admin never picked — a stray data: URL, an external host. Refused
-           rather than stored, so it cannot end up as a broken <img> on a tab. */
-        if (!photo.startsWith('/') || photo.startsWith('//')) {
-          throw new HttpError(400, 'Each slider photo must be an uploaded image or a local image path');
-        }
-        return photo;
-      });
+      .map(assertStorablePhoto);
   }
 
   const meta = db.get('meta');

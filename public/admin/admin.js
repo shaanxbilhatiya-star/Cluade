@@ -240,6 +240,61 @@
       (o.hint ? '<div class="hint">' + esc(o.hint) + '</div>' : '') + '</div>';
   }
 
+  /* ── Reading a picked image ────────────────────────────────────────────────
+     The formats the server stores as-is. Anything else a browser can open is
+     re-encoded to JPEG below rather than rejected, because a phone's HEIC or a
+     stray BMP previews perfectly well on screen and then fails at save time,
+     which is impossible to diagnose from the admin's side.                    */
+  var UPLOAD_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'];
+
+  /* Photos are sent as base64 inside one JSON body, which inflates them by a
+     third, and a gallery sends every photo at once. Re-encoding anything above
+     this keeps a batch of several comfortably inside the request limit. */
+  var MAX_DIRECT_BYTES = 2 * 1024 * 1024;
+  var MAX_DIMENSION = 2400;
+
+  /**
+   * Turns a picked File into a data URL the server will accept.
+   *
+   * Small file in a stored format: the original bytes, untouched. Anything else
+   * is drawn to a canvas and re-encoded as JPEG — downscaled so its longest side
+   * fits MAX_DIMENSION, never cropped, so the whole image survives.
+   *
+   * @param {File} file
+   * @param {(dataUrl: string) => void} onDone
+   * @param {(message: string) => void} onError
+   */
+  function readImageFile(file, onDone, onError) {
+    var reader = new FileReader();
+
+    reader.onerror = function () { onError('Could not read ' + file.name); };
+
+    reader.onload = function () {
+      var stored = UPLOAD_TYPES.indexOf(String(file.type).toLowerCase()) !== -1;
+      if (stored && file.size <= MAX_DIRECT_BYTES) { onDone(reader.result); return; }
+
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        try {
+          onDone(canvas.toDataURL('image/jpeg', 0.92));
+        } catch (_e) {
+          onError('Could not process ' + file.name);
+        }
+      };
+      img.onerror = function () {
+        onError(file.name + ' is not an image this browser can open \u2014 save it as JPEG or PNG and try again');
+      };
+      img.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  }
+
   /** Cover photo picker: keeps the full image (no forced crop), just downsizes if it's huge. */
   function imageField(label, name, value, opts) {
     var o = opts || {};
@@ -251,7 +306,7 @@
           (hasImg ? '<img src="' + esc(value) + '" alt="">' : icon('sparkle', 22)) +
         '</div>' +
         '<div class="img-field__controls">' +
-          '<input type="file" accept="image/png,image/jpeg,image/webp" data-imgfield-input>' +
+          '<input type="file" accept="image/*" data-imgfield-input>' +
           '<button type="button" class="btn btn--ghost btn--sm" data-imgfield-pick>Choose photo</button>' +
           '<div class="hint">Any size or ratio \u2014 poster, square post, whatever you use. Uploaded at full quality.</div>' +
         '</div>' +
@@ -274,37 +329,13 @@
     input.addEventListener('change', function () {
       var file = input.files && input.files[0];
       if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function () {
-        var MAX_DIRECT_BYTES = 6 * 1024 * 1024; // send as-is (full quality, no re-encode) below this
-        var MAX_DIMENSION = 2400; // only used as a safety cap for oversized files
-
-        function apply(dataUrl) {
-          hidden.value = dataUrl;
-          preview.classList.remove('img-field__preview--empty');
-          preview.innerHTML = '<img src="' + dataUrl + '" alt="">';
-        }
-
-        if (file.size <= MAX_DIRECT_BYTES) {
-          // Small enough already — upload the original bytes untouched, no cropping, no re-compression.
-          apply(reader.result);
-          return;
-        }
-
-        // Oversized file: downscale (never crop) so the longer side fits MAX_DIMENSION, at high quality.
-        var img = new Image();
-        img.onload = function () {
-          var scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
-          var w = Math.round(img.width * scale);
-          var hgt = Math.round(img.height * scale);
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = hgt;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, hgt);
-          apply(canvas.toDataURL('image/jpeg', 0.95));
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
+      readImageFile(file, function (dataUrl) {
+        hidden.value = dataUrl;
+        preview.classList.remove('img-field__preview--empty');
+        preview.innerHTML = '<img src="' + dataUrl + '" alt="">';
+      }, function (message) {
+        toast(message, 'error');
+      });
     });
   }
 
@@ -319,7 +350,7 @@
       '<label class="label">' + esc(label) + '</label>' +
       '<div class="gal-field" data-galfield="' + name + '">' +
         '<div class="gal-field__grid" data-gal-grid></div>' +
-        '<input type="file" accept="image/png,image/jpeg,image/webp" multiple data-gal-input>' +
+        '<input type="file" accept="image/*" multiple data-gal-input>' +
         '<button type="button" class="btn btn--ghost btn--sm" data-gal-pick>' + icon('plus', 15) + ' Add photos</button>' +
         '<div class="hint">' + esc(o.hint || 'First photo is used as the cover. Drag-free reordering: use the arrows.') + '</div>' +
       '</div>' +
@@ -358,28 +389,12 @@
     input.addEventListener('change', function () {
       var files = Array.prototype.slice.call(input.files || []);
       files.forEach(function (file) {
-        var reader = new FileReader();
-        reader.onload = function () {
-          var MAX_DIRECT_BYTES = 6 * 1024 * 1024;
-          var MAX_DIMENSION = 2400;
-
-          function add(dataUrl) { list.push(dataUrl); sync(); }
-
-          if (file.size <= MAX_DIRECT_BYTES) { add(reader.result); return; }
-
-          // Oversized: downscale (never crop) so the longer side fits MAX_DIMENSION.
-          var img = new Image();
-          img.onload = function () {
-            var scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
-            var canvas = document.createElement('canvas');
-            canvas.width = Math.round(img.width * scale);
-            canvas.height = Math.round(img.height * scale);
-            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-            add(canvas.toDataURL('image/jpeg', 0.95));
-          };
-          img.src = reader.result;
-        };
-        reader.readAsDataURL(file);
+        readImageFile(file, function (dataUrl) {
+          list.push(dataUrl);
+          sync();
+        }, function (message) {
+          toast(message, 'error');
+        });
       });
       input.value = '';
     });

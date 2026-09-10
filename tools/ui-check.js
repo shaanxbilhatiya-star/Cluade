@@ -1182,6 +1182,104 @@ async function run() {
       cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
       [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
 
+    /* The reported failure: photos picked in the console previewed fine, then
+       save returned "Each slider photo must be an uploaded image or a local
+       image path". These drive the real file input, one format per case. */
+    section('Admin console \u2014 picking real files and saving them');
+    for (const [label, mime, bytes] of [
+      // 1x1 PNG
+      ['a PNG', 'image/png',
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg=='],
+      // 1x1 GIF — a format the server used to reject outright
+      ['a GIF', 'image/gif', 'R0lGODlhAQABAIAAAAAAAP///yH5BAAAAAAALAAAAAABAAEAAAIBRAA7'],
+    ]) {
+      cdp.clearErrors();
+      await open(`${BASE}/admin/#sliders`, admin, `document.querySelector('[data-gal-input]') !== null`, 'the sliders page');
+      await cdp.eval(`
+        [...document.querySelectorAll('.sl-tab')].find(t => /Water Park/.test(t.textContent)).click();
+        return true;
+      `);
+      await sleep(300);
+
+      const picked = await cdp.eval(`
+        const input = document.querySelector('[data-gal-input]');
+        const bin = atob(${JSON.stringify(bytes)});
+        const buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i += 1) buf[i] = bin.charCodeAt(i);
+        const file = new File([buf], 'promo-test', { type: ${JSON.stringify(mime)} });
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      `);
+      check(`${label}: the picker accepts the file`, picked === true);
+      await waitFor(cdp, `document.querySelectorAll('[data-galfield="photos"] .gal-item').length > 0`,
+        `${label} to appear as a thumbnail`);
+      check(`${label}: it previews as a thumbnail`, true);
+
+      await cdp.eval(`document.querySelector('[data-action="save"]').click(); return true;`);
+      await sleep(1500);
+      const toastText = await cdp.eval(`
+        return [...document.querySelectorAll('#toast-host .toast')].map(t => t.textContent).join(' | ');
+      `);
+      check(`${label}: saving reports no error`, !/must be an uploaded image|could not be uploaded/i.test(toastText),
+        toastText);
+
+      const served = (await api('GET', '/api/promos/waterpark')).body;
+      const uploadedPath = served.photos.find((p) => p.indexOf('/uploads/promos/') === 0);
+      check(`${label}: it is written to disk and served from /uploads`, Boolean(uploadedPath),
+        JSON.stringify(served.photos));
+      check(`${label}: the file really is fetchable`,
+        uploadedPath ? (await fetch(BASE + uploadedPath)).status === 200 : false);
+      check(`${label}: the phone is served it`, await (async () => {
+        await open(`${BASE}/#/waterpark`, customer, `document.querySelector('.promo-slider') !== null`, 'the slider');
+        return cdp.eval(`return [...document.querySelectorAll('.promo__img')].some(i => i.getAttribute('src').indexOf('/uploads/promos/') === 0);`);
+      })());
+      check(`${label}: no console errors`, cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+        [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+      // Reset for the next format.
+      await api('PUT', '/api/admin/promos/waterpark', { photos: [] }, admin);
+      await cdp.send('Emulation.setDeviceMetricsOverride', {
+        width: 1500, height: 1400, deviceScaleFactor: 1, mobile: false,
+      });
+    }
+
+    /* A format no browser can decode must fail loudly in the picker rather than
+       silently producing something the server will reject at save time. */
+    section('Admin console \u2014 an unopenable file is reported at the picker');
+    cdp.clearErrors();
+    await open(`${BASE}/admin/#sliders`, admin, `document.querySelector('[data-gal-input]') !== null`, 'the sliders page');
+    const galleryBefore = await cdp.eval(`return document.querySelectorAll('[data-galfield="photos"] .gal-item').length;`);
+    await cdp.eval(`
+      const input = document.querySelector('[data-gal-input]');
+      const file = new File([new Uint8Array([1, 2, 3, 4, 5])], 'holiday.heic', { type: 'image/heic' });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelectorAll('#toast-host .toast').length > 0`, 'the picker to complain');
+    check('it names the file and says what to do', await cdp.eval(`
+      return /holiday\\.heic/.test(document.querySelector('#toast-host .toast').textContent)
+        && /JPEG or PNG/.test(document.querySelector('#toast-host .toast').textContent);
+    `), await cdp.eval(`return document.querySelector('#toast-host .toast').textContent;`));
+    check('and nothing is added to the gallery',
+      (await cdp.eval(`return document.querySelectorAll('[data-galfield="photos"] .gal-item').length;`)) === galleryBefore,
+      `was ${galleryBefore}`);
+
+    await api('PUT', '/api/admin/promos/waterpark', {
+      photos: ['/img/banners/best-ticket-offers.svg', '/img/banners/popcorn-party.svg'],
+    }, admin);
+    await open(`${BASE}/admin/#sliders`, admin, `document.querySelector('.sl-tab') !== null`, 'the sliders page');
+    await cdp.eval(`
+      [...document.querySelectorAll('.sl-tab')].find(t => /Water Park/.test(t.textContent)).click();
+      return true;
+    `);
+    await sleep(400);
+
     section('Admin console \u2014 removing a photo reaches the app');
     cdp.clearErrors();
     check('a photo can be removed and saved', await cdp.eval(`

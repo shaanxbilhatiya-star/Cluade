@@ -44,7 +44,11 @@ const ROOM_FIELDS = [
 // Uploaded photos arrive as a data: URL and are saved to disk here so the JSON
 // db only ever stores a path. They go to the upload directory (a mounted volume
 // in production) rather than into public/, which is rebuilt on every deploy.
-const DATA_URL_RE = /^data:image\/(png|jpe?g|webp);base64,/i;
+/* Formats stored as uploaded. The admin picker re-encodes anything else to JPEG
+   before sending, so this is the set of things that arrive here, not a limit on
+   what an admin may choose. GIF and AVIF are here because browsers hand them
+   over routinely and rejecting them looked like a broken upload. */
+const DATA_URL_RE = /^data:image\/(png|jpe?g|webp|gif|avif);base64,/i;
 
 /** Saves a data: URL into the upload directory and returns its public URL. */
 function saveUploadedImage(folder, slug, dataUrl) {
