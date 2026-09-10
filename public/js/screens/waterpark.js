@@ -153,14 +153,13 @@
 
             (s.tagline ? '<p class="hotel-tagline">' + UI.esc(s.tagline) + '</p>' : '') +
 
-            '<div class="wp-hero">' +
-              (s.subline ? '<span class="wp-hero__kicker">' + UI.esc(s.subline) + '</span>' : '') +
-              '<div class="wp-hero__meta">' + UI.icon('clock', 15) +
-                '<span>Open ' + UI.esc(s.openTime) + ' \u2013 ' + UI.esc(s.closeTime) +
-                ' \u00B7 entry every ' + s.slotMinutes + ' min</span></div>' +
+            '<div class="property-meta">' +
+              '<span class="property-meta__item">' + UI.icon('clock', 14) +
+                'Open ' + UI.esc(s.openTime) + ' – ' + UI.esc(s.closeTime) +
+                ' · entry every ' + s.slotMinutes + ' min</span>' +
               (data.bestSaving
-                ? '<div class="wp-hero__save">' + UI.icon('tag', 16) +
-                  '<span>Save up to ' + UI.money(data.bestSaving) + ' with a family package</span></div>'
+                ? '<span class="property-meta__item property-meta__item--save">' + UI.icon('tag', 14) +
+                  'Save up to ' + UI.money(data.bestSaving) + ' with a family package</span>'
                 : '') +
             '</div>' +
 
