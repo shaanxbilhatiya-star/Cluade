@@ -13,7 +13,7 @@ const MOVIE_FIELDS = [
   'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active',
   'castPhotos', 'tmdbId',
 ];
-const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
+const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'reviewCount', 'facilities', 'coverPhoto', 'photos', 'policies', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
 const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'active'];
 
@@ -168,7 +168,8 @@ router.post('/admin/cinemas', auth.requireAdmin, (ctx) => {
   if (db.findOne('cinemas', (c) => c.slug === slug)) throw new HttpError(409, 'A cinema with that name already exists');
 
   const cinema = db.insert('cinemas', Object.assign(
-    { id: db.id('cin'), slug, brand: '', area: '', address: '', distanceKm: 0, rating: 4, facilities: [], active: true },
+    { id: db.id('cin'), slug, brand: '', area: '', address: '', distanceKm: 0, rating: 4, reviewCount: 0,
+      facilities: [], coverPhoto: '', photos: [], policies: [], active: true },
     pick(ctx.body, CINEMA_FIELDS)
   ));
   ctx.state.status = 201;

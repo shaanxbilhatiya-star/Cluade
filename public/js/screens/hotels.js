@@ -426,17 +426,16 @@
    * a single still otherwise. The overlay is click-through so swiping the
    * gallery still works where the gradient covers it.
    */
-  function hotelHero(hotel, slider) {
+  function hotelHero(hotel) {
     var photos = (hotel.photos || []).filter(Boolean);
     if (!photos.length) photos = ['/img/hotels/_placeholder.svg'];
 
     /* Advances on its own so the property's other photos are seen without a
-       swipe. The pace is the same admin-set interval the tab's promo slider
-       uses, so "how fast things scroll on Stay" is one setting. */
+       swipe. */
     var media = photos.length > 1
       ? UI.carousel(photos.map(function (src) {
           return '<div class="carousel__slide">' + img(src, hotel.name, 'hotel-hero__img') + '</div>';
-        }), { autoplay: (slider && slider.intervalMs) || 4500 })
+        }), { autoplay: 4500 })
       : img(photos[0], hotel.name, 'hotel-hero__img');
 
     return '<div class="hotel-hero">' +
@@ -716,9 +715,7 @@
         '<div class="screen">' +
           UI.appbar({ title: 'Stay with us' }) +
           '<div class="scroll">' +
-            hotelHero(hotel, data.slider) +
-
-            UI.promoSlider(data.slider) +
+            hotelHero(hotel) +
 
             (hotel.tagline ? '<p class="hotel-tagline">' + UI.esc(hotel.tagline) + '</p>' : '') +
 

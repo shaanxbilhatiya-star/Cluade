@@ -385,7 +385,7 @@ textarea.input { resize: vertical; min-height: 84px; }
 .wp-incl { display: flex; flex-wrap: wrap; gap: 7px; }
 
 
-/* ── Tab sliders ─────────────────────────────────────────────────────────── */
+/* ── Section switcher pills (reusable segmented-tab control) ───────────────── */
 .sl-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .sl-tab {
   display: inline-flex; align-items: center; gap: 8px;

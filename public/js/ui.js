@@ -338,38 +338,6 @@
   /** How long autoplay stands down after the reader swipes for themselves. */
   var CAROUSEL_RESUME_MS = 6000;
 
-  /**
-   * The admin-managed photo slider that sits at the top of a tab.
-   *
-   * Takes the `slider` block the tab payload carries: { active, intervalMs,
-   * photos }. Renders nothing at all when the admin has switched it off or has
-   * not added photos, so a tab never shows an empty band.
-   *
-   * The photos are finished creatives, so they are shown whole: full width, at
-   * whatever ratio they were uploaded at, with nothing drawn over them.
-   */
-  function promoSlider(slider) {
-    if (!slider || slider.active === false) return '';
-    var photos = (slider.photos || []).filter(Boolean);
-    if (!photos.length) return '';
-
-    var cards = photos.map(function (src) {
-      return '<div class="carousel__slide">' +
-        '<div class="promo">' +
-          '<img class="promo__img" src="' + esc(src) + '" alt="" loading="lazy">' +
-        '</div>' +
-      '</div>';
-    });
-
-    /* One photo has nothing to advance to, so it renders as a still with no dots
-       and no timer. */
-    if (cards.length === 1) return '<div class="promo-slider promo-slider--single">' + cards[0] + '</div>';
-
-    return '<div class="promo-slider">' +
-      carousel(cards, { autoplay: slider.intervalMs || 4500 }) +
-      '</div>';
-  }
-
   /** Wires dot indicators (and optional autoplay) for every carousel in root. */
   function initCarousels(root) {
     root.querySelectorAll('[data-carousel]').forEach(function (car) {
@@ -480,6 +448,59 @@
     });
   }
 
+  /**
+   * Generic property hero: a photo carousel with a rating pill and a photo
+   * count badge, in the same shape as the hotel's own hero. Used by any tab
+   * that has its own admin-managed Property Details (Waterpark, Dine-In,
+   * Hotel), so all three look and behave the same way.
+   */
+  function propertyHero(p) {
+    var photos = (p.photos || []).filter(Boolean);
+    if (p.coverPhoto) photos = [p.coverPhoto].concat(photos.filter(function (x) { return x !== p.coverPhoto; }));
+    if (!photos.length) return '';
+
+    var media = photos.length > 1
+      ? carousel(photos.map(function (src) {
+          return '<div class="carousel__slide">' +
+            '<img class="hotel-hero__img" src="' + esc(src) + '" alt="" loading="lazy">' +
+          '</div>';
+        }), { autoplay: 4500 })
+      : '<img class="hotel-hero__img" src="' + esc(photos[0]) + '" alt="" loading="lazy">';
+
+    return '<div class="hotel-hero">' +
+      media +
+      '<div class="hotel-hero__veil"></div>' +
+      (p.rating
+        ? '<span class="hotel-hero__rating">' + icon('star', 13) + Number(p.rating).toFixed(1) +
+          (p.reviewCount ? '<small>' + p.reviewCount + '</small>' : '') + '</span>'
+        : '') +
+      (photos.length > 1
+        ? '<span class="hotel-hero__count">' + icon('grid', 12) + photos.length + '</span>'
+        : '') +
+      '</div>';
+  }
+
+  /** Amenity chips + policy list, in the same shape the hotel tab uses. */
+  function propertyExtras(p) {
+    var out = '';
+    if ((p.amenities || []).length) {
+      out += '<div class="hotel-amens">' +
+        p.amenities.map(function (a) {
+          return '<span class="amen-chip">' + icon('check', 15) + esc(a) + '</span>';
+        }).join('') +
+      '</div>';
+    }
+    if ((p.policies || []).length) {
+      out += '<h2 class="subhead">Policies</h2>' +
+        '<ul class="policy-list">' +
+        p.policies.map(function (line) {
+          return '<li>' + icon('info', 15) + '<span>' + esc(line) + '</span></li>';
+        }).join('') +
+        '</ul>';
+    }
+    return out;
+  }
+
   window.Screens = window.Screens || {};
 
   window.UI = {
@@ -488,9 +509,9 @@
     timeAgo: timeAgo, runtime: runtime, initials: initials, toDate: toDate,
     toast: toast, sheet: sheet, confirm: confirmSheet,
     appbar: appbar, sectionHead: sectionHead, posterImg: posterImg, movieCard: movieCard,
-    promoSlider: promoSlider,
     foodCard: foodCard, empty: empty, row: row, statusPill: statusPill,
     spinnerBlock: spinnerBlock, carousel: carousel, initCarousels: initCarousels,
+    propertyHero: propertyHero, propertyExtras: propertyExtras,
     actions: actions, showAdultWarning: showAdultWarning, MONTHS: MONTHS, DOW: DOW, CURRENCY: CURRENCY,
   };
 })();

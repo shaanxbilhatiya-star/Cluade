@@ -110,7 +110,7 @@
           UI.appbar({ title: 'Dine-In' }) +
           '<div class="scroll">' +
 
-            UI.promoSlider(data.slider) +
+            UI.propertyHero(s) +
 
             '<div class="dine-hero">' +
               '<h2 class="dine-hero__name">' + UI.esc(s.restaurantName) + '</h2>' +
@@ -203,6 +203,8 @@
                     '<span class="exp-call__arrow">' + UI.icon('arrow-right', 18) + '</span>' +
                   '</a></div>'
               : '') +
+
+            UI.propertyExtras(s) +
 
             '<div class="spacer-24"></div>' +
           '</div>' +

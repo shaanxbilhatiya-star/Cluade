@@ -46,6 +46,14 @@ const DEFAULTS = {
   address: 'Kingfisher Resort, Mandla',
   phone: '7648913272',
 
+  // ── Property details (same shape as the hotel's, for the tab's own hero) ──
+  rating: 0,
+  reviewCount: 0,
+  coverPhoto: '',
+  photos: [],
+  amenities: [],
+  policies: [],
+
   // ── Discounts (percent off the food bill) ──
   reservedDiscountPercent: 30,
   walkinDiscountPercent: 10,
@@ -131,7 +139,12 @@ const NOTICE_FIELDS = [
 /** Current settings: shipped defaults with the admin's saved values merged over. */
 function settings() {
   const saved = db.get('meta').dineIn || {};
-  return Object.assign({}, DEFAULTS, saved);
+  const merged = Object.assign({}, DEFAULTS, saved);
+  merged.areas = (saved.areas || DEFAULTS.areas).slice();
+  merged.photos = (saved.photos || DEFAULTS.photos).slice();
+  merged.amenities = (saved.amenities || DEFAULTS.amenities).slice();
+  merged.policies = (saved.policies || DEFAULTS.policies).slice();
+  return merged;
 }
 
 function clampNumber(value, bounds, fallback) {
@@ -190,6 +203,31 @@ function saveSettings(patch = {}) {
       ? patch.areas
       : String(patch.areas || '').split(',');
     next.areas = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
+  }
+
+  // ── Property details ──
+  if (patch.rating !== undefined && patch.rating !== '') {
+    const r = Number(patch.rating);
+    if (!Number.isFinite(r) || r < 0 || r > 5) throw new HttpError(400, 'Rating must be between 0 and 5');
+    next.rating = r;
+  }
+  if (patch.reviewCount !== undefined && patch.reviewCount !== '') {
+    next.reviewCount = Math.max(0, Math.round(Number(patch.reviewCount)) || 0);
+  }
+  if (patch.coverPhoto !== undefined) {
+    next.coverPhoto = String(patch.coverPhoto || '').trim();
+  }
+  if (patch.photos !== undefined) {
+    const list = Array.isArray(patch.photos) ? patch.photos : String(patch.photos || '').split('\n');
+    next.photos = list.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (patch.amenities !== undefined) {
+    const list = Array.isArray(patch.amenities) ? patch.amenities : String(patch.amenities || '').split(',');
+    next.amenities = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 24);
+  }
+  if (patch.policies !== undefined) {
+    const list = Array.isArray(patch.policies) ? patch.policies : String(patch.policies || '').split('\n');
+    next.policies = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 24);
   }
 
   if (!TIME_RE.test(next.openTime) || !TIME_RE.test(next.closeTime)) {
@@ -251,6 +289,12 @@ function publicSettings(s = settings()) {
     maxPartySize: s.maxPartySize,
     advanceDays: s.advanceDays,
     areas: s.areas,
+    rating: s.rating || 0,
+    reviewCount: s.reviewCount || 0,
+    coverPhoto: s.coverPhoto || '',
+    photos: s.photos || [],
+    amenities: s.amenities || [],
+    policies: s.policies || [],
   };
 }
 

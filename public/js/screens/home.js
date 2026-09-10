@@ -125,8 +125,6 @@
               (data.hero.length ? UI.carousel(data.hero.map(heroSlide), { autoplay: 4500 }) : '') +
             '</div>' +
 
-            UI.promoSlider(data.slider) +
-
             (data.nextBooking ? nextBookingCard(data.nextBooking) : '') +
 
             quickAccessBar() +

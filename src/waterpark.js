@@ -57,6 +57,16 @@ const DEFAULTS = {
   /** The one-line terms printed under the packages. */
   validityNote: 'Package valid for one day only.',
 
+  // ── Property details (same shape as the hotel's, for the tab's own hero) ──
+  rating: 0,
+  reviewCount: 0,
+  /** Shown first in the hero photo strip; also the card image on Home. */
+  coverPhoto: '',
+  /** Extra photos guests can swipe through in the hero. */
+  photos: [],
+  amenities: [],
+  policies: [],
+
   // ── Operating window ──
   openTime: '10:00',
   closeTime: '18:00',
@@ -207,6 +217,9 @@ function settings() {
   );
   merged.addOns = (saved.addOns || DEFAULTS.addOns).map((a) => Object.assign({}, a));
   merged.inclusions = (saved.inclusions || DEFAULTS.inclusions).slice();
+  merged.photos = (saved.photos || DEFAULTS.photos).slice();
+  merged.amenities = (saved.amenities || DEFAULTS.amenities).slice();
+  merged.policies = (saved.policies || DEFAULTS.policies).slice();
   return merged;
 }
 
@@ -290,6 +303,31 @@ function saveSettings(patch = {}) {
     next.inclusions = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
   }
 
+  // ── Property details ──
+  if (patch.rating !== undefined && patch.rating !== '') {
+    const r = Number(patch.rating);
+    if (!Number.isFinite(r) || r < 0 || r > 5) throw new HttpError(400, 'Rating must be between 0 and 5');
+    next.rating = r;
+  }
+  if (patch.reviewCount !== undefined && patch.reviewCount !== '') {
+    next.reviewCount = Math.max(0, Math.round(Number(patch.reviewCount)) || 0);
+  }
+  if (patch.coverPhoto !== undefined) {
+    next.coverPhoto = String(patch.coverPhoto || '').trim();
+  }
+  if (patch.photos !== undefined) {
+    const list = Array.isArray(patch.photos) ? patch.photos : String(patch.photos || '').split('\n');
+    next.photos = list.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (patch.amenities !== undefined) {
+    const list = Array.isArray(patch.amenities) ? patch.amenities : String(patch.amenities || '').split(',');
+    next.amenities = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 24);
+  }
+  if (patch.policies !== undefined) {
+    const list = Array.isArray(patch.policies) ? patch.policies : String(patch.policies || '').split('\n');
+    next.policies = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 24);
+  }
+
   if (!TIME_RE.test(next.openTime) || !TIME_RE.test(next.closeTime)) {
     throw new HttpError(400, 'Opening and closing times must be 24-hour times like 10:00');
   }
@@ -331,6 +369,12 @@ function publicSettings(s = settings()) {
     convenienceFeePercent: s.convenienceFeePercent,
     gstPercent: s.gstPercent,
     inclusions: s.inclusions,
+    rating: s.rating || 0,
+    reviewCount: s.reviewCount || 0,
+    coverPhoto: s.coverPhoto || '',
+    photos: s.photos || [],
+    amenities: s.amenities || [],
+    policies: s.policies || [],
   };
 }
 

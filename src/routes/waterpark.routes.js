@@ -19,7 +19,6 @@
 const db = require('../db');
 const auth = require('../auth');
 const park = require('../waterpark');
-const promos = require('../promos');
 const barcode = require('../barcode');
 const { computeWaterparkTotals, resolveWaterparkOffer } = require('../pricing');
 const { paymentRecord, notify } = require('../bookings');
@@ -92,7 +91,6 @@ router.get('/waterpark', (ctx) => {
   const date = ctx.query.date && park.DATE_RE.test(ctx.query.date) ? ctx.query.date : park.today();
 
   return {
-    slider: promos.publicSlider('waterpark'),
     settings: park.publicSettings(s),
     catalogue: park.catalogue(s),
     today: park.today(),

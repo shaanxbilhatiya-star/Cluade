@@ -16,7 +16,6 @@ const storage = require('./src/storage');
 const { Router } = require('./src/router');
 const { serveStatic, sendError, sendJSON } = require('./src/http');
 const seed = require('./src/seed');
-const promos = require('./src/promos');
 const { releaseExpiredHolds } = require('./src/seats');
 const { generateComboImages } = require('./tools/generate-combo-images');
 const { generateHotelImages } = require('./tools/generate-hotel-images');
@@ -57,7 +56,6 @@ api.mount('/api', require('./src/routes/experiences.routes'));
 api.mount('/api', require('./src/routes/hotels.routes'));
 api.mount('/api', require('./src/routes/dinein.routes'));
 api.mount('/api', require('./src/routes/waterpark.routes'));
-api.mount('/api', require('./src/routes/promos.routes'));
 api.mount('/api', require('./src/routes/users.routes'));
 api.mount('/api', require('./src/routes/admin.routes'));
 

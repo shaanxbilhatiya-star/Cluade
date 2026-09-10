@@ -598,8 +598,13 @@
         field('Area', 'area', c.area) +
         field('Distance (km)', 'distanceKm', c.distanceKm || 0, { type: 'number' }) +
         field('Rating', 'rating', c.rating || 4, { type: 'number' }) +
+        field('Review count', 'reviewCount', c.reviewCount || 0, { type: 'number' }) +
         field('Address', 'address', c.address, { span: true }) +
         field('Facilities', 'facilities', (c.facilities || []).join(', '), { span: true, hint: 'Comma separated, e.g. Dolby Atmos, Recliners' }) +
+        field('Cover photo URL', 'coverPhoto', c.coverPhoto, { span: true }) +
+        field('Photo URLs (one per line)', 'photos', (c.photos || []).join('\n'), { type: 'textarea', span: true }) +
+        field('Policies (one per line)', 'policies', (c.policies || []).join('\n'),
+          { type: 'textarea', span: true, placeholder: 'Outside food not allowed\nID proof required for late shows' }) +
         '</div>');
     }
 
@@ -608,6 +613,10 @@
       return {
         name: raw.name, brand: raw.brand, city: raw.city, area: raw.area, address: raw.address,
         distanceKm: Number(raw.distanceKm), rating: Number(raw.rating), facilities: csvList(raw.facilities),
+        reviewCount: Number(raw.reviewCount) || 0,
+        coverPhoto: raw.coverPhoto || '',
+        photos: (raw.photos || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
+        policies: (raw.policies || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
       };
     }
 
@@ -852,7 +861,7 @@
               field('Date', 'date', currentDate, { type: 'date' }) +
               field('Time (HH:MM)', 'time', '19:00', { placeholder: '19:00' }) +
               field('Base ticket price', 'basePrice', 240, { type: 'number', hint: 'Premium = 1.5×, VIP = 2.2×' }) +
-              field('Language', 'language', (movie.languages && movie.languages[0]) || '', { placeholder: 'Defaults to the movie's first language' }) +
+              field('Language', 'language', (movie.languages && movie.languages[0]) || '', { placeholder: 'Defaults to the movie\'s first language' }) +
               '</div>');
             var m = modal({ title: 'Add showtime for ' + movie.title, body: body, confirmLabel: 'Create showtime' });
             m.confirmBtn.addEventListener('click', function () {
@@ -883,7 +892,7 @@
                 field('Date', 'date', showtime.date, { type: 'date' }) +
                 field('Time (HH:MM)', 'time', showtime.time, { placeholder: '19:00' }) +
                 field('Base ticket price', 'basePrice', showtime.prices.regular, { type: 'number', hint: 'Premium = 1.5×, VIP = 2.2×' }) +
-                field('Language', 'language', showtime.language, { placeholder: 'Defaults to the movie's first language' }) +
+                field('Language', 'language', showtime.language, { placeholder: 'Defaults to the movie\'s first language' }) +
                 '</div>');
               var m = modal({ title: 'Edit showtime', body: body, confirmLabel: 'Save changes' });
               m.confirmBtn.addEventListener('click', function () {

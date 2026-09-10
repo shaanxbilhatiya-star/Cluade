@@ -146,7 +146,7 @@
           UI.appbar({ title: s.headline || 'Water Park' }) +
           '<div class="scroll">' +
 
-            UI.promoSlider(data.slider) +
+            UI.propertyHero(s) +
 
             '<div class="wp-hero">' +
               (s.subline ? '<span class="wp-hero__kicker">' + UI.esc(s.subline) + '</span>' : '') +
@@ -288,6 +288,8 @@
                   : '') +
               '</div>' +
             '</div>' +
+
+            UI.propertyExtras(s) +
 
             '<div class="spacer-24"></div>' +
           '</div>' +

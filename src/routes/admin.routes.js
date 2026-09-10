@@ -6,7 +6,6 @@ const auth = require('../auth');
 const hotels = require('../hotels');
 const dine = require('../dinein');
 const park = require('../waterpark');
-const promos = require('../promos');
 const storage = require('../storage');
 const { notify } = require('../bookings');
 const { computeWaterparkTotals, resolveWaterparkOffer } = require('../pricing');
@@ -817,7 +816,12 @@ router.get('/admin/dine-in', auth.requireAdmin, () => {
  * of the notice they are shown come from here.
  */
 router.put('/admin/dine-in/settings', auth.requireAdmin, (ctx) => {
-  const settings = dine.saveSettings(ctx.body || {});
+  const body = Object.assign({}, ctx.body);
+  if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('dinein', 'dinein', body.coverPhoto);
+  const photos = resolvePhotoList(body.photos, 'dinein', 'dinein');
+  if (photos !== undefined) body.photos = photos;
+
+  const settings = dine.saveSettings(body);
   return { settings, previews: { walkin: dine.renderNotice(settings.walkinNotice, dine.noticeTokens(settings)) } };
 });
 
@@ -974,7 +978,12 @@ router.get('/admin/waterpark', auth.requireAdmin, () => {
 
 /** Park identity, hours, capacity, charges and notice copy. */
 router.put('/admin/waterpark/settings', auth.requireAdmin, (ctx) => {
-  const settings = park.saveSettings(ctx.body || {});
+  const body = Object.assign({}, ctx.body);
+  if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('waterpark', 'waterpark', body.coverPhoto);
+  const photos = resolvePhotoList(body.photos, 'waterpark', 'waterpark');
+  if (photos !== undefined) body.photos = photos;
+
+  const settings = park.saveSettings(body);
   return {
     settings,
     previews: {
@@ -1273,26 +1282,6 @@ router.delete('/admin/waterpark/bookings/:id', auth.requireAdmin, (ctx) => {
   }
   db.remove('waterparkBookings', ctx.params.id);
   return { deleted: true, id: ctx.params.id };
-});
-
-// ── Tab sliders (the auto-scrolling photo strip on each tab) ─────────────────
-/** Every section with its photos, interval and on/off state. */
-router.get('/admin/promos', auth.requireAdmin, () => promos.adminPayload());
-
-/**
- * Saves one tab's slider: its photos, whether it shows and how fast it
- * advances. Freshly uploaded photos arrive as data: URLs and are written to
- * disk here, exactly as the hotel galleries do.
- */
-router.put('/admin/promos/:section', auth.requireAdmin, (ctx) => {
-  const section = promos.assertSection(ctx.params.section);
-  const body = Object.assign({}, ctx.body);
-
-  const photos = resolvePhotoList(body.photos, 'promos', section, promos.MAX_PHOTOS);
-  if (photos !== undefined) body.photos = photos;
-
-  const saved = promos.saveSlider(section, body);
-  return { section, slider: saved, live: promos.publicSlider(section) };
 });
 
 // ── Hotel & rooms ────────────────────────────────────────────────────────────

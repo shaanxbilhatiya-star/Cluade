@@ -11,7 +11,6 @@
 const db = require('../db');
 const auth = require('../auth');
 const hotels = require('../hotels');
-const promos = require('../promos');
 const { computeHotelTotals, resolveHotelOffer } = require('../pricing');
 const { expand, paymentRecord, notify } = require('../bookings');
 const { Router, HttpError } = require('../router');
@@ -148,8 +147,6 @@ router.get('/hotels', (ctx) => {
   return {
     hotel,
     phone: hotel.phone || FALLBACK_PHONE,
-    /** Admin-managed promo slider for this tab, and the shared scroll speed. */
-    slider: promos.publicSlider('stay'),
     stay,
     count: rooms.length,
     // Cheapest nightly rate, used for the "from ₹x" line on the tab header.

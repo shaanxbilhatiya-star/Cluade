@@ -112,7 +112,6 @@
     { id: 'hotel', label: 'Hotel & Rooms', icon: 'bed' },
     { id: 'dinein', label: 'Dine-In', icon: 'dine' },
     { id: 'waterpark', label: 'Water Park', icon: 'waves' },
-    { id: 'sliders', label: 'Tab Sliders', icon: 'grid' },
     { id: 'food', label: 'Food & Drinks', icon: 'food' },
     { id: 'offers', label: 'Offers', icon: 'tag' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle' },
@@ -1740,6 +1739,7 @@
      copy without anyone having to retype it. */
   async function pageDineIn(content, topActions) {
     topActions.innerHTML =
+      '<button class="btn btn--ghost" data-action="edit-property">' + icon('building', 17) + ' Property details</button> ' +
       '<button class="btn btn--ghost" data-action="reset-notices">' + icon('refresh', 17) + ' Reset notices</button> ' +
       '<button class="btn" data-action="edit-settings">' + icon('edit', 17) + ' Edit discounts &amp; notices</button>';
 
@@ -1872,6 +1872,90 @@
     /** The token cheat-sheet shown under every notice input. */
     var tokenHint = 'Tokens: ' + data.noticeTokens.map(function (t) { return '{' + t + '}'; }).join('  ');
 
+    // ── Property details ──
+    function propertyForm() {
+      return h('<div class="form-grid">' +
+        field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.3' }) +
+        field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+        imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
+        galleryField('Property photos', 'photos', s.photos, {
+          hint: 'Shown in the hero at the top of the Dine-In tab. Add more than one and guests can swipe through them.',
+        }) +
+        field('Amenities (comma separated)', 'amenities', (s.amenities || []).join(', '),
+          { type: 'textarea', span: true, placeholder: 'AC seating, Live music, Free parking' }) +
+        field('Policies (one per line)', 'policies', (s.policies || []).join('\n'),
+          { type: 'textarea', span: true, placeholder: 'Reservation held for 15 minutes\nSmart casual dress code' }) +
+        '</div>');
+    }
+
+    function propertyPayload(body) {
+      var raw = readForm(body);
+      return {
+        rating: Number(raw.rating) || 0,
+        reviewCount: Number(raw.reviewCount) || 0,
+        coverPhoto: raw.coverPhoto || '',
+        photos: (raw.photos || '').split('\n').filter(Boolean),
+        amenities: csvList(raw.amenities),
+        policies: (raw.policies || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
+      };
+    }
+
+    function editProperty() {
+      var m = modal({ title: 'Dine-In property details', body: propertyForm(), confirmLabel: 'Save property' });
+      bindImageField(m.body, 'coverPhoto');
+      bindGalleryField(m.body, 'photos');
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var res = await API.put('/admin/dine-in/settings', propertyPayload(m.body));
+          s = res.settings;
+          toast('Property details saved — live for customers now', 'success');
+          navigate('dinein');
+        });
+      });
+    }
+
+    // ── Property details ──
+    function propertyForm() {
+      return h('<div class="form-grid">' +
+        field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.5' }) +
+        field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+        imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
+        galleryField('Property photos', 'photos', s.photos, {
+          hint: 'Shown in the hero at the top of the Waterpark tab. Add more than one and guests can swipe through them.',
+        }) +
+        field('Amenities (comma separated)', 'amenities', (s.amenities || []).join(', '),
+          { type: 'textarea', span: true, placeholder: 'Lifeguards on duty, Changing rooms, Free parking' }) +
+        field('Policies (one per line)', 'policies', (s.policies || []).join('\n'),
+          { type: 'textarea', span: true, placeholder: 'Costume compulsory in pools\nNo outside food or drinks' }) +
+        '</div>');
+    }
+
+    function propertyPayload(body) {
+      var raw = readForm(body);
+      return {
+        rating: Number(raw.rating) || 0,
+        reviewCount: Number(raw.reviewCount) || 0,
+        coverPhoto: raw.coverPhoto || '',
+        photos: (raw.photos || '').split('\n').filter(Boolean),
+        amenities: csvList(raw.amenities),
+        policies: (raw.policies || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
+      };
+    }
+
+    function editProperty() {
+      var m = modal({ title: 'Water park property details', body: propertyForm(), confirmLabel: 'Save property' });
+      bindImageField(m.body, 'coverPhoto');
+      bindGalleryField(m.body, 'photos');
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var res = await API.put('/admin/waterpark/settings', propertyPayload(m.body));
+          s = res.settings;
+          toast('Property details saved — live for customers now', 'success');
+          navigate('waterpark');
+        });
+      });
+    }
+
     function settingsForm() {
       return h('<div class="form-grid">' +
         field('Dine-In tab', 'active', s.active === false ? 'false' : 'true', { options: [
@@ -1978,6 +2062,8 @@
       };
     }
 
+    topActions.querySelector('[data-action="edit-property"]').addEventListener('click', editProperty);
+
     topActions.querySelector('[data-action="edit-settings"]').addEventListener('click', function () {
       var m = modal({ title: 'Dine-In discounts & notices', body: settingsForm(), confirmLabel: 'Save changes' });
       m.confirmBtn.addEventListener('click', function () {
@@ -2040,6 +2126,7 @@
      drift from its line items.                                                */
   async function pageWaterpark(content, topActions) {
     topActions.innerHTML =
+      '<button class="btn btn--ghost" data-action="edit-property">' + icon('building', 17) + ' Property details</button> ' +
       '<button class="btn btn--ghost" data-action="reset-notices">' + icon('refresh', 17) + ' Reset notices</button> ' +
       '<button class="btn btn--line" data-action="edit-settings">' + icon('edit', 17) + ' Park settings</button> ' +
       '<button class="btn" data-action="new-booking">' + icon('plus', 17) + ' Sell a pass</button>';
@@ -2885,6 +2972,8 @@
     }
 
     // ── Top action wiring ──
+    topActions.querySelector('[data-action="edit-property"]').addEventListener('click', editProperty);
+
     topActions.querySelector('[data-action="edit-settings"]').addEventListener('click', function () {
       var m = modal({ title: 'Water park settings', body: settingsForm(), confirmLabel: 'Save changes', wide: true });
       m.confirmBtn.addEventListener('click', function () {
@@ -3107,135 +3196,6 @@
     });
   }
 
-
-  // ── Tab sliders ──────────────────────────────────────────────────────────
-
-  /* The auto-scrolling photo strip at the top of each customer tab.
-
-     One slider per tab: add photos, set the speed, done. It uses the same
-     multi-photo control as the hotel's Property photos, so managing slider
-     photos works exactly like managing property photos.
-
-     Nothing is drawn over a photo. These are finished creatives, so they are
-     shown whole at whatever ratio they were uploaded at.                      */
-  async function pageSliders(content, topActions) {
-    content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
-    var data = await API.get('/admin/promos');
-
-    // Remembered so saving one tab does not bounce you back to the first.
-    var current = state.cache.sliderSection || data.sections[0].id;
-    if (!data.sections.some(function (s) { return s.id === current; })) current = data.sections[0].id;
-
-    function sectionOf(id) {
-      return data.sections.filter(function (s) { return s.id === id; })[0];
-    }
-
-    function seconds(ms) {
-      return (Math.round((Number(ms) || 0) / 100) / 10) + 's';
-    }
-
-    topActions.innerHTML = '';
-
-    function render() {
-      var section = sectionOf(current);
-      var count = (section.photos || []).length;
-
-      content.innerHTML = '';
-      var view = h('<div>' +
-        '<div class="sl-tabs">' +
-          data.sections.map(function (s) {
-            return '<button class="sl-tab" data-section="' + esc(s.id) + '"' +
-              ' aria-pressed="' + (s.id === current ? 'true' : 'false') + '">' +
-              esc(s.label) +
-              '<span class="sl-tab__count">' + (s.photos || []).length + '</span>' +
-            '</button>';
-          }).join('') +
-        '</div>' +
-
-        '<div class="panel" style="margin-top:0"><div class="panel__head">' +
-          '<h2 class="panel__title">' + esc(section.label) + ' tab slider</h2>' +
-          (section.active === false
-            ? '<span class="pill pill--red">Switched off</span>'
-            : count
-              ? '<span class="pill pill--green">Live \u00B7 ' + count + ' photo(s)</span>'
-              : '<span class="pill pill--grey">No photos yet</span>') +
-        '</div><div class="panel__body">' +
-          '<div class="form-grid" data-form>' +
-            galleryField('Slider photos', 'photos', section.photos, {
-              hint: 'These are the photos guests swipe through at the top of the ' + section.label + ' tab. ' +
-                'Any size or ratio \u2014 poster, square post, whatever you use. Uploaded at full quality and shown ' +
-                'whole, not cropped. The first photo shows first. Add two or more and they scroll automatically.',
-            }) +
-            field('Slider', 'active', section.active === false ? 'false' : 'true', { options: [
-              { value: 'true', label: 'Show it on the ' + section.label + ' tab' },
-              { value: 'false', label: 'Hide it completely' },
-            ] }) +
-            field('Seconds per photo', 'intervalSeconds', Math.round(section.intervalMs / 100) / 10, {
-              type: 'number',
-              hint: 'Between ' + (data.intervalBounds.min / 1000) + ' and ' + (data.intervalBounds.max / 1000) +
-                ' seconds. Scrolling pauses while a guest is swiping.' +
-                (section.id === 'stay' ? ' This also sets the speed of the property photos below the slider.' : ''),
-            }) +
-            '<div class="col-span">' +
-              '<button class="btn" data-action="save">' + icon('check', 17) + ' Save ' + esc(section.label) + ' slider</button>' +
-              '<div class="hint" style="margin-top:8px">' +
-                (count === 1
-                  ? 'One photo shows as a still \u2014 add another to make it scroll.'
-                  : count > 1
-                    ? count + ' photos, advancing every ' + seconds(section.intervalMs) + '.'
-                    : 'With no photos, the tab shows no slider at all.') +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div></div>' +
-      '</div>');
-
-      content.appendChild(view);
-      bindGalleryField(view, 'photos');
-      wire(view);
-    }
-
-    function wire(view) {
-      view.addEventListener('click', async function (event) {
-        var tab = event.target.closest('[data-section]');
-        if (tab) {
-          current = tab.getAttribute('data-section');
-          state.cache.sliderSection = current;
-          render();
-          return;
-        }
-
-        var save = event.target.closest('[data-action="save"]');
-        if (!save) return;
-
-        var raw = readForm(view.querySelector('[data-form]'));
-        save.disabled = true;
-        var label = save.textContent;
-        save.textContent = 'Saving\u2026';
-        try {
-          var res = await API.put('/admin/promos/' + current, {
-            // The gallery field stores one path (or one data: URL) per line.
-            photos: String(raw.photos || '').split('\n').map(function (p) { return p.trim(); }).filter(Boolean),
-            active: raw.active === 'true',
-            intervalMs: Math.round(Number(raw.intervalSeconds) * 1000),
-          });
-          // Refresh from the response so uploaded photos show their saved paths.
-          var section = sectionOf(current);
-          section.photos = res.slider.photos;
-          section.active = res.slider.active;
-          section.intervalMs = res.slider.intervalMs;
-          toast(sectionOf(current).label + ' slider saved \u2014 live for guests now', 'success');
-          render();
-        } catch (err) {
-          toast(err.message, 'error');
-          save.disabled = false;
-          save.textContent = label;
-        }
-      });
-    }
-
-    render();
-  }
 
   // ── Hotel & rooms ────────────────────────────────────────────────────────
 
@@ -3734,7 +3694,6 @@
     hotel: pageHotel,
     dinein: pageDineIn,
     waterpark: pageWaterpark,
-    sliders: pageSliders,
     food: pageFood,
     offers: pageOffers,
     experiences: pageExperiences,

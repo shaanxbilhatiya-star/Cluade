@@ -102,13 +102,18 @@
         '<div class="screen">' +
           UI.appbar({ title: info.name, back: true, alignLeft: true, logo: false }) +
           '<div class="scroll">' +
+            (info.coverPhoto
+              ? '<div style="padding:0 16px"><img src="' + UI.esc(info.coverPhoto) + '" alt="" ' +
+                'style="width:100%;height:160px;object-fit:cover;border-radius:14px" loading="lazy"></div>'
+              : '') +
             '<div style="padding:0 16px 4px">' +
               '<div style="display:flex;align-items:flex-start;gap:12px">' +
                 '<span class="row__icon" style="color:var(--primary-600);margin-top:2px">' + UI.icon('map-pin', 20) + '</span>' +
                 '<p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.55;flex:1">' + UI.esc(info.address) + '</p>' +
               '</div>' +
               '<div class="tag-row">' +
-                '<span class="tag tag--accent">' + UI.icon('star', 12) + ' ' + UI.esc(info.rating) + '</span>' +
+                '<span class="tag tag--accent">' + UI.icon('star', 12) + ' ' + UI.esc(info.rating) +
+                  (info.reviewCount ? ' (' + UI.esc(info.reviewCount) + ')' : '') + '</span>' +
                 (info.facilities || []).map(function (f) { return '<span class="tag">' + UI.esc(f) + '</span>'; }).join('') +
               '</div>' +
               '<div class="tag-row">' +
@@ -120,6 +125,17 @@
             '<div class="divider"></div>' +
             '<div class="datestrip" data-dates></div>' +
             '<div data-shows></div>' +
+            ((info.policies || []).length
+              ? '<div class="divider"></div>' +
+                '<div style="padding:0 16px">' +
+                  '<h2 class="subhead" style="padding:0 0 8px">Policies</h2>' +
+                  '<ul class="policy-list">' +
+                  info.policies.map(function (p) {
+                    return '<li>' + UI.icon('info', 15) + '<span>' + UI.esc(p) + '</span></li>';
+                  }).join('') +
+                  '</ul>' +
+                '</div>'
+              : '') +
             '<div class="spacer-24"></div>' +
           '</div>' +
         '</div>'
