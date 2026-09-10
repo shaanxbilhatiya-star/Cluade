@@ -172,6 +172,30 @@ async function run() {
       token: adminToken, body: { photos: ['data:text/html,<script>alert(1)</script>'] },
     });
     check('a non-image data: URL is refused', junk.status === 400, junk.body?.error);
+    check('and the message names the format rather than talking about paths',
+      /could not be uploaded/.test(junk.body?.error || '') && /text\/html/.test(junk.body?.error || ''),
+      junk.body?.error);
+
+    /* GIF and AVIF used to be rejected outright: the upload regex only knew
+       png/jpeg/webp, so the file was passed through unsaved and then refused,
+       which is what produced the unexplained save failure. */
+    section('Every format a browser hands over is stored');
+    for (const [label, dataUrl] of [
+      ['PNG', PNG_DATA_URL],
+      ['GIF', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAAAAAAALAAAAAABAAEAAAIBRAA7'],
+      ['JPEG', 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwcJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AmAA//9k='],
+      ['WEBP', 'data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=='],
+      ['AVIF', 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAABCaWluZgAAAAAAAQAAABphdjAxQ29sb3IAAAAAAAAAAAAAAAAAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQAMAAAAABNjb2xybmNseAACAAIABoAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEDQgMgkQAAAAFLm0lHmm+B0IEA=='],
+    ]) {
+      const saved = await api('PUT', '/api/admin/promos/movie', { token: adminToken, body: { photos: [dataUrl] } });
+      check(`a ${label} upload is accepted`, saved.status === 200, `status ${saved.status}: ${saved.body?.error}`);
+      const stored = saved.body.slider && saved.body.slider.photos[0];
+      check(`the ${label} is written to /uploads`, /^\/uploads\/promos\//.test(stored || ''), stored);
+      check(`and the ${label} file is served back`, stored ? (await fetch(BASE + stored)).status === 200 : false);
+    }
+    await api('PUT', '/api/admin/promos/movie', {
+      token: adminToken, body: { photos: [PNG_DATA_URL, '/img/banners/combo-saver.svg'] },
+    });
 
     section('There is a cap on how many photos a slider holds');
     const many = await api('PUT', '/api/admin/promos/dinein', {
