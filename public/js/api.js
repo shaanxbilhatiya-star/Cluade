@@ -141,6 +141,18 @@
     dineBills: function () { return request('GET', '/dine-in/bills'); },
     dineBill: function (id) { return request('GET', '/dine-in/bills/' + id); },
 
+    // ── Water park ──
+    /** Tab payload: packages with their computed value breakup, rate card, add-ons. */
+    waterpark: function (date) { return request('GET', '/waterpark' + (date ? '?date=' + encodeURIComponent(date) : '')); },
+    waterparkSlots: function (date) { return request('GET', '/waterpark/slots' + (date ? '?date=' + encodeURIComponent(date) : '')); },
+    /** The server prices the order — a package or a per-person build — and renders the notice. */
+    waterparkQuote: function (payload) { return request('POST', '/waterpark/quote', payload); },
+    validateWaterparkOffer: function (payload) { return request('POST', '/waterpark/offers/validate', payload); },
+    bookWaterpark: function (payload) { return request('POST', '/waterpark/bookings', payload); },
+    waterparkBookings: function () { return request('GET', '/waterpark/bookings'); },
+    waterparkBooking: function (id) { return request('GET', '/waterpark/bookings/' + id); },
+    cancelWaterparkBooking: function (id) { return request('POST', '/waterpark/bookings/' + id + '/cancel', {}); },
+
     // ── Account ──
     updateProfile: function (patch) { return request('PATCH', '/me', patch); },
     updateSettings: function (patch) { return request('PATCH', '/me/settings', patch); },

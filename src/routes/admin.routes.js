@@ -5,8 +5,10 @@ const db = require('../db');
 const auth = require('../auth');
 const hotels = require('../hotels');
 const dine = require('../dinein');
+const park = require('../waterpark');
 const storage = require('../storage');
 const { notify } = require('../bookings');
+const { computeWaterparkTotals, resolveWaterparkOffer } = require('../pricing');
 const { LAYOUTS } = require('../catalog');
 const { ensureRollingShowtimes, markSeedRemoved, unmarkSeedRemoved } = require('../seed');
 const { Router, HttpError } = require('../router');
@@ -253,6 +255,24 @@ router.get('/admin/stats', auth.requireAdmin, () => {
     ).length,
   };
 
+  // The water park sells day passes out of its own collection, so it is
+  // summarised separately too. `savingGiven` is the number that matters here:
+  // it is what the bundled package pricing cost against counter rates, set
+  // against the guests it brought through the gate.
+  const parkPasses = db.get('waterparkBookings').filter((b) => b.status === 'confirmed');
+  const parkToday = new Date().toISOString().slice(0, 10);
+  const parkStats = {
+    bookings: parkPasses.length,
+    revenue: parkPasses.reduce((s, b) => s + (b.amounts?.total || 0), 0),
+    guests: parkPasses.reduce((s, b) => s + (b.guests?.total || 0), 0),
+    savingGiven: parkPasses.reduce((s, b) => s + (b.amounts?.totalSaving || 0), 0),
+    addOnRevenue: parkPasses.reduce((s, b) => s + (b.amounts?.addOnAmount || 0), 0),
+    packageBookings: parkPasses.filter((b) => b.mode === 'package').length,
+    individualBookings: parkPasses.filter((b) => b.mode === 'individual').length,
+    upcoming: parkPasses.filter((b) => (b.date || '') >= parkToday).length,
+    todayGuests: parkPasses.filter((b) => b.date === parkToday).reduce((s, b) => s + (b.guests?.total || 0), 0),
+  };
+
   // Occupancy is only meaningful for shows that have actually run - measuring
   // sold seats against every future showtime would always round to ~0%.
   const now = Date.now();
@@ -282,6 +302,7 @@ router.get('/admin/stats', auth.requireAdmin, () => {
       hotelRooms: db.get('hotelRooms').length,
       dineReservations: db.get('dineReservations').length,
       dineBills: db.get('dineBills').length,
+      waterparkBookings: db.get('waterparkBookings').length,
       users: db.find('users', (u) => u.role === 'customer').length,
       bookings: bookings.length,
       cancelled: bookings.filter((b) => b.status === 'cancelled').length,
@@ -293,6 +314,7 @@ router.get('/admin/stats', auth.requireAdmin, () => {
     today: { bookings: todays.length, revenue: todays.reduce((s, b) => s + (b.amounts?.total || 0), 0) },
     stays: stayStats,
     dine: dineStats,
+    park: parkStats,
     topMovies,
     trend,
   };
@@ -828,6 +850,421 @@ router.delete('/admin/dine-in/reservations/:id', auth.requireAdmin, (ctx) => {
     throw new HttpError(400, 'That reservation settled a bill and is kept for the record');
   }
   db.remove('dineReservations', ctx.params.id);
+  return { deleted: true, id: ctx.params.id };
+});
+
+// ── Water park (rate card, packages, add-ons, passes) ────────────────────────
+/**
+ * Everything the Water Park admin section renders in one payload.
+ *
+ * `packages` arrive already expanded by `decoratePackage()`, so the value
+ * breakup, the total actual value and the "you save" figure in the admin table
+ * are the same computed numbers the customer is shown — there is no second
+ * copy of that arithmetic anywhere.
+ */
+router.get('/admin/waterpark', auth.requireAdmin, () => {
+  const s = park.settings();
+  const customerName = (userId) => {
+    if (!userId) return 'Counter sale';
+    const user = db.byId('users', userId);
+    return user ? user.name : 'Unknown';
+  };
+
+  const all = db.get('waterparkBookings');
+  const confirmed = all.filter((b) => b.status === 'confirmed');
+  const todayKey = park.today();
+
+  const bookings = [...all]
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, 200)
+    .map((b) =>
+      Object.assign(park.decorateBooking(b, s), {
+        customerName: customerName(b.userId),
+      })
+    );
+
+  /** Which rate-card lines and add-ons are actually selling. */
+  const lineSales = new Map();
+  for (const booking of confirmed) {
+    for (const line of booking.lines || []) {
+      const row = lineSales.get(line.itemId) || { itemId: line.itemId, label: line.label, qty: 0, revenue: 0 };
+      row.qty += Number(line.qty) || 0;
+      row.revenue += Number(line.value) || 0;
+      lineSales.set(line.itemId, row);
+    }
+  }
+  const addOnSales = new Map();
+  for (const booking of confirmed) {
+    for (const addOn of booking.addOns || []) {
+      const row = addOnSales.get(addOn.id) || { id: addOn.id, label: addOn.label, qty: 0, revenue: 0 };
+      row.qty += Number(addOn.qty) || 0;
+      row.revenue += Number(addOn.value) || 0;
+      addOnSales.set(addOn.id, row);
+    }
+  }
+
+  const packageCounts = new Map();
+  for (const booking of confirmed) {
+    if (!booking.packageId) continue;
+    packageCounts.set(booking.packageId, (packageCounts.get(booking.packageId) || 0) + (booking.packageQty || 1));
+  }
+
+  return {
+    settings: s,
+    defaults: park.DEFAULTS,
+    units: park.UNITS,
+    /** Token reference shown under the notice inputs in the admin form. */
+    noticeTokens: Object.keys(park.noticeTokens(s)),
+    /** Live render of each notice, so the admin sees exactly what a guest reads. */
+    previews: {
+      package: park.renderNotice(s.packageNotice, park.noticeTokens(s)),
+      individual: park.renderNotice(s.individualNotice, park.noticeTokens(s)),
+      paid: park.renderNotice(
+        s.paidNotice,
+        park.noticeTokens(s, { date: park.dateLabel(todayKey), time: park.timeLabel(s.openTime) })
+      ),
+      soldOut: park.renderNotice(
+        s.soldOutNotice,
+        park.noticeTokens(s, { date: park.dateLabel(todayKey), time: park.timeLabel(s.openTime) })
+      ),
+    },
+    /** Inactive ones included: the admin needs to see and re-enable them. */
+    packages: park.allPackages(s).map((p) =>
+      Object.assign({}, p, { sold: packageCounts.get(p.id) || 0 })
+    ),
+    items: s.items.map((i) =>
+      Object.assign({}, i, {
+        sales: lineSales.get(i.id) || { qty: 0, revenue: 0 },
+        /** Packages that would break if this line were deleted. */
+        usedBy: s.packages.filter((p) => (p.lines || []).some((l) => l.itemId === i.id)).map((p) => p.name),
+      })
+    ),
+    addOns: s.addOns.map((a) => Object.assign({}, a, { sales: addOnSales.get(a.id) || { qty: 0, revenue: 0 } })),
+    stats: {
+      bookings: confirmed.length,
+      cancelled: all.filter((b) => b.status === 'cancelled').length,
+      revenue: confirmed.reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+      guests: confirmed.reduce((sum, b) => sum + (b.guests?.total || 0), 0),
+      /** What the bundles cost against counter rates — the price of the promotion. */
+      savingGiven: confirmed.reduce((sum, b) => sum + (b.amounts?.totalSaving || 0), 0),
+      addOnRevenue: confirmed.reduce((sum, b) => sum + (b.amounts?.addOnAmount || 0), 0),
+      packageBookings: confirmed.filter((b) => b.mode === 'package').length,
+      individualBookings: confirmed.filter((b) => b.mode === 'individual').length,
+      counterSales: confirmed.filter((b) => b.source === 'counter').length,
+      todayGuests: confirmed.filter((b) => b.date === todayKey).reduce((sum, b) => sum + (b.guests?.total || 0), 0),
+      todayRevenue: confirmed
+        .filter((b) => b.date === todayKey)
+        .reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+      upcoming: confirmed.filter((b) => b.date >= todayKey).length,
+      checkedIn: confirmed.filter((b) => b.checkedInAt).length,
+    },
+    bookings,
+    /** Today's gate load, slot by slot. */
+    todaySlots: park.slotsFor(todayKey, s),
+    today: todayKey,
+  };
+});
+
+/** Park identity, hours, capacity, charges and notice copy. */
+router.put('/admin/waterpark/settings', auth.requireAdmin, (ctx) => {
+  const settings = park.saveSettings(ctx.body || {});
+  return {
+    settings,
+    previews: {
+      package: park.renderNotice(settings.packageNotice, park.noticeTokens(settings)),
+      individual: park.renderNotice(settings.individualNotice, park.noticeTokens(settings)),
+    },
+  };
+});
+
+/** Restores the shipped notice wording, leaving prices alone. */
+router.post('/admin/waterpark/notices/reset', auth.requireAdmin, () => {
+  const patch = {};
+  for (const key of park.NOTICE_FIELDS) patch[key] = park.DEFAULTS[key];
+  return { settings: park.saveSettings(patch) };
+});
+
+/**
+ * Restores the whole shipped configuration — rate card, packages and add-ons.
+ * The escape hatch for an admin who has edited the numbers into a corner.
+ */
+router.post('/admin/waterpark/reset', auth.requireAdmin, () => {
+  const meta = db.get('meta');
+  delete meta.waterPark;
+  db.markDirty('meta');
+  return { settings: park.settings(), packages: park.allPackages() };
+});
+
+// ── Rate card ──
+/**
+ * Creates or updates one rate-card line. Editing a rate here moves every
+ * package's value breakup and the per-person builder at the same time, which
+ * is the whole point of there being a single rate card.
+ */
+router.post('/admin/waterpark/items', auth.requireAdmin, (ctx) => {
+  const item = park.saveItem(ctx.body || {});
+  ctx.state.status = 201;
+  return { item, packages: park.allPackages() };
+});
+
+router.put('/admin/waterpark/items/:id', auth.requireAdmin, (ctx) => {
+  const existing = park.itemById(ctx.params.id);
+  if (!existing) throw new HttpError(404, 'Rate-card line not found');
+  const item = park.saveItem(Object.assign({}, ctx.body, { id: ctx.params.id }));
+  return { item, packages: park.allPackages() };
+});
+
+router.delete('/admin/waterpark/items/:id', auth.requireAdmin, (ctx) => {
+  park.removeItem(ctx.params.id);
+  return { deleted: true, id: ctx.params.id };
+});
+
+// ── Packages ──
+router.post('/admin/waterpark/packages', auth.requireAdmin, (ctx) => {
+  const pkg = park.savePackage(ctx.body || {});
+  ctx.state.status = 201;
+  return { package: pkg };
+});
+
+router.put('/admin/waterpark/packages/:id', auth.requireAdmin, (ctx) => {
+  if (!park.packageById(ctx.params.id)) throw new HttpError(404, 'Package not found');
+  const pkg = park.savePackage(Object.assign({}, ctx.body, { id: ctx.params.id }));
+  return { package: pkg };
+});
+
+router.delete('/admin/waterpark/packages/:id', auth.requireAdmin, (ctx) => {
+  const sold = db.find(
+    'waterparkBookings',
+    (b) => b.packageId === ctx.params.id && b.status === 'confirmed'
+  ).length;
+  // Issued passes name the package, so it is switched off rather than removed
+  // once it has sold — otherwise the ledger would reference a package that no
+  // longer exists.
+  if (sold) {
+    const pkg = park.savePackage(Object.assign({}, park.packageById(ctx.params.id), { active: false }));
+    return { deleted: false, deactivated: true, package: pkg, sold };
+  }
+  park.removePackage(ctx.params.id);
+  return { deleted: true, id: ctx.params.id };
+});
+
+// ── Add-ons ──
+router.post('/admin/waterpark/addons', auth.requireAdmin, (ctx) => {
+  const addOn = park.saveAddOn(ctx.body || {});
+  ctx.state.status = 201;
+  return { addOn };
+});
+
+router.put('/admin/waterpark/addons/:id', auth.requireAdmin, (ctx) => {
+  if (!park.addOnById(ctx.params.id)) throw new HttpError(404, 'Add-on not found');
+  const addOn = park.saveAddOn(Object.assign({}, ctx.body, { id: ctx.params.id }));
+  return { addOn };
+});
+
+router.delete('/admin/waterpark/addons/:id', auth.requireAdmin, (ctx) => {
+  park.removeAddOn(ctx.params.id);
+  return { deleted: true, id: ctx.params.id };
+});
+
+// ── Passes ──
+/**
+ * Prices an order without saving it. The admin counter-booking form calls this
+ * on every keystroke so the clerk sees the live total, and it is the same
+ * resolver the customer app quotes through.
+ */
+router.post('/admin/waterpark/quote', auth.requireAdmin, (ctx) => {
+  const s = park.settings();
+  const order = park.resolveOrder(ctx.body || {}, s);
+  const offer = ctx.body && ctx.body.offerCode
+    ? resolveWaterparkOffer(db.get('offers'), ctx.body.offerCode, {
+        baseAmount: order.baseAmount,
+        addOnAmount: order.addOnAmount,
+        actualValue: order.actualValue,
+      })
+    : null;
+  const amounts = computeWaterparkTotals({
+    baseAmount: order.baseAmount,
+    actualValue: order.actualValue,
+    addOnAmount: order.addOnAmount,
+    convenienceFeePercent: s.convenienceFeePercent,
+    gstPercent: s.gstPercent,
+    offer,
+  });
+  return {
+    order,
+    amounts,
+    offer: offer ? { code: offer.code, title: offer.title } : null,
+    offerRejected: Boolean(ctx.body && ctx.body.offerCode) && !offer,
+    notice: park.orderNotice(order, s),
+    slot: ctx.body && ctx.body.date && ctx.body.time ? park.slotFor(ctx.body.date, ctx.body.time, s) : null,
+  };
+});
+
+/**
+ * Sells a pass at the gate. This is what makes the tab usable for walk-ups:
+ * no customer account is needed, the clerk records a name and phone, and the
+ * booking is marked `source: 'counter'` so counter sales can be told apart
+ * from app sales in the ledger.
+ */
+router.post('/admin/waterpark/bookings', auth.requireAdmin, (ctx) => {
+  const body = ctx.body || {};
+  const s = park.settings();
+
+  const date = park.assertBookableDate(body.date || park.today(), s);
+  if (!body.time) throw new HttpError(400, 'Pick an entry time');
+
+  const order = park.resolveOrder(body, s);
+  const offer = body.offerCode
+    ? resolveWaterparkOffer(db.get('offers'), body.offerCode, {
+        baseAmount: order.baseAmount,
+        addOnAmount: order.addOnAmount,
+        actualValue: order.actualValue,
+      })
+    : null;
+  const amounts = computeWaterparkTotals({
+    baseAmount: order.baseAmount,
+    actualValue: order.actualValue,
+    addOnAmount: order.addOnAmount,
+    convenienceFeePercent: s.convenienceFeePercent,
+    gstPercent: s.gstPercent,
+    offer,
+  });
+
+  const slot = park.assertCapacity(date, body.time, order.guests.total, s);
+
+  const guestName = String(body.guestName || '').trim();
+  if (!guestName) throw new HttpError(400, "Enter the guest's name for the pass");
+
+  // A counter sale may be attached to an existing customer account by email, so
+  // the pass shows up in their app too.
+  let userId = null;
+  if (body.customerEmail) {
+    const email = String(body.customerEmail).trim().toLowerCase();
+    const user = db.findOne('users', (u) => String(u.email).toLowerCase() === email);
+    if (!user) throw new HttpError(404, `No customer account for ${email}`);
+    userId = user.id;
+  }
+
+  const method = body.paymentMethod || 'cash';
+  const startsAt = park.stampFor(date, slot.time);
+
+  const booking = db.insert('waterparkBookings', {
+    id: db.id('wpb'),
+    reference: db.reference('WP'),
+    userId,
+    type: 'waterpark',
+    status: 'confirmed',
+
+    mode: order.mode,
+    packageId: order.packageId,
+    packageCode: order.packageCode,
+    packageName: order.packageName,
+    packageQty: order.packageQty,
+    lines: order.lines,
+    addOns: order.addOns,
+    guests: order.guests,
+
+    date,
+    time: slot.time,
+    startsAt: startsAt ? startsAt.toISOString() : null,
+    guest: {
+      name: guestName.slice(0, 80),
+      phone: String(body.guestPhone || '').trim().slice(0, 20),
+    },
+
+    amounts,
+    offerCode: amounts.offerCode,
+    payment: {
+      method,
+      methodLabel: method === 'cash' ? 'Cash at counter' : method === 'upi' ? 'UPI at counter' : 'Card at counter',
+      status: 'paid',
+      amount: amounts.total,
+      transactionId: `TXN${db.reference('').slice(0, 10)}`,
+      paidAt: new Date().toISOString(),
+    },
+    checkedInAt: null,
+    source: 'counter',
+    soldBy: ctx.user.id,
+    notes: String(body.notes || '').trim().slice(0, 300),
+    appliedRates: {
+      parkName: s.parkName,
+      validityNote: s.validityNote,
+      convenienceFeePercent: s.convenienceFeePercent,
+      gstPercent: s.gstPercent,
+      lines: order.lines.map((l) => ({ itemId: l.itemId, label: l.label, rate: l.rate })),
+    },
+  });
+
+  if (userId) {
+    notify(
+      userId,
+      `${s.headline} pass issued`,
+      `${order.guests.total} guest(s) on ${park.dateLabel(date)} at ${park.timeLabel(slot.time)}. ` +
+        `Reference ${booking.reference}.`,
+      'booking'
+    );
+  }
+
+  ctx.state.status = 201;
+  return { booking: park.decorateBooking(booking, s) };
+});
+
+/** Gate check-in. Idempotent per pass, and refuses a cancelled one. */
+router.post('/admin/waterpark/bookings/:id/checkin', auth.requireAdmin, (ctx) => {
+  const booking = db.byId('waterparkBookings', ctx.params.id);
+  if (!booking) throw new HttpError(404, 'Booking not found');
+  if (booking.status !== 'confirmed') throw new HttpError(400, 'That pass is cancelled');
+  if (booking.checkedInAt) {
+    throw new HttpError(400, `Already checked in at ${park.clockLabel(booking.checkedInAt)}`);
+  }
+  const updated = db.update('waterparkBookings', ctx.params.id, {
+    checkedInAt: new Date().toISOString(),
+    checkedInBy: ctx.user.id,
+  });
+  return { booking: park.decorateBooking(updated) };
+});
+
+/** Undo a mistaken check-in. */
+router.post('/admin/waterpark/bookings/:id/undo-checkin', auth.requireAdmin, (ctx) => {
+  const booking = db.byId('waterparkBookings', ctx.params.id);
+  if (!booking) throw new HttpError(404, 'Booking not found');
+  if (!booking.checkedInAt) throw new HttpError(400, 'That pass has not been checked in');
+  const updated = db.update('waterparkBookings', ctx.params.id, { checkedInAt: null, checkedInBy: null });
+  return { booking: park.decorateBooking(updated) };
+});
+
+router.post('/admin/waterpark/bookings/:id/cancel', auth.requireAdmin, (ctx) => {
+  const booking = db.byId('waterparkBookings', ctx.params.id);
+  if (!booking) throw new HttpError(404, 'Booking not found');
+  if (booking.status !== 'confirmed') throw new HttpError(400, 'That pass is already cancelled');
+
+  const updated = db.update('waterparkBookings', ctx.params.id, {
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString(),
+    cancelledBy: 'admin',
+  });
+
+  // Cancelling releases the slot, so the guest has to be told.
+  if (booking.userId) {
+    notify(
+      booking.userId,
+      'Water park pass cancelled',
+      `Your ${park.settings().headline} pass for ${park.dateLabel(booking.date)} was cancelled by the park. ` +
+        'Please call us to rebook.',
+      'booking'
+    );
+  }
+  return { booking: park.decorateBooking(updated) };
+});
+
+router.delete('/admin/waterpark/bookings/:id', auth.requireAdmin, (ctx) => {
+  const booking = db.byId('waterparkBookings', ctx.params.id);
+  if (!booking) throw new HttpError(404, 'Booking not found');
+  // A pass that was paid for and used is the revenue record for that visit.
+  if (booking.status === 'confirmed' && booking.checkedInAt) {
+    throw new HttpError(400, 'That pass was used at the gate and is kept for the record');
+  }
+  db.remove('waterparkBookings', ctx.params.id);
   return { deleted: true, id: ctx.params.id };
 });
 

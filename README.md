@@ -49,10 +49,13 @@ Open that on your phone (same network). The customer UI is designed phone-first;
 ### Useful commands
 
 ```bash
-npm start          # node server.js
-npm test           # end-to-end API smoke test (134 assertions)
-npm run seed       # wipe data/ and re-seed the demo catalogue
-npm run assets     # regenerate the SVG artwork
+npm start              # node server.js
+npm test               # end-to-end API smoke test (134 assertions)
+npm run test:dine-in   # Dine-In tab, end to end (90 assertions)
+npm run test:waterpark # Water park tab, end to end (152 assertions)
+npm run test:ui        # renders the admin console + app in headless Chrome (102 assertions)
+npm run seed           # wipe data/ and re-seed the demo catalogue
+npm run assets         # regenerate the SVG artwork
 PORT=8080 node server.js
 ```
 
@@ -138,13 +141,15 @@ the app cannot be scaled to multiple replicas as-is.
 
 ## The customer app
 
-Mobile-only, five tabs, dark mode throughout.
+Mobile-only, six tabs, dark mode throughout.
 
 **Home** — city picker, notification bell with unread badge, auto-playing hero carousel, "Your next show" card, *Now Playing* and *Coming Soon* rails with **View All**, personalised "Because you like…" rail, offer banners, nearby cinemas.
 
 **Cinemas** — nearby cinemas with distance, rating, formats and facilities; tap through to a cinema's day-by-day schedule grouped by movie.
 
 **Food Order** — offer-banner carousel, category rails (*Most Popular*, *New Beverages*, *Value Combos*…), item detail pages, a persistent cart, and checkout with cinema + pickup-slot selection.
+
+**Water Park** — the *Family Fun Day* tab. All-in-one family packages, each showing its full value breakup (every line, its quantity, its rate and its value) so the guest can see why the flat price is a saving; or **build the day person by person** from the same rate card with every quantity editable. Add-ons (fish spa, bull ride, massage chair, photography) on top of either, entry-slot capacity, and a day pass with a scannable gate barcode. Totals are always quoted by the server, so the price shown is the price charged.
 
 **My Tickets** — `Upcoming / Passed / Canceled` tabs × `Movie / Food / Event` filters, per-booking **"Remind me 30 minutes earlier"** toggle, and a full ticket view with a scannable barcode, itemised bill and cancellation.
 
@@ -154,7 +159,9 @@ Mobile-only, five tabs, dark mode throughout.
 
 ## The admin console
 
-Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Food CRUD · Offers CRUD · Customers (spend, points, enable/disable).
+Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Hotel & Rooms · Dine-In · **Water Park** · Food CRUD · Offers CRUD · Customers (spend, points, enable/disable).
+
+**Water Park** is a full operations console for the tab: one editable **rate card** that every package line and every per-person booking is priced from, so changing the adult entry rate reprices both packages and the per-person builder at once. Packages are edited as quantities against that rate card — the total actual value and the "you save" figure are computed, never typed, and the editor recomputes them as you type while warning if a package is priced above its own parts or carries the wrong number of entry tickets. Plus add-on pricing, opening hours and slot capacity, admin-editable customer notices with `{token}` substitution, a live gate-load view, a filterable pass ledger with check-in, and **counter sales** — sell a walk-up pass (package or per person) with a live server-priced total and no customer account needed.
 
 ---
 
@@ -253,8 +260,17 @@ All responses are JSON. Authenticated routes take `Authorization: Bearer <token>
 `GET|PUT /api/me/interests` · `GET|POST|DELETE /api/me/payment-methods` ·
 `GET /api/me/notifications` · `POST /api/me/notifications/read`
 
+### Water park
+`GET /api/waterpark` · `GET /api/waterpark/slots` · `POST /api/waterpark/quote` ·
+`POST /api/waterpark/offers/validate` · `GET|POST /api/waterpark/bookings` 🔒 ·
+`GET /api/waterpark/bookings/:id` 🔒 · `POST /api/waterpark/bookings/:id/cancel` 🔒 ·
+`GET /api/waterpark/bookings/:id/barcode.svg`
+
 ### Admin (🔒 admin role)
 `GET /api/admin/stats` · CRUD on `/api/admin/{movies,cinemas,screens,showtimes,food,offers}` ·
+`GET|PUT /api/admin/waterpark[/settings]` · CRUD on `/api/admin/waterpark/{items,packages,addons}` ·
+`POST /api/admin/waterpark/{quote,bookings,notices/reset,reset}` ·
+`POST /api/admin/waterpark/bookings/:id/{checkin,undo-checkin,cancel}` ·
 `POST /api/admin/showtimes/generate` · `GET /api/admin/bookings` · `GET /api/admin/users` ·
 `POST /api/admin/users/:id/toggle` · `GET /api/admin/verify/:reference` ·
 `POST /api/admin/bookings/:id/checkin`
@@ -267,7 +283,13 @@ All responses are JSON. Authenticated routes take `Authorization: Bearer <token>
 npm test
 ```
 
-Spawns the server against a throwaway data directory (your real `data/` is untouched) and runs ~140 assertions across the whole journey: catalogue filters, auth and token tampering, seat maps, hold conflicts between two users, spent-hold reuse, pricing arithmetic, offer validation, checkout, barcode rendering, cancellation and seat release, account features, every admin CRUD path, archive-instead-of-delete protection, and error handling (404 / 405 / malformed JSON / path traversal).
+Every suite spawns the server against a throwaway data directory, so your real `data/` is never touched.
+
+`npm run test:waterpark` proves the package arithmetic the poster advertises (Package A is worth ₹2,450, sells for ₹1,499 and saves ₹951; Package B ₹3,200 / ₹1,799 / ₹1,401), that a per-person booking is charged counter rates and saves nothing, that nobody gets through the gate without an entry ticket, and that editing a rate in the admin API moves both packages and the per-person builder immediately.
+
+`npm run test:ui` renders the admin console and the customer app in headless Chrome (driven over the DevTools Protocol with no browser-automation dependency) and asserts against the real DOM — including a complete counter sale and a complete customer booking. It fails on any console error or uncaught exception, which is what catches a screen that loads but is quietly broken. Add `-- --shots` to write PNGs to `tools/screenshots/`.
+
+`npm test` runs ~140 assertions across the whole movie journey: catalogue filters, auth and token tampering, seat maps, hold conflicts between two users, spent-hold reuse, pricing arithmetic, offer validation, checkout, barcode rendering, cancellation and seat release, account features, every admin CRUD path, archive-instead-of-delete protection, and error handling (404 / 405 / malformed JSON / path traversal).
 
 ---
 
