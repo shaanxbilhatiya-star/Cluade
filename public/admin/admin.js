@@ -431,6 +431,11 @@
     return String(value || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
   }
 
+  /** One value per line (e.g. a list of photo URLs) -> array. */
+  function linesList(value) {
+    return String(value || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
   async function submitModal(m, work) {
     m.confirmBtn.disabled = true;
     var old = m.confirmBtn.textContent;
@@ -860,7 +865,13 @@
         field('Area', 'area', c.area) +
         field('Distance (km)', 'distanceKm', c.distanceKm || 0, { type: 'number' }) +
         field('Rating', 'rating', c.rating || 4, { type: 'number' }) +
+        field('Review count', 'reviewCount', c.reviewCount || 0, { type: 'number' }) +
         field('Address', 'address', c.address, { span: true }) +
+        field('Tagline', 'tagline', c.tagline, { span: true }) +
+        field('Cover photos', 'photos', (c.photos || []).join('\n'), {
+          type: 'textarea', span: true, placeholder: '/img/cinemas/cover-1.jpg',
+          hint: 'One photo URL per line — shown at the top of the cinema\'s card and detail page.',
+        }) +
         field('Facilities', 'facilities', (c.facilities || []).join(', '), { span: true, hint: 'Comma separated, e.g. Dolby Atmos, Recliners' }) +
         '</div>');
     }
@@ -869,7 +880,9 @@
       var raw = readForm(body);
       return {
         name: raw.name, brand: raw.brand, city: raw.city, area: raw.area, address: raw.address,
-        distanceKm: Number(raw.distanceKm), rating: Number(raw.rating), facilities: csvList(raw.facilities),
+        tagline: raw.tagline, photos: linesList(raw.photos),
+        distanceKm: Number(raw.distanceKm), rating: Number(raw.rating), reviewCount: Number(raw.reviewCount),
+        facilities: csvList(raw.facilities),
       };
     }
 
@@ -1883,6 +1896,14 @@
         field('Address', 'address', s.address, { span: true }) +
         field('Phone', 'phone', s.phone) +
 
+        '<div class="col-span"><div class="label" style="margin-top:6px">Cover photo (shown at the top of the tab)</div></div>' +
+        field('Cover photos', 'photos', (s.photos || []).join('\n'), {
+          type: 'textarea', span: true, placeholder: '/img/dinein/cover-1.jpg',
+          hint: 'One photo URL per line. The first is shown first; more than one becomes a swipeable slider.',
+        }) +
+        field('Rating', 'rating', s.rating, { type: 'number', hint: 'Out of 5, e.g. 4.4' }) +
+        field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+
         '<div class="col-span"><div class="label" style="margin-top:6px">Discounts</div></div>' +
         field('Reserved-table discount (%)', 'reservedDiscountPercent', s.reservedDiscountPercent, {
           type: 'number', hint: 'Applied when a reservation has been held for the lock window below.',
@@ -1953,6 +1974,9 @@
         tagline: raw.tagline,
         address: raw.address,
         phone: raw.phone,
+        photos: linesList(raw.photos),
+        rating: Number(raw.rating),
+        reviewCount: Number(raw.reviewCount),
         reservedDiscountPercent: Number(raw.reservedDiscountPercent),
         walkinDiscountPercent: Number(raw.walkinDiscountPercent),
         maxDiscountAmount: Number(raw.maxDiscountAmount),
@@ -2447,6 +2471,15 @@
         field('Address', 'address', s.address, { span: true }) +
         field('Phone', 'phone', s.phone) +
         field('Validity note', 'validityNote', s.validityNote, { hint: 'Printed under the packages and on the pass.' }) +
+
+        '<div class="col-span"><div class="label" style="margin-top:6px">Cover photo (shown at the top of the tab)</div></div>' +
+        field('Cover photos', 'photos', (s.photos || []).join('\n'), {
+          type: 'textarea', span: true, placeholder: '/img/waterpark/cover-1.jpg',
+          hint: 'One photo URL per line. The first is shown first; more than one becomes a swipeable slider.',
+        }) +
+        field('Rating', 'rating', s.rating, { type: 'number', hint: 'Out of 5, e.g. 4.5' }) +
+        field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
+
         field('What\'s included (comma separated)', 'inclusions', (s.inclusions || []).join(', '), {
           span: true, placeholder: 'Water Park Entry, Movie Tickets, Costume',
           hint: 'The "what\'s included" strip. Presentation only \u2014 what a guest is charged for comes from the package lines.',
@@ -2490,6 +2523,9 @@
         address: raw.address,
         phone: raw.phone,
         validityNote: raw.validityNote,
+        photos: linesList(raw.photos),
+        rating: Number(raw.rating),
+        reviewCount: Number(raw.reviewCount),
         inclusions: csvList(raw.inclusions),
         openTime: raw.openTime,
         closeTime: raw.closeTime,

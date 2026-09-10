@@ -15,6 +15,15 @@
     var posters = (cinema.nowShowing || []).slice(0, 5);
     return '<div class="card cinema-card">' +
       '<button data-action="cinema" data-id="' + UI.esc(cinema.id) + '" style="width:100%;text-align:left">' +
+        ((cinema.photos || []).length
+          ? UI.heroCard({
+              photos: cinema.photos,
+              name: cinema.name,
+              subtitle: [cinema.area, cinema.city].filter(Boolean).join(', '),
+              rating: cinema.rating,
+              reviewCount: cinema.reviewCount,
+            })
+          : '') +
         '<div class="cinema-card__top">' +
           '<div style="flex:1;min-width:0">' +
             '<h3 class="cinema-card__name">' + UI.esc(cinema.name) + '</h3>' +
@@ -102,6 +111,16 @@
         '<div class="screen">' +
           UI.appbar({ title: info.name, back: true, alignLeft: true, logo: false }) +
           '<div class="scroll">' +
+            ((info.photos || []).length
+              ? UI.heroCard({
+                  photos: info.photos,
+                  name: info.name,
+                  subtitle: [info.area, info.city].filter(Boolean).join(', '),
+                  rating: info.rating,
+                  reviewCount: info.reviewCount,
+                })
+              : '') +
+            (info.tagline ? '<p class="hotel-tagline">' + UI.esc(info.tagline) + '</p>' : '') +
             '<div style="padding:0 16px 4px">' +
               '<div style="display:flex;align-items:flex-start;gap:12px">' +
                 '<span class="row__icon" style="color:var(--primary-600);margin-top:2px">' + UI.icon('map-pin', 20) + '</span>' +

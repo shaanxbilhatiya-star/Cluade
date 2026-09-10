@@ -112,6 +112,15 @@
 
             UI.promoSlider(data.slider) +
 
+            UI.heroCard({
+              photos: s.photos,
+              name: s.restaurantName,
+              subtitle: s.address,
+              rating: s.rating,
+              reviewCount: s.reviewCount,
+              intervalMs: (data.slider && data.slider.intervalMs) || 4500,
+            }) +
+
             '<div class="dine-hero">' +
               '<h2 class="dine-hero__name">' + UI.esc(s.restaurantName) + '</h2>' +
               (s.tagline ? '<p class="dine-hero__tagline">' + UI.esc(s.tagline) + '</p>' : '') +

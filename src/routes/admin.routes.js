@@ -27,7 +27,7 @@ const MOVIE_FIELDS = [
   'trailerUrl', 'posterUrl', 'backdropUrl', 'accentColor', 'active', 'tmdbId',
   'tierPrices', // per-movie tier pricing: { sofa, recliner, platinum, gold, silver }
 ];
-const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'facilities', 'active'];
+const CINEMA_FIELDS = ['name', 'brand', 'city', 'area', 'address', 'lat', 'lng', 'distanceKm', 'rating', 'reviewCount', 'tagline', 'photos', 'facilities', 'active'];
 const FOOD_FIELDS = ['name', 'category', 'price', 'description', 'size', 'veg', 'popular', 'imageUrl', 'available'];
 const OFFER_FIELDS = ['title', 'subtitle', 'code', 'discountType', 'discountValue', 'maxDiscount', 'minAmount', 'appliesTo', 'bannerUrl', 'active'];
 const EXPERIENCE_FIELDS = ['title', 'category', 'subtitle', 'icon', 'color', 'priceLabel', 'priceNote', 'features', 'badge', 'order', 'active', 'image'];
@@ -451,9 +451,13 @@ router.post('/admin/cinemas', auth.requireAdmin, (ctx) => {
   const slug = slugify(ctx.body.slug || ctx.body.name);
   if (db.findOne('cinemas', (c) => c.slug === slug)) throw new HttpError(409, 'A cinema with that name already exists');
 
+  const patch = pick(ctx.body, CINEMA_FIELDS);
+  if (patch.photos !== undefined) patch.photos = csv(patch.photos);
+  if (patch.reviewCount !== undefined) patch.reviewCount = Math.max(0, Math.round(Number(patch.reviewCount)) || 0);
+
   const cinema = db.insert('cinemas', Object.assign(
-    { id: db.id('cin'), slug, brand: '', area: '', address: '', distanceKm: 0, rating: 4, facilities: [], active: true },
-    pick(ctx.body, CINEMA_FIELDS)
+    { id: db.id('cin'), slug, brand: '', area: '', address: '', distanceKm: 0, rating: 4, reviewCount: 0, tagline: '', photos: [], facilities: [], active: true },
+    patch
   ));
   ctx.state.status = 201;
   return { cinema };
@@ -461,7 +465,10 @@ router.post('/admin/cinemas', auth.requireAdmin, (ctx) => {
 
 router.put('/admin/cinemas/:id', auth.requireAdmin, (ctx) => {
   if (!db.byId('cinemas', ctx.params.id)) throw new HttpError(404, 'Cinema not found');
-  return { cinema: db.update('cinemas', ctx.params.id, pick(ctx.body, CINEMA_FIELDS)) };
+  const patch = pick(ctx.body, CINEMA_FIELDS);
+  if (patch.photos !== undefined) patch.photos = csv(patch.photos);
+  if (patch.reviewCount !== undefined) patch.reviewCount = Math.max(0, Math.round(Number(patch.reviewCount)) || 0);
+  return { cinema: db.update('cinemas', ctx.params.id, patch) };
 });
 
 router.delete('/admin/cinemas/:id', auth.requireAdmin, (ctx) => {

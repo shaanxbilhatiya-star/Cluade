@@ -45,6 +45,10 @@ const DEFAULTS = {
   tagline: 'Pay your bill from the table and save instantly',
   address: 'Kingfisher Resort, Mandla',
   phone: '7648913272',
+  /** Hero photo(s) shown at the top of the Dine-In tab. */
+  photos: [],
+  rating: 4.4,
+  reviewCount: 0,
 
   // ── Discounts (percent off the food bill) ──
   reservedDiscountPercent: 30,
@@ -190,6 +194,23 @@ function saveSettings(patch = {}) {
       ? patch.areas
       : String(patch.areas || '').split(',');
     next.areas = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
+  }
+
+  if (patch.photos !== undefined) {
+    const list = Array.isArray(patch.photos) ? patch.photos : String(patch.photos || '').split(/\r?\n|,/);
+    next.photos = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 10);
+  }
+
+  if (patch.rating !== undefined && patch.rating !== '') {
+    const n = Number(patch.rating);
+    if (!Number.isFinite(n)) throw new HttpError(400, 'rating must be a number');
+    next.rating = Math.min(5, Math.max(0, Math.round(n * 10) / 10));
+  }
+
+  if (patch.reviewCount !== undefined && patch.reviewCount !== '') {
+    const n = Number(patch.reviewCount);
+    if (!Number.isFinite(n)) throw new HttpError(400, 'reviewCount must be a number');
+    next.reviewCount = Math.min(1000000, Math.max(0, Math.round(n)));
   }
 
   if (!TIME_RE.test(next.openTime) || !TIME_RE.test(next.closeTime)) {
