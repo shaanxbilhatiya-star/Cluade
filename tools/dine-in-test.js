@@ -414,18 +414,14 @@ async function run() {
     await api('PUT', '/api/admin/dine-in/settings', { token: adminToken, body: { active: true } });
 
     // ── Pay at the counter ───────────────────────────────────────────────────
-    /* 'cash' is money not yet collected, so the bill must not claim to be paid
-       and must not mint loyalty points. */
+    /* 'cash' is money not yet collected, so the bill must not claim to be paid. */
     section('Pay at the counter is not settled money');
-    const before = (await api('GET', '/api/me', { token })).body.user.loyaltyPoints;
     const cashBill = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, payment: { method: 'cash' } } });
     check('a counter bill is accepted', cashBill.status === 201, `status ${cashBill.status}`);
     check('but its status is pending, not paid',
       cashBill.body.bill.status === 'pending' && cashBill.body.bill.payment.status === 'pending',
       JSON.stringify({ bill: cashBill.body.bill?.status, payment: cashBill.body.bill?.payment?.status }));
-    check('and no loyalty points are credited yet', cashBill.body.pointsEarned === 0);
-    const after = (await api('GET', '/api/me', { token })).body.user.loyaltyPoints;
-    check('the points balance is unchanged', after === before, `${before} -> ${after}`);
+    check('and no loyalty points are minted', cashBill.body.pointsEarned === undefined);
     expectedBills += 1;
     expectedSaved += cashBill.body.bill.amounts.discount;
 

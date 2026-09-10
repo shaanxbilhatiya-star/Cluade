@@ -965,7 +965,18 @@ ul { margin: 0; padding: 0; list-style: none; }
 .profile__email { margin-top: 4px; font-size: 14.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile__divider { height: 1px; background: var(--line); margin: 0 16px; }
 
-.stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 16px; }
+/* Break between two groups of rows. Rows inside a group are already separated
+   by hairlines, so a group break needs real space and a stronger rule to read
+   as a break rather than as just another row divider. */
+.list__sep { height: 1px; background: var(--line-strong); margin: 16px 16px; }
+
+/* Auto-fit columns so adding or removing a stat never needs a CSS change. */
+.stat-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 10px; padding: 16px;
+}
 .stat {
   background: var(--bg-sunken); border-radius: var(--radius); padding: 13px 10px; text-align: center;
 }
@@ -1334,7 +1345,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .checkout-note svg { flex: none; margin-top: 2px; color: var(--success); }
 
-.reward-line {
+.paid-line {
   margin: 16px 16px 0; display: flex; align-items: center; justify-content: center; gap: 7px;
   font-size: 13px; font-weight: 700; color: var(--primary-700);
 }

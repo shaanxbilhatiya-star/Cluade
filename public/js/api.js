@@ -156,14 +156,6 @@
     // ── Account ──
     updateProfile: function (patch) { return request('PATCH', '/me', patch); },
     updateSettings: function (patch) { return request('PATCH', '/me/settings', patch); },
-    watchlist: function () { return request('GET', '/me/watchlist'); },
-    toggleWatchlist: function (movieId) { return request('POST', '/me/watchlist', { movieId: movieId }); },
-    interests: function () { return request('GET', '/me/interests'); },
-    saveInterests: function (payload) { return request('PUT', '/me/interests', payload); },
-    paymentMethods: function () { return request('GET', '/me/payment-methods'); },
-    addPaymentMethod: function (payload) { return request('POST', '/me/payment-methods', payload); },
-    makeDefaultPaymentMethod: function (id) { return request('POST', '/me/payment-methods/' + id + '/default', {}); },
-    deletePaymentMethod: function (id) { return request('DELETE', '/me/payment-methods/' + id); },
     notifications: function () { return request('GET', '/me/notifications'); },
     markNotificationsRead: function (ids) { return request('POST', '/me/notifications/read', ids ? { ids: ids } : {}); },
     changePassword: function (currentPassword, newPassword) {

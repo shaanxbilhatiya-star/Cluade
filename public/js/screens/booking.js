@@ -4,6 +4,14 @@
 
   var TIER_LABEL = { regular: 'Regular', premium: 'Premium', vip: 'VIP Recliner', sofa: 'Sofa', recliner: 'Recliner', platinum: 'Platinum', gold: 'Gold', silver: 'Silver' };
 
+  /** Payment options at checkout. The ids are what the API accepts. */
+  var PAY_METHODS = [
+    { id: 'upi', label: 'UPI', sub: 'GPay, PhonePe, Paytm', icon: 'wallet' },
+    { id: 'card', label: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay', icon: 'card' },
+    { id: 'netbanking', label: 'Net Banking', sub: 'All major banks', icon: 'bank' },
+    { id: 'cash', label: 'Pay at counter', sub: 'Settle at the box office', icon: 'cash' },
+  ];
+
   // Groups consecutive rows that share a tier into sections, so the seat map
   // can show one price/tier heading per block (Sofa, Recliner, Platinum, …)
   // instead of repeating it per row — matches how multiplex seat maps are
@@ -167,7 +175,6 @@
   window.Screens.movieDetail = {
     render: async function (params) {
       var movie = await API.movie(params.id);
-      var inWatchlist = Boolean(Store.user && (Store.user.watchlist || []).indexOf(movie.id) !== -1);
       var isComingSoon = movie.status === 'coming_soon';
 
       var view = UI.h(
@@ -178,11 +185,7 @@
               '<div class="detail-hero__scrim"></div>' +
               '<div class="detail-hero__bar">' +
                 '<button class="icon-btn" data-action="back" aria-label="Go back">' + UI.icon('arrow-left', 23) + '</button>' +
-                '<div style="display:flex;gap:8px">' +
-                  '<button class="icon-btn" data-action="watchlist" aria-pressed="' + inWatchlist + '" aria-label="Add to watchlist">' +
-                    UI.icon('heart', 21, { solid: false }) + '</button>' +
-                  '<button class="icon-btn" data-action="share" aria-label="Share">' + UI.icon('share', 20) + '</button>' +
-                '</div>' +
+                '<button class="icon-btn" data-action="share" aria-label="Share">' + UI.icon('share', 20) + '</button>' +
               '</div>' +
               (movie.trailerUrl ? '<button class="detail-hero__play" data-action="trailer" aria-label="Watch trailer">' + UI.icon('play', 26, { solid: true }) + '</button>' : '') +
             '</div>' +
@@ -258,7 +261,12 @@
 
           '<div class="actionbar">' +
             (isComingSoon
-              ? '<button class="btn" data-action="watchlist-cta">' + (inWatchlist ? 'In your watchlist' : 'Notify me on release') + '</button>'
+              /* Nothing to book yet, so the bar states when it lands and sends
+                 the guest to what they can actually watch today. */
+              ? '<div class="actionbar__price"><div class="actionbar__label">In cinemas</div>' +
+                '<div class="actionbar__value" style="font-size:15px">' +
+                  UI.esc(movie.releaseDate ? UI.shortDate(movie.releaseDate) : 'Date to be announced') + '</div></div>' +
+                '<button class="btn" data-action="browse-now">See what\u2019s playing</button>'
               : '<div class="actionbar__price"><div class="actionbar__label">Now playing</div>' +
                 '<div class="actionbar__value" style="font-size:15px">' + UI.esc(movie.showtimeCount) + ' shows</div></div>' +
                 '<button class="btn" data-action="book">Book tickets</button>') +
@@ -266,33 +274,8 @@
         '</div>'
       );
 
-      function paintHeart(on) {
-        var btn = view.querySelector('[data-action="watchlist"]');
-        btn.setAttribute('aria-pressed', String(on));
-        btn.innerHTML = UI.icon('heart', 21, { solid: on });
-        btn.style.color = on ? '#FB7185' : '#fff';
-        var cta = view.querySelector('[data-action="watchlist-cta"]');
-        if (cta) cta.textContent = on ? 'In your watchlist' : 'Notify me on release';
-      }
-
-      async function toggleWatchlist() {
-        if (!API.isSignedIn()) {
-          sessionStorage.setItem('cineflex.returnTo', '/movie/' + movie.id);
-          App.navigate('/login');
-          return;
-        }
-        try {
-          var res = await API.toggleWatchlist(movie.id);
-          inWatchlist = res.inWatchlist;
-          if (Store.user) Store.user.watchlist = res.watchlist;
-          paintHeart(inWatchlist);
-          UI.toast(inWatchlist ? 'Added to your watchlist' : 'Removed from your watchlist', 'success');
-        } catch (err) { UI.toast(err.message, 'error'); }
-      }
-
       UI.actions(view, {
-        watchlist: toggleWatchlist,
-        'watchlist-cta': toggleWatchlist,
+        'browse-now': function () { App.navigate('/movies/now_playing'); },
         book: function () {
           if (movie.certificate && movie.certificate.toUpperCase() === 'A') {
             var modal = UI.h(
@@ -380,7 +363,6 @@
         },
       });
 
-      paintHeart(inWatchlist);
       _enrichCastPhotos(view);
       return view;
     },
@@ -658,7 +640,7 @@
 
       var state = {
         offerCode: null,
-        payment: (profile.user.paymentMethods || []).find(function (m) { return m.isDefault; }) || null,
+        payment: 'upi',
         food: {},
         totals: null,
       };
@@ -776,14 +758,15 @@
           '</div>' +
 
           '<h2 class="subhead">Pay with</h2>' +
-          '<div style="padding:0 16px">' +
-            '<button class="option" data-action="pick-payment">' +
-              '<span class="option__icon">' + UI.icon(state.payment ? (state.payment.type === 'upi' ? 'phone' : state.payment.type === 'wallet' ? 'wallet' : state.payment.type === 'netbanking' ? 'bank' : 'card') : 'cash', 21) + '</span>' +
-              '<span class="option__text">' +
-                '<span class="option__title">' + UI.esc(state.payment ? state.payment.label : 'Pay at counter') + '</span>' +
-                '<span class="option__sub">' + UI.esc(state.payment ? (state.payment.last4 ? '•••• ' + state.payment.last4 : state.payment.handle || state.payment.type.toUpperCase()) : 'Settle at the box office') + '</span>' +
-              '</span>' +
-              '<span class="row__chevron">' + UI.icon('chevron-right', 19) + '</span></button>' +
+          '<div class="options" style="padding:0 16px">' +
+            PAY_METHODS.map(function (m) {
+              return '<button class="option" data-action="method" data-id="' + m.id + '"' +
+                ' aria-pressed="' + (m.id === state.payment ? 'true' : 'false') + '">' +
+                '<span class="option__icon">' + UI.icon(m.icon, 21) + '</span>' +
+                '<span class="option__text"><span class="option__title">' + m.label + '</span>' +
+                  '<span class="option__sub">' + m.sub + '</span></span>' +
+                '<span class="option__radio"></span></button>';
+            }).join('') +
           '</div>' +
 
           '<h2 class="subhead">Bill summary</h2>' +
@@ -845,33 +828,10 @@
           });
         },
 
-        'pick-payment': function () {
-          var methods = profile.user.paymentMethods || [];
-          var list = UI.h('<div style="padding:0 16px 8px">' +
-            methods.map(function (m) {
-              return '<button class="option" data-pick="' + UI.esc(m.id) + '" aria-pressed="' + (state.payment && state.payment.id === m.id ? 'true' : 'false') + '">' +
-                '<span class="option__icon">' + UI.icon(m.type === 'upi' ? 'phone' : m.type === 'wallet' ? 'wallet' : m.type === 'netbanking' ? 'bank' : 'card', 21) + '</span>' +
-                '<span class="option__text"><span class="option__title">' + UI.esc(m.label) + '</span>' +
-                '<span class="option__sub">' + UI.esc(m.last4 ? '•••• ' + m.last4 : m.handle || m.type.toUpperCase()) + '</span></span>' +
-                '<span class="option__radio"></span></button>';
-            }).join('') +
-            '<button class="option" data-pick="counter" aria-pressed="' + (state.payment ? 'false' : 'true') + '">' +
-              '<span class="option__icon">' + UI.icon('cash', 21) + '</span>' +
-              '<span class="option__text"><span class="option__title">Pay at counter</span>' +
-              '<span class="option__sub">Settle at the box office</span></span>' +
-              '<span class="option__radio"></span></button>' +
-            '<div style="height:10px"></div>' +
-            '<button class="btn-outline btn-outline--lg" data-pick="manage">Manage payment methods</button>' +
-            '</div>');
-          var sheet = UI.sheet({ title: 'Pay with', body: list });
-          list.addEventListener('click', function (e) {
-            var btn = e.target.closest('[data-pick]');
-            if (!btn) return;
-            var value = btn.getAttribute('data-pick');
-            sheet.close();
-            if (value === 'manage') { App.navigate('/account/payments'); return; }
-            state.payment = value === 'counter' ? null : methods.find(function (m) { return m.id === value; });
-            paint();
+        method: function (btn) {
+          state.payment = btn.getAttribute('data-id');
+          view.querySelectorAll('[data-action="method"]').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b.getAttribute('data-id') === state.payment));
           });
         },
 
@@ -883,7 +843,7 @@
               holdId: flow.holdId,
               food: foodLines(),
               offerCode: state.offerCode,
-              payment: state.payment ? { method: state.payment.type, methodId: state.payment.id } : { method: 'cash' },
+              payment: { method: state.payment },
               reminder: true,
             });
             clearInterval(timer);
@@ -954,7 +914,6 @@
               '</div>' +
             '</div>' +
 
-            (res.pointsEarned ? '<p class="text-center" style="margin:18px 0 0;font-size:13px;color:var(--primary-600);font-weight:700">+' + res.pointsEarned + ' reward points earned</p>' : '') +
             '<div class="spacer-24"></div>' +
           '</div>' +
 

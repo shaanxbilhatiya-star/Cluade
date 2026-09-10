@@ -116,18 +116,13 @@ function expand(booking) {
   });
 }
 
-/** Builds the payment sub-record, resolving a saved card to its label. */
-function paymentRecord(payment, user, amount) {
+/** Builds the payment sub-record for a booking. */
+function paymentRecord(payment, amount) {
   const method = (payment && payment.method) || 'card';
   if (!PAYMENT_LABELS[method]) throw new HttpError(400, `Unsupported payment method: ${method}`);
 
   let label = PAYMENT_LABELS[method];
-  if (payment && payment.methodId) {
-    const saved = (user.paymentMethods || []).find((m) => m.id === payment.methodId);
-    if (saved) label = saved.label + (saved.last4 ? ` ••${saved.last4}` : '');
-  } else if (payment && payment.label) {
-    label = String(payment.label).slice(0, 60);
-  }
+  if (payment && payment.label) label = String(payment.label).slice(0, 60);
 
   return {
     method,

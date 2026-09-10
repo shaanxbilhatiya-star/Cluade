@@ -2,6 +2,14 @@
 (function () {
   'use strict';
 
+  /** Payment options at checkout. The ids are what the API accepts. */
+  var PAY_METHODS = [
+    { id: 'upi', label: 'UPI', sub: 'GPay, PhonePe, Paytm', icon: 'wallet' },
+    { id: 'card', label: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay', icon: 'card' },
+    { id: 'netbanking', label: 'Net Banking', sub: 'All major banks', icon: 'bank' },
+    { id: 'cash', label: 'Pay at counter', sub: 'Settle when you collect', icon: 'cash' },
+  ];
+
   function cartBar() {
     var count = Store.cartCount();
     if (!count) return '';
@@ -216,7 +224,7 @@
         cinemaId: cinemas.length ? cinemas[0].id : null,
         slot: '19:00',
         offerCode: null,
-        payment: (profile.user.paymentMethods || []).find(function (m) { return m.isDefault; }) || null,
+        payment: 'upi',
         totals: null,
       };
 
@@ -325,15 +333,15 @@
           '</div>' +
 
           '<h2 class="subhead">Pay with</h2>' +
-          '<div style="padding:0 16px">' +
-            '<button class="option" data-action="pick-payment">' +
-              '<span class="option__icon">' + UI.icon(state.payment ? (state.payment.type === 'upi' ? 'phone' : state.payment.type === 'wallet' ? 'wallet' : 'card') : 'card', 21) + '</span>' +
-              '<span class="option__text">' +
-                '<span class="option__title">' + UI.esc(state.payment ? state.payment.label : 'Pay at counter') + '</span>' +
-                '<span class="option__sub">' + UI.esc(state.payment ? (state.payment.last4 ? '•••• ' + state.payment.last4 : state.payment.handle || state.payment.type.toUpperCase()) : 'Cash / card at the cinema') + '</span>' +
-              '</span>' +
-              '<span class="row__chevron">' + UI.icon('chevron-right', 19) + '</span>' +
-            '</button>' +
+          '<div class="options" style="padding:0 16px">' +
+            PAY_METHODS.map(function (m) {
+              return '<button class="option" data-action="method" data-id="' + m.id + '"' +
+                ' aria-pressed="' + (m.id === state.payment ? 'true' : 'false') + '">' +
+                '<span class="option__icon">' + UI.icon(m.icon, 21) + '</span>' +
+                '<span class="option__text"><span class="option__title">' + m.label + '</span>' +
+                  '<span class="option__sub">' + m.sub + '</span></span>' +
+                '<span class="option__radio"></span></button>';
+            }).join('') +
           '</div>' +
 
           (state.totals
@@ -412,33 +420,10 @@
           });
         },
 
-        'pick-payment': function () {
-          var methods = (profile.user.paymentMethods || []);
-          var list = UI.h('<div style="padding:0 16px 8px">' +
-            methods.map(function (m) {
-              return '<button class="option" data-pick="' + UI.esc(m.id) + '" aria-pressed="' + (state.payment && state.payment.id === m.id ? 'true' : 'false') + '">' +
-                '<span class="option__icon">' + UI.icon(m.type === 'upi' ? 'phone' : m.type === 'wallet' ? 'wallet' : m.type === 'netbanking' ? 'bank' : 'card', 21) + '</span>' +
-                '<span class="option__text"><span class="option__title">' + UI.esc(m.label) + '</span>' +
-                '<span class="option__sub">' + UI.esc(m.last4 ? '•••• ' + m.last4 : m.handle || m.type.toUpperCase()) + '</span></span>' +
-                '<span class="option__radio"></span></button>';
-            }).join('') +
-            '<button class="option" data-pick="counter" aria-pressed="' + (state.payment ? 'false' : 'true') + '">' +
-              '<span class="option__icon">' + UI.icon('cash', 21) + '</span>' +
-              '<span class="option__text"><span class="option__title">Pay at counter</span>' +
-              '<span class="option__sub">Settle when you collect</span></span>' +
-              '<span class="option__radio"></span></button>' +
-            '<div style="height:10px"></div>' +
-            '<button class="btn-outline btn-outline--lg" data-pick="manage">Manage payment methods</button>' +
-            '</div>');
-          var sheet = UI.sheet({ title: 'Pay with', body: list });
-          list.addEventListener('click', function (e) {
-            var btn = e.target.closest('[data-pick]');
-            if (!btn) return;
-            var value = btn.getAttribute('data-pick');
-            sheet.close();
-            if (value === 'manage') { App.navigate('/account/payments'); return; }
-            state.payment = value === 'counter' ? null : methods.find(function (m) { return m.id === value; });
-            paint();
+        method: function (btn) {
+          state.payment = btn.getAttribute('data-id');
+          view.querySelectorAll('[data-action="method"]').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b.getAttribute('data-id') === state.payment));
           });
         },
 
@@ -453,7 +438,7 @@
               items: Store.cart.map(function (l) { return { itemId: l.itemId, qty: l.qty }; }),
               slot: state.slot,
               offerCode: state.offerCode,
-              payment: state.payment ? { method: state.payment.type, methodId: state.payment.id } : { method: 'cash' },
+              payment: { method: state.payment },
             });
             Store.clearCart();
             App.navigate('/confirmed/' + res.booking.id, { replace: true });

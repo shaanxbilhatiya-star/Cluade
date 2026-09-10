@@ -933,9 +933,9 @@
         field('Screen name', 'name', s.name) +
         field('Format', 'format', s.format || '2D', { options: ['2D', '3D', 'IMAX 2D', 'IMAX 3D', '4DX'] }) +
         field('Sound system', 'soundSystem', s.soundSystem || 'Dolby 7.1', { options: ['Dolby 7.1', 'Dolby Atmos', 'IMAX 12.1'] }) +
-        field('Seat layout', 'layoutPreset', s.layoutPreset || 'standard', {
+        field('Seat layout', 'layoutPreset', s.layoutPreset || 'kingfisher-standard', {
           options: data.layoutPresets,
-          hint: 'standard ≈ 104 seats, compact ≈ 64, imax ≈ 116, grand/twin ≈ 5-tier luxe layouts',
+          hint: 'Available layouts: ' + data.layoutPresets.join(', ') + '. Changing this rebuilds the seat map.',
         }) +
         field('Blocked seats', 'blockedSeats', (s.blockedSeats || []).join(', '), {
           type: 'textarea', span: true, placeholder: 'e.g. RC3, RC4, RC5, P110, P111',
@@ -3530,8 +3530,8 @@
       '<div class="panel" style="margin-top:0"><div class="panel__head"><h2 class="panel__title">Customers</h2>' +
         '<input class="input" data-q placeholder="Search name, email or phone…"></div>' +
       '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Name</th><th>Contact</th><th>City</th><th>Member ID</th><th class="num">Bookings</th><th class="num">Spent</th><th class="num">Points</th><th>Status</th><th></th></tr></thead>' +
-        '<tbody data-rows><tr><td colspan="9" class="empty-state">Loading…</td></tr></tbody>' +
+        '<thead><tr><th>Name</th><th>Contact</th><th>City</th><th>Member ID</th><th class="num">Bookings</th><th class="num">Spent</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody data-rows><tr><td colspan="8" class="empty-state">Loading…</td></tr></tbody>' +
       '</table></div></div></div>';
 
     var tbody = content.querySelector('[data-rows]');
@@ -3550,13 +3550,12 @@
               '<td class="mono">' + esc(u.memberId || '—') + '</td>' +
               '<td class="num">' + u.bookingCount + '</td>' +
               '<td class="num cell-strong">' + money(u.totalSpent) + '</td>' +
-              '<td class="num">' + (u.loyaltyPoints || 0) + '</td>' +
               '<td><span class="pill ' + (u.active === false ? 'pill--red' : 'pill--green') + '">' + (u.active === false ? 'disabled' : 'active') + '</span></td>' +
               '<td>' + (u.role === 'admin' ? '' : '<button class="btn btn--line btn--sm" data-toggle="' + esc(u.id) + '">' +
                 (u.active === false ? 'Enable' : 'Disable') + '</button>') + '</td>' +
               '</tr>';
           }).join('')
-        : '<tr><td colspan="9" class="empty-state">No customers found.</td></tr>';
+        : '<tr><td colspan="8" class="empty-state">No customers found.</td></tr>';
     }
 
     content.querySelector('[data-q]').addEventListener('input', function () {

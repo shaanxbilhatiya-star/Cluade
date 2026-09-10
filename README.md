@@ -53,7 +53,7 @@ npm start              # node server.js
 npm test               # end-to-end API smoke test (134 assertions)
 npm run test:dine-in   # Dine-In tab, end to end (90 assertions)
 npm run test:waterpark # Water park tab, end to end (152 assertions)
-npm run test:ui        # renders the admin console + app in headless Chrome (102 assertions)
+npm run test:ui        # renders the admin console + app in headless Chrome (163 assertions)
 npm run seed           # wipe data/ and re-seed the demo catalogue
 npm run assets         # regenerate the SVG artwork
 PORT=8080 node server.js
@@ -153,13 +153,15 @@ Mobile-only, six tabs, dark mode throughout.
 
 **My Tickets** — `Upcoming / Passed / Canceled` tabs × `Movie / Food / Event` filters, per-booking **"Remind me 30 minutes earlier"** toggle, and a full ticket view with a scannable barcode, itemised bill and cancellation.
 
-**Account** — Watchlist, Movie Interest, Payment Methods, Personal Info, Notification preferences, Security (password change), Language, **Dark Mode** toggle, Help Center, About, and a membership card with its own barcode.
+**Account** — everything the guest has booked, grouped by where they booked it: **Movie Tickets** and **Movie Food & Beverages**, then **Hotel Reservations** and **Restaurant Reservations**, then **Waterpark Bookings**. Below that, *General* (Personal Info, Notification preferences, Security, Language, **Dark Mode** toggle) and *About* (Help Center, About, Log Out), plus a membership card with its own barcode.
 
-**Booking flow** — movie detail (synopsis, cast, reviews, trailer, watchlist) → date + cinema + showtime → **seat map** (screen curve, aisles, Regular/Premium/VIP tiers, live availability) → **10-minute seat hold with a live countdown** → optional snacks, offer code, payment method → confirmation with barcode.
+The first three rows deep-link into My Tickets filtered by type (`#/tickets?type=movie|food|hotel`), because movie, food and hotel bookings share one polymorphic collection. Dine-in and the water park keep their own collections, so they get their own list screens (`/account/restaurant`, `/account/waterpark`) that open the existing bill and pass screens.
+
+**Booking flow** — movie detail (synopsis, cast, reviews, trailer) → date + cinema + showtime → **seat map** (screen curve, aisles, Regular/Premium/VIP tiers, live availability) → **10-minute seat hold with a live countdown** → optional snacks, offer code, payment method → confirmation with barcode.
 
 ## The admin console
 
-Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Hotel & Rooms · Dine-In · **Water Park** · Food CRUD · Offers CRUD · Customers (spend, points, enable/disable).
+Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Hotel & Rooms · Dine-In · **Water Park** · Food CRUD · Offers CRUD · Customers (spend, enable/disable).
 
 **Water Park** is a full operations console for the tab: one editable **rate card** that every package line and every per-person booking is priced from, so changing the adult entry rate reprices both packages and the per-person builder at once. Packages are edited as quantities against that rate card — the total actual value and the "you save" figure are computed, never typed, and the editor recomputes them as you type while warning if a package is priced above its own parts or carries the wrong number of entry tickets. Plus add-on pricing, opening hours and slot capacity, admin-editable customer notices with `{token}` substitution, a live gate-load view, a filterable pass ledger with check-in, and **counter sales** — sell a walk-up pass (package or per person) with a live server-priced total and no customer account needed.
 
@@ -256,8 +258,7 @@ All responses are JSON. Authenticated routes take `Authorization: Bearer <token>
 
 ### Food & account
 `GET /api/food/home` · `GET /api/food` · `GET /api/food/:id` · `GET /api/offers` ·
-`GET|PATCH /api/me` · `PATCH /api/me/settings` · `GET|POST|DELETE /api/me/watchlist` ·
-`GET|PUT /api/me/interests` · `GET|POST|DELETE /api/me/payment-methods` ·
+`GET|PATCH /api/me` · `PATCH /api/me/settings` ·
 `GET /api/me/notifications` · `POST /api/me/notifications/read`
 
 ### Water park
@@ -289,13 +290,14 @@ Every suite spawns the server against a throwaway data directory, so your real `
 
 `npm run test:ui` renders the admin console and the customer app in headless Chrome (driven over the DevTools Protocol with no browser-automation dependency) and asserts against the real DOM — including a complete counter sale and a complete customer booking. It fails on any console error or uncaught exception, which is what catches a screen that loads but is quietly broken. Add `-- --shots` to write PNGs to `tools/screenshots/`.
 
-`npm test` runs ~140 assertions across the whole movie journey: catalogue filters, auth and token tampering, seat maps, hold conflicts between two users, spent-hold reuse, pricing arithmetic, offer validation, checkout, barcode rendering, cancellation and seat release, account features, every admin CRUD path, archive-instead-of-delete protection, and error handling (404 / 405 / malformed JSON / path traversal).
+`npm test` runs 134 assertions across the whole movie journey: catalogue filters, auth and token tampering, seat maps, hold conflicts between two users, spent-hold reuse, pricing arithmetic, offer validation, checkout, barcode rendering, cancellation and seat release, account features, every admin CRUD path, archive-instead-of-delete protection, and error handling (404 / 405 / malformed JSON / path traversal).
 
 ---
 
 ## Notes & limits
 
-- **Payments are simulated.** No gateway is integrated; card numbers are never collected or stored — saved methods keep only a label, brand and last four digits. Wire up a real gateway in `paymentRecord()` (`src/routes/bookings.routes.js`) before taking money.
+- **Payments are simulated.** No gateway is integrated and card numbers are never collected or stored — the guest picks a method (UPI, card, net banking, or pay at the counter) and the booking records that choice. Wire up a real gateway in `paymentRecord()` (`src/bookings.js`) before taking money.
+- **There is no loyalty-points scheme.** Bookings are not scored and nothing is accrued or redeemed; the membership card is only an identity barcode for collecting tickets at the counter.
 - **Reminders are stored, not delivered.** The toggle persists the preference; sending push/email needs a notification provider.
 - **Single-process design.** The in-memory cache means one server process owns the data. Run one instance, or move `src/db.js` to a real database first.
 - **Movie titles and artwork are placeholders** generated locally for demonstration.

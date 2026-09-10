@@ -136,11 +136,6 @@
                 : UI.empty({ icon: 'projector', title: 'No shows in ' + data.city, text: 'Try picking another city from the header.' })) +
             '</div>' +
 
-            (data.recommended.length
-              ? '<div class="section">' + UI.sectionHead('Because you like ' + (Store.user && Store.user.interests[0] ? Store.user.interests[0] : 'movies')) +
-                '<div class="rail">' + data.recommended.map(function (m) { return UI.movieCard(m, { book: false }); }).join('') + '</div></div>'
-              : '') +
-
             '<div class="section">' +
               UI.sectionHead('Coming Soon', 'all-coming-soon') +
               '<div class="rail">' + data.comingSoon.map(function (m) { return UI.movieCard(m, { book: false }); }).join('') + '</div>' +

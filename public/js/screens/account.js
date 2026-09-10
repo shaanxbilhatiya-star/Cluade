@@ -10,7 +10,7 @@
           UI.empty({
             icon: 'user',
             title: 'You are browsing as a guest',
-            text: 'Sign in to book tickets, keep a watchlist and see your order history.',
+            text: 'Sign in to book tickets, rooms and passes, and to see your booking history.',
             action: 'signin',
             actionLabel: 'Sign in',
           }) +
@@ -37,7 +37,7 @@
             '<img src="/api/barcode.svg?value=' + encodeURIComponent(user.memberId) + '" alt="Membership barcode" style="width:100%">' +
           '</div>' +
           '<p style="margin:14px 0 0;font-size:12.5px;color:var(--muted);line-height:1.55">' +
-            'Scan at the counter to collect tickets or redeem your ' + UI.esc(user.loyaltyPoints) + ' reward points.' +
+            'Scan this at the counter to collect your tickets.' +
           '</p>' +
         '</div>',
     });
@@ -70,16 +70,29 @@
 
             '<div class="stat-strip">' +
               '<div class="stat"><div class="stat__value">' + stats.totalBookings + '</div><div class="stat__label">Bookings</div></div>' +
-              '<div class="stat"><div class="stat__value">' + stats.loyaltyPoints + '</div><div class="stat__label">Points</div></div>' +
               '<div class="stat"><div class="stat__value">' + UI.money(stats.totalSpent) + '</div><div class="stat__label">Spent</div></div>' +
             '</div>' +
 
             '<div class="profile__divider"></div>' +
 
+            /* Everything the guest has booked, grouped by where they booked it:
+               the cinema, then the resort, then the water park. */
             '<div class="list">' +
-              UI.row({ icon: 'heart', label: 'Watchlist', action: 'watchlist', value: stats.watchlistCount ? String(stats.watchlistCount) : '' }) +
-              UI.row({ icon: 'grid', label: 'Movie Interest', action: 'interests' }) +
-              UI.row({ icon: 'card', label: 'Payment Methods', action: 'payments', value: String((user.paymentMethods || []).length) }) +
+              UI.row({ icon: 'ticket', label: 'Movie Tickets', action: 'movie-tickets' }) +
+              UI.row({ icon: 'popcorn', label: 'Movie Food & Beverages', action: 'movie-food' }) +
+            '</div>' +
+
+            '<div class="list__sep"></div>' +
+
+            '<div class="list">' +
+              UI.row({ icon: 'bed', label: 'Hotel Reservations', action: 'hotel-bookings' }) +
+              UI.row({ icon: 'dine', label: 'Restaurant Reservations', action: 'restaurant-bookings' }) +
+            '</div>' +
+
+            '<div class="list__sep"></div>' +
+
+            '<div class="list">' +
+              UI.row({ icon: 'waves', label: 'Waterpark Bookings', action: 'waterpark-bookings' }) +
             '</div>' +
 
             '<div class="list__group-label">General</div>' +
@@ -105,9 +118,16 @@
 
       UI.actions(view, {
         qr: function () { membershipSheet(user); },
-        watchlist: function () { App.navigate('/account/watchlist'); },
-        interests: function () { App.navigate('/account/interests'); },
-        payments: function () { App.navigate('/account/payments'); },
+
+        /* The first three reuse My Tickets, which filters the one polymorphic
+           bookings collection by type. Dine-in and the water park keep their
+           own collections, so they have their own list screens. */
+        'movie-tickets': function () { App.navigate('/tickets?type=movie'); },
+        'movie-food': function () { App.navigate('/tickets?type=food'); },
+        'hotel-bookings': function () { App.navigate('/tickets?type=hotel'); },
+        'restaurant-bookings': function () { App.navigate('/account/restaurant'); },
+        'waterpark-bookings': function () { App.navigate('/account/waterpark'); },
+
         profile: function () { App.navigate('/account/profile'); },
         notifications: function () { App.navigate('/account/notifications'); },
         security: function () { App.navigate('/account/security'); },
@@ -129,7 +149,7 @@
         logout: async function () {
           var ok = await UI.confirm({
             title: 'Log out?',
-            message: 'You will need to sign in again to see your tickets and watchlist.',
+            message: 'You will need to sign in again to see your tickets and bookings.',
             confirmLabel: 'Log out',
             danger: true,
           });
@@ -137,230 +157,6 @@
         },
       });
 
-      return view;
-    },
-  };
-
-  // ── Watchlist ──────────────────────────────────────────────────────────────
-  window.Screens.watchlist = {
-    auth: true,
-    render: async function () {
-      var data = await API.watchlist();
-
-      var view = UI.h(
-        '<div class="screen">' +
-          UI.appbar({ title: 'Watchlist', back: true }) +
-          '<div class="scroll">' +
-            (data.movies.length
-              ? '<div class="spacer-16"></div><div class="grid-2">' +
-                data.movies.map(function (m) { return UI.movieCard(m); }).join('') + '</div>' +
-                '<style>.grid-2 .movie-card{width:100%}</style>'
-              : UI.empty({
-                  icon: 'heart', title: 'Your watchlist is empty',
-                  text: 'Tap the heart on any movie to save it for later.',
-                  action: 'browse', actionLabel: 'Browse movies',
-                })) +
-            '<div class="spacer-24"></div>' +
-          '</div>' +
-        '</div>'
-      );
-
-      UI.actions(view, {
-        browse: function () { App.navigate('/home'); },
-        movie: function (el) { App.navigate('/movie/' + el.getAttribute('data-id')); },
-        book: function (el) { var cert = el.getAttribute('data-cert') || ''; if (cert.toUpperCase() === 'A') { UI.showAdultWarning(function () { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); }); } else { App.navigate('/movie/' + el.getAttribute('data-id') + '/showtimes'); } },
-      });
-
-      return view;
-    },
-  };
-
-  // ── Movie interests ────────────────────────────────────────────────────────
-  window.Screens.interests = {
-    auth: true,
-    render: async function () {
-      var data = await API.interests();
-      var picked = new Set(data.interests);
-      var languages = new Set(data.preferredLanguages);
-
-      var view = UI.h(
-        '<div class="screen">' +
-          UI.appbar({ title: 'Movie Interest', back: true }) +
-          '<div class="scroll">' +
-            '<p class="prose" style="padding-top:14px">Pick the genres and languages you enjoy. We use these to build your Home recommendations.</p>' +
-            '<h2 class="subhead">Genres</h2>' +
-            '<div class="pickers">' +
-              data.allGenres.map(function (g) {
-                return '<button class="chip chip--sm" data-genre="' + UI.esc(g) + '" aria-pressed="' + (picked.has(g) ? 'true' : 'false') + '">' + UI.esc(g) + '</button>';
-              }).join('') +
-            '</div>' +
-            '<h2 class="subhead">Languages</h2>' +
-            '<div class="pickers">' +
-              data.allLanguages.map(function (l) {
-                return '<button class="chip chip--sm" data-lang="' + UI.esc(l) + '" aria-pressed="' + (languages.has(l) ? 'true' : 'false') + '">' + UI.esc(l) + '</button>';
-              }).join('') +
-            '</div>' +
-            '<div class="spacer-24"></div>' +
-          '</div>' +
-          '<div class="actionbar"><button class="btn" data-action="save">Save preferences</button></div>' +
-        '</div>'
-      );
-
-      view.addEventListener('click', function (event) {
-        var chip = event.target.closest('[data-genre],[data-lang]');
-        if (!chip) return;
-        var isGenre = chip.hasAttribute('data-genre');
-        var value = chip.getAttribute(isGenre ? 'data-genre' : 'data-lang');
-        var set = isGenre ? picked : languages;
-        if (set.has(value)) set.delete(value); else set.add(value);
-        chip.setAttribute('aria-pressed', set.has(value) ? 'true' : 'false');
-      });
-
-      UI.actions(view, {
-        save: async function (el) {
-          el.disabled = true;
-          try {
-            await API.saveInterests({ interests: Array.from(picked), preferredLanguages: Array.from(languages) });
-            if (Store.user) Store.user.interests = Array.from(picked);
-            UI.toast('Preferences saved', 'success');
-            App.back('/account');
-          } catch (err) {
-            UI.toast(err.message, 'error');
-            el.disabled = false;
-          }
-        },
-      });
-
-      return view;
-    },
-  };
-
-  // ── Payment methods ────────────────────────────────────────────────────────
-  window.Screens.payments = {
-    auth: true,
-    render: async function () {
-      var data = await API.paymentMethods();
-
-      function iconFor(type) {
-        return type === 'upi' ? 'phone' : type === 'wallet' ? 'wallet' : type === 'netbanking' ? 'bank' : 'card';
-      }
-
-      var view = UI.h(
-        '<div class="screen">' +
-          UI.appbar({ title: 'Payment Methods', back: true }) +
-          '<div class="scroll" data-body></div>' +
-          '<div class="actionbar"><button class="btn" data-action="add">' + UI.icon('plus', 19) + ' Add payment method</button></div>' +
-        '</div>'
-      );
-
-      var body = view.querySelector('[data-body]');
-
-      function paint(methods) {
-        body.innerHTML = methods.length
-          ? '<div style="padding:16px">' + methods.map(function (m) {
-              return '<div class="option"' + (m.isDefault ? ' aria-pressed="true"' : '') + '>' +
-                '<span class="option__icon">' + UI.icon(iconFor(m.type), 21) + '</span>' +
-                '<span class="option__text">' +
-                  '<span class="option__title">' + UI.esc(m.label) + (m.isDefault ? ' · Default' : '') + '</span>' +
-                  '<span class="option__sub">' +
-                    UI.esc(m.last4 ? (m.brand ? m.brand + ' •••• ' + m.last4 : '•••• ' + m.last4) : m.handle || (m.type === 'wallet' ? 'Wallet' : m.type.toUpperCase())) +
-                    (m.expiry ? ' · exp ' + UI.esc(m.expiry) : '') +
-                  '</span>' +
-                '</span>' +
-                (m.isDefault ? '' : '<button class="link-btn" data-action="default" data-id="' + UI.esc(m.id) + '" style="font-size:13px">Set default</button>') +
-                '<button class="icon-btn" data-action="remove" data-id="' + UI.esc(m.id) + '" aria-label="Remove ' + UI.esc(m.label) + '" style="color:var(--danger);width:34px;height:34px">' + UI.icon('trash', 19) + '</button>' +
-                '</div>';
-            }).join('') + '</div>' +
-            '<p class="prose" style="font-size:12px;padding-top:6px">Card numbers are never stored — this demo keeps only the label, brand and last 4 digits.</p>'
-          : UI.empty({ icon: 'card', title: 'No payment methods', text: 'Add a card, UPI ID or wallet to check out faster.' });
-      }
-
-      function addSheet() {
-        var form = UI.h(
-          '<form style="padding:0 0 8px">' +
-            '<div class="field">' +
-              '<label class="field__label">Type</label>' +
-              '<div class="field__control">' + UI.icon('card', 20) +
-                '<select name="type">' +
-                  '<option value="card">Credit / Debit card</option>' +
-                  '<option value="upi">UPI</option>' +
-                  '<option value="wallet">Wallet</option>' +
-                  '<option value="netbanking">Net banking</option>' +
-                '</select>' + UI.icon('chevron-down', 18) +
-              '</div>' +
-            '</div>' +
-            '<div class="field"><label class="field__label">Label</label>' +
-              '<div class="field__control">' + UI.icon('edit', 20) + '<input name="label" placeholder="e.g. HDFC Credit Card" required></div></div>' +
-            '<div data-card-fields>' +
-              '<div class="field"><label class="field__label">Last 4 digits</label>' +
-                '<div class="field__control">' + UI.icon('lock', 20) + '<input name="last4" inputmode="numeric" maxlength="4" placeholder="4821"></div></div>' +
-              '<div class="field"><label class="field__label">Expiry (MM/YY)</label>' +
-                '<div class="field__control">' + UI.icon('calendar', 20) + '<input name="expiry" placeholder="09/28" maxlength="5"></div></div>' +
-            '</div>' +
-            '<div data-upi-fields hidden>' +
-              '<div class="field"><label class="field__label">UPI ID</label>' +
-                '<div class="field__control">' + UI.icon('phone', 20) + '<input name="handle" placeholder="name@bank"></div></div>' +
-            '</div>' +
-            '<p class="field__error" data-error style="padding:0 16px 10px;display:none"></p>' +
-            '<div style="padding:0 16px"><button class="btn" type="submit">Save method</button></div>' +
-          '</form>'
-        );
-
-        var sheet = UI.sheet({ title: 'Add payment method', body: form });
-        var typeSelect = form.querySelector('[name="type"]');
-
-        function syncFields() {
-          var isCard = typeSelect.value === 'card';
-          var isUpi = typeSelect.value === 'upi';
-          form.querySelector('[data-card-fields]').hidden = !isCard;
-          form.querySelector('[data-upi-fields]').hidden = !isUpi;
-        }
-        typeSelect.addEventListener('change', syncFields);
-        syncFields();
-
-        form.addEventListener('submit', async function (event) {
-          event.preventDefault();
-          var payload = { type: typeSelect.value, label: form.label.value.trim() };
-          if (payload.type === 'card') {
-            payload.last4 = form.last4.value.trim();
-            payload.expiry = form.expiry.value.trim();
-          }
-          if (payload.type === 'upi') payload.handle = form.handle.value.trim();
-
-          try {
-            var res = await API.addPaymentMethod(payload);
-            sheet.close();
-            UI.toast('Payment method added', 'success');
-            paint(res.paymentMethods);
-          } catch (err) {
-            var box = form.querySelector('[data-error]');
-            box.textContent = err.message;
-            box.style.display = 'block';
-          }
-        });
-      }
-
-      UI.actions(view, {
-        add: addSheet,
-        default: async function (el) {
-          try {
-            var res = await API.makeDefaultPaymentMethod(el.getAttribute('data-id'));
-            paint(res.paymentMethods);
-            UI.toast('Default updated', 'success');
-          } catch (err) { UI.toast(err.message, 'error'); }
-        },
-        remove: async function (el) {
-          var ok = await UI.confirm({ title: 'Remove this method?', message: 'You can add it again at any time.', confirmLabel: 'Remove', danger: true });
-          if (!ok) return;
-          try {
-            var res = await API.deletePaymentMethod(el.getAttribute('data-id'));
-            paint(res.paymentMethods);
-            UI.toast('Removed');
-          } catch (err) { UI.toast(err.message, 'error'); }
-        },
-      });
-
-      paint(data.paymentMethods);
       return view;
     },
   };
@@ -698,9 +494,8 @@
             body: '<div class="prose" style="line-height:1.7;font-size:13.5px">' +
               '<p>We store only what is needed to sell you a ticket: your name, email, mobile number, city and booking history.</p>' +
               '<p>Passwords are stored as salted scrypt hashes and are never recoverable in plain text.</p>' +
-              '<p>Card numbers are never stored. Saved payment methods keep only a label, the brand and the last four digits.</p>' +
-              '<p>Your genre and language preferences are used solely to order the recommendations on your Home screen.</p>' +
-              '<p>You can delete a saved payment method or turn off any notification category at any time from Account.</p></div>',
+              '<p>Card numbers are never collected or stored. Payment details are entered at the time of payment and are not kept.</p>' +
+              '<p>You can turn off any notification category at any time from Account.</p></div>',
           });
         },
       });

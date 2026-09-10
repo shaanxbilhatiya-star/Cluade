@@ -68,7 +68,7 @@ function reservationForBill(ctx, body, s) {
 function resolveBillRequest(ctx, body, s) {
   /* The bill total is declared by the guest, so it is bounded on both sides:
      a junk or astronomical figure would otherwise be persisted and summed into
-     the admin revenue figures, and would mint loyalty points to match. */
+     the admin revenue figures. */
   const raw = body.billAmount;
   if (typeof raw !== 'number' && typeof raw !== 'string') {
     throw new HttpError(400, 'Enter the bill amount printed on your restaurant bill');
@@ -349,7 +349,7 @@ router.post('/dine-in/bills', auth.requireAuth, (ctx) => {
     throw new HttpError(423, 'Please wait for your reservation billing window to open');
   }
 
-  const payment = paymentRecord(body.payment, ctx.user, amounts.total);
+  const payment = paymentRecord(body.payment, amounts.total);
 
   const bill = db.insert('dineBills', {
     id: db.id('dbil'),
@@ -384,12 +384,6 @@ router.post('/dine-in/bills', auth.requireAuth, (ctx) => {
     db.update('dineReservations', bill.reservationId, { billId: bill.id, status: 'completed' });
   }
 
-  // Points follow the settled amount, and only once the money is actually in.
-  const earned = payment.status === 'paid' ? Math.round(amounts.total / 10) : 0;
-  if (earned) {
-    db.update('users', ctx.user.id, { loyaltyPoints: (ctx.user.loyaltyPoints || 0) + earned });
-  }
-
   notify(
     ctx.user.id,
     payment.status === 'paid' ? 'Bill paid 🍽️' : 'Bill ready at the counter 🍽️',
@@ -399,10 +393,7 @@ router.post('/dine-in/bills', auth.requireAuth, (ctx) => {
   );
 
   ctx.state.status = 201;
-  return {
-    bill: Object.assign({}, bill, { notice: dine.paidNotice(bill, s) }),
-    pointsEarned: earned,
-  };
+  return { bill: Object.assign({}, bill, { notice: dine.paidNotice(bill, s) }) };
 });
 
 router.get('/dine-in/bills', auth.requireAuth, (ctx) => {

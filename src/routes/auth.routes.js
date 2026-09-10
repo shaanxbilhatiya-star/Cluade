@@ -41,11 +41,6 @@ router.post('/auth/register', (ctx) => {
     avatarUrl: '/img/avatars/guest.svg',
     city: city || 'Mandla',
     memberId: `CF-${new Date().getFullYear()}-${String(seq).padStart(6, '0')}`,
-    loyaltyPoints: 0,
-    watchlist: [],
-    interests: [],
-    preferredLanguages: [],
-    paymentMethods: [],
     settings: {
       darkMode: false,
       language: 'English (US)',
