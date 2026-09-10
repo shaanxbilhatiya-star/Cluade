@@ -3,8 +3,14 @@
   'use strict';
 
   function heroSlide(movie) {
+    var accent = movie.accentColor || '#1a1a2e';
+    var inner = movie.backdropUrl
+      ? '<img src="' + UI.esc(movie.backdropUrl) + '" alt="' + UI.esc(movie.title) + '" data-fallback="/img/posters/_placeholder.svg">'
+      : '<div class="hero-slide__gradient" style="background:linear-gradient(135deg,' + UI.esc(accent) + ' 0%,#0d0d1a 100%);width:100%;height:100%;display:flex;align-items:flex-end;padding:20px 18px;box-sizing:border-box">' +
+          '<span style="font-size:22px;font-weight:800;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.7);line-height:1.2">' + UI.esc(movie.title) + '</span>' +
+        '</div>';
     return '<button class="carousel__slide hero-slide" data-action="movie" data-id="' + UI.esc(movie.id) + '" aria-label="' + UI.esc(movie.title) + '">' +
-      '<img src="' + UI.esc(movie.backdropUrl) + '" alt="' + UI.esc(movie.title) + '" data-fallback="/img/posters/_placeholder.svg">' +
+      inner +
       (movie.isComingSoon ? '<span class="hero-slide__tag">Coming ' + UI.esc(UI.shortDate(movie.releaseDate)) + '</span>' : '') +
       '</button>';
   }

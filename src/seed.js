@@ -698,17 +698,17 @@ function ensureHotels() {
  * artwork disappears on the next boot with no admin action needed.
  */
 function clearGeneratedPosterArt() {
-  // Only wipe backdropUrl (the wide landscape images nobody asked for).
-  // posterUrl is intentionally kept — Coming Soon cards need it.
-  const BACKDROP_RE = /^\/img\/backdrops\//;
+  // Wipe ALL backdropUrls — hero landscape images are never wanted regardless
+  // of where they came from (generated SVG, CDN URL, or otherwise).
+  // posterUrl is never touched — Coming Soon cards need it.
   let cleared = 0;
   for (const movie of db.get('movies')) {
-    if (BACKDROP_RE.test(movie.backdropUrl || '')) {
+    if (movie.backdropUrl) {
       db.update('movies', movie.id, { backdropUrl: '' });
       cleared += 1;
     }
   }
-  if (cleared) console.log(`[seed] cleared auto-generated backdrop art on ${cleared} movie(s)`);
+  if (cleared) console.log(`[seed] cleared backdrop art on ${cleared} movie(s)`);
 }
 
 module.exports = {
