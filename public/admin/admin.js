@@ -1875,6 +1875,8 @@
     // ── Property details ──
     function propertyForm() {
       return h('<div class="form-grid">' +
+        field('Restaurant name', 'restaurantName', s.restaurantName, { span: true, placeholder: 'Kingfisher Restaurant' }) +
+        field('Address', 'address', s.address, { span: true, placeholder: 'Kingfisher Resort, Mandla' }) +
         field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.3' }) +
         field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
         field('Tagline', 'tagline', s.tagline, { span: true, placeholder: 'Great food, great vibes — right inside the resort' }) +
@@ -1892,6 +1894,8 @@
     function propertyPayload(body) {
       var raw = readForm(body);
       return {
+        restaurantName: raw.restaurantName || '',
+        address: raw.address || '',
         rating: Number(raw.rating) || 0,
         reviewCount: Number(raw.reviewCount) || 0,
         tagline: raw.tagline || '',
@@ -2935,6 +2939,8 @@
     // ── Property details helpers ──
     function propertyForm() {
       return h('<div class="form-grid">' +
+        field('Park name', 'parkName', s.parkName, { span: true, placeholder: 'Kingfisher Mandla' }) +
+        field('Address', 'address', s.address, { span: true, placeholder: 'Near Bichhiya Road, Mandla, Madhya Pradesh' }) +
         field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.5' }) +
         field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
         field('Tagline', 'tagline', s.tagline, { span: true, placeholder: 'Splash into a day of fun for the whole family' }) +
@@ -2952,6 +2958,8 @@
     function propertyPayload(body) {
       var raw = readForm(body);
       return {
+        parkName: raw.parkName || '',
+        address: raw.address || '',
         rating: Number(raw.rating) || 0,
         reviewCount: Number(raw.reviewCount) || 0,
         tagline: raw.tagline || '',
