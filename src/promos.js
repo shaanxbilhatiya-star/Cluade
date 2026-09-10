@@ -372,11 +372,71 @@ function ensureSlides() {
   return added;
 }
 
+// ── Tab photos ───────────────────────────────────────────────────────────────
+/**
+ * Per-tab photo galleries — a cover photo plus a slider gallery — that appear
+ * at the top of each customer tab.  Stored on `meta.tabPhotos` as:
+ *   { movie: { coverPhoto: '/uploads/...', photos: [...] }, ... }
+ */
+
+const TAB_PHOTO_LIMIT = 20;
+
+/** Returns all sections' photo configs (cover + gallery). */
+function allTabPhotos() {
+  const saved = db.get('meta').tabPhotos || {};
+  const out = {};
+  for (const s of SECTIONS) {
+    out[s.id] = Object.assign({ coverPhoto: '', photos: [] }, saved[s.id] || {});
+  }
+  return out;
+}
+
+/** Returns one section's photos. */
+function tabPhotosFor(section) {
+  const id = assertSection(section);
+  return allTabPhotos()[id];
+}
+
+/**
+ * Saves cover photo and/or gallery for one section.
+ * Callers have already resolved data: URLs to saved file paths.
+ */
+function saveTabPhotos(section, patch = {}) {
+  const id = assertSection(section);
+  const all = allTabPhotos();
+  const current = all[id];
+
+  if (patch.coverPhoto !== undefined) current.coverPhoto = String(patch.coverPhoto || '');
+  if (patch.photos !== undefined) {
+    const list = Array.isArray(patch.photos)
+      ? patch.photos
+      : String(patch.photos || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    current.photos = list.slice(0, TAB_PHOTO_LIMIT);
+  }
+
+  const meta = db.get('meta');
+  meta.tabPhotos = Object.assign({}, all, { [id]: current });
+  db.markDirty('meta');
+  return current;
+}
+
+/** What the client app receives for a section's photos. */
+function publicTabPhotos(section) {
+  const id = assertSection(section);
+  const p = tabPhotosFor(id);
+  return {
+    section: id,
+    coverPhoto: p.coverPhoto || '',
+    photos: p.photos || [],
+  };
+}
+
 module.exports = {
   SECTIONS,
   SECTION_IDS,
   SLIDER_DEFAULTS,
   INTERVAL_BOUNDS,
+  TAB_PHOTO_LIMIT,
   isSection,
   assertSection,
   sectionLabel,
@@ -392,4 +452,8 @@ module.exports = {
   publicSlider,
   adminPayload,
   ensureSlides,
+  allTabPhotos,
+  tabPhotosFor,
+  saveTabPhotos,
+  publicTabPhotos,
 };

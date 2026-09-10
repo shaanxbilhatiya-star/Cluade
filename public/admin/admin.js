@@ -3102,6 +3102,7 @@
   async function pageSliders(content, topActions) {
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
     var data = await API.get('/admin/promos');
+    var photoData = await API.get('/admin/tab-photos');
 
     // Survives a reload of this page so editing one tab does not bounce you back.
     var current = state.cache.sliderSection || data.sections[0].id;
@@ -3109,6 +3110,11 @@
 
     function sectionOf(id) {
       return data.sections.filter(function (s) { return s.id === id; })[0];
+    }
+
+    function tabPhotosOf(sectionId) {
+      var found = (photoData.sections || []).filter(function (s) { return s.id === sectionId; })[0];
+      return found || { coverPhoto: '', photos: [] };
     }
 
     function seconds(ms) {
@@ -3232,6 +3238,38 @@
             : '<div class="empty-state">No slides yet. Add one and it appears at the top of the ' +
               esc(section.label) + ' tab.</div>') +
         '</div></div>' +
+      '</div>' +
+
+        // ── Tab Photos panel ──────────────────────────────────────────────
+        (function() {
+          var tp = tabPhotosOf(current);
+          var coverThumb = tp.coverPhoto
+            ? '<img src="' + esc(tp.coverPhoto) + '" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px;vertical-align:middle">'
+            : '<span style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:8px;background:var(--surface-raised);margin-right:10px;color:var(--muted);font-size:22px;vertical-align:middle">' + icon('sparkle', 20) + '</span>';
+          var galleryThumbs = tp.photos.length
+            ? tp.photos.slice(0, 6).map(function(p) {
+                return '<img src="' + esc(p) + '" style="width:48px;height:48px;object-fit:cover;border-radius:7px;border:2px solid var(--border)">';
+              }).join(' ') + (tp.photos.length > 6 ? ' <span class="hint">+' + (tp.photos.length - 6) + ' more</span>' : '')
+            : '<span class="hint">No photos yet — the app will show a placeholder.</span>';
+          return '<div class="panel"><div class="panel__head">' +
+            '<h2 class="panel__title">Tab photos</h2>' +
+            '<button class="btn btn--sm" data-action="edit-tab-photos">' + icon('edit', 16) + ' Edit photos</button>' +
+          '</div><div class="panel__body">' +
+            '<div class="form-row" style="margin-bottom:14px">' +
+              '<div class="label">Cover photo</div>' +
+              '<div style="display:flex;align-items:center">' +
+                coverThumb +
+                '<span class="hint">' + (tp.coverPhoto ? 'Shown as the tab header image.' : 'No cover photo set.') + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<div class="label">Slider photos <span class="hint" style="font-weight:400">(' + tp.photos.length + ')</span></div>' +
+              '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">' + galleryThumbs + '</div>' +
+              '<div class="hint" style="margin-top:6px">These fill the photo slider at the top of the ' + esc(sectionOf(current).label) + ' tab. First photo is the cover. Add more than one and guests can swipe through them.</div>' +
+            '</div>' +
+          '</div></div>';
+        })() +
+
       '</div>');
       content.appendChild(view);
       wire(view);
@@ -3315,6 +3353,41 @@
       });
     }
 
+    // ── Tab Photos Modal ──
+    function openTabPhotosModal() {
+      var tp = tabPhotosOf(current);
+      var sectionLabel = sectionOf(current).label;
+      var body = h('<div><div class="form-grid">' +
+        imageField('Cover photo', 'coverPhoto', tp.coverPhoto, {
+          hint: 'Any size or ratio — poster, square post, whatever you use. Uploaded at full quality.',
+        }) +
+        galleryField('Slider photos', 'photos', tp.photos, {
+          hint: 'These replace the placeholder artwork at the top of the ' + sectionLabel + ' tab. Add more than one and guests can swipe through them. The first photo is the cover.',
+        }) +
+      '</div></div>');
+      bindImageField(body, 'coverPhoto');
+      bindGalleryField(body, 'photos');
+
+      var m = modal({
+        title: sectionLabel + ' tab photos',
+        body: body,
+        confirmLabel: 'Save photos',
+      });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var raw = readForm(m.body);
+          await API.put('/admin/tab-photos/' + current, {
+            coverPhoto: raw.coverPhoto || '',
+            photos: raw.photos || '',
+          });
+          // Refresh photoData so the summary panel reflects the new photos.
+          photoData = await API.get('/admin/tab-photos');
+          toast('Photos saved — live on the ' + sectionLabel + ' tab now', 'success');
+          navigate('sliders');
+        });
+      });
+    }
+
     // ── Wiring ──
     topActions.querySelector('[data-action="new-slide"]').addEventListener('click', function () { openSlideModal(null); });
     topActions.querySelector('[data-action="edit-slider"]').addEventListener('click', openSettingsModal);
@@ -3330,6 +3403,8 @@
         }
 
         if (event.target.closest('[data-action="new-slide-inline"]')) { openSlideModal(null); return; }
+
+        if (event.target.closest('[data-action="edit-tab-photos"]')) { openTabPhotosModal(); return; }
 
         var edit = event.target.closest('[data-edit]');
         if (edit) {

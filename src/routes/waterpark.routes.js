@@ -93,6 +93,7 @@ router.get('/waterpark', (ctx) => {
 
   return {
     slider: promos.publicSlider('waterpark'),
+    tabPhotos: promos.publicTabPhotos('waterpark'),
     settings: park.publicSettings(s),
     catalogue: park.catalogue(s),
     today: park.today(),

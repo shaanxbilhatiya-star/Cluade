@@ -81,6 +81,7 @@ router.get('/home', (ctx) => {
     currency: CURRENCY,
     /** Admin-managed promo slider for this tab. */
     slider: promos.publicSlider('movie'),
+    tabPhotos: promos.publicTabPhotos('movie'),
     hero,
     nowPlaying: nowPlaying.map(slim),
     comingSoon: comingSoon.map(slim),

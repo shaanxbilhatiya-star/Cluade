@@ -1320,6 +1320,40 @@ router.post('/admin/promos/slides/:id/move', auth.requireAdmin, (ctx) => {
   return promos.moveSlide(ctx.params.id, direction);
 });
 
+// ── Tab photos (cover + slider gallery per tab) ───────────────────────────────
+/** All sections' cover photo and gallery. */
+router.get('/admin/tab-photos', auth.requireAdmin, () => ({
+  sections: promos.SECTIONS.map((s) => Object.assign({ id: s.id, label: s.label }, promos.tabPhotosFor(s.id))),
+}));
+
+/** Get one section's photos. */
+router.get('/admin/tab-photos/:section', auth.requireAdmin, (ctx) => {
+  const s = promos.SECTIONS.find((x) => x.id === ctx.params.section);
+  if (!s) throw new HttpError(404, 'Unknown section');
+  return Object.assign({ id: s.id, label: s.label }, promos.tabPhotosFor(s.id));
+});
+
+/** Save cover photo and/or gallery for one section. */
+router.put('/admin/tab-photos/:section', auth.requireAdmin, (ctx) => {
+  const body = Object.assign({}, ctx.body);
+
+  // Persist any freshly-uploaded data: URLs to disk.
+  if (isDataUrl(body.coverPhoto)) {
+    body.coverPhoto = saveUploadedImage('tab-photos', `${ctx.params.section}-cover`, body.coverPhoto);
+  }
+  if (body.photos !== undefined) {
+    const list = Array.isArray(body.photos)
+      ? body.photos
+      : String(body.photos || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    body.photos = list.map((p) =>
+      isDataUrl(p) ? saveUploadedImage('tab-photos', ctx.params.section, p) : p
+    );
+  }
+
+  const result = promos.saveTabPhotos(ctx.params.section, body);
+  return { section: ctx.params.section, ...result };
+});
+
 // ── Hotel & rooms ────────────────────────────────────────────────────────────
 /** Rooms and their live occupancy for the next `days` nights. */
 router.get('/admin/hotel', auth.requireAdmin, (ctx) => {
