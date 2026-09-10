@@ -148,15 +148,6 @@
 
             UI.promoSlider(data.slider) +
 
-            UI.heroCard({
-              photos: s.photos,
-              name: s.headline || s.parkName,
-              subtitle: [s.parkName, s.address].filter(Boolean).join(' \u00B7 '),
-              rating: s.rating,
-              reviewCount: s.reviewCount,
-              intervalMs: (data.slider && data.slider.intervalMs) || 4500,
-            }) +
-
             '<div class="wp-hero">' +
               (s.subline ? '<span class="wp-hero__kicker">' + UI.esc(s.subline) + '</span>' : '') +
               '<h2 class="wp-hero__title">' + UI.esc(s.headline) + '</h2>' +

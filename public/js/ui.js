@@ -370,43 +370,6 @@
       '</div>';
   }
 
-  /**
-   * Shared "photo + title + location + rating" hero used at the top of a tab
-   * (Stay with us, Water Park, Dine-In, Movies/Cinemas). One admin-managed
-   * photo set, a name/subtitle overlay, and an optional rating badge — the
-   * same visual across every venue so the tabs read as one property.
-   *
-   * opts: { photos, name, subtitle, rating, reviewCount, intervalMs }
-   */
-  function heroCard(opts) {
-    var o = opts || {};
-    var photos = (o.photos || []).filter(Boolean);
-    if (!photos.length) photos = ['/img/hotels/_placeholder.svg'];
-
-    var media = photos.length > 1
-      ? carousel(photos.map(function (src) {
-          return '<div class="carousel__slide">' +
-            '<img class="hotel-hero__img" src="' + esc(src) + '" alt="' + esc(o.name || '') + '" data-fallback="/img/hotels/_placeholder.svg"></div>';
-        }), { autoplay: o.intervalMs || 4500 })
-      : '<img class="hotel-hero__img" src="' + esc(photos[0]) + '" alt="' + esc(o.name || '') + '" data-fallback="/img/hotels/_placeholder.svg">';
-
-    return '<div class="hotel-hero">' +
-      media +
-      '<div class="hotel-hero__veil"></div>' +
-      '<div class="hotel-hero__text">' +
-        '<h2>' + esc(o.name || '') + '</h2>' +
-        (o.subtitle ? '<p>' + icon('map-pin', 14) + esc(o.subtitle) + '</p>' : '') +
-      '</div>' +
-      (o.rating
-        ? '<span class="hotel-hero__rating">' + icon('star', 13) + Number(o.rating).toFixed(1) +
-          (o.reviewCount ? '<small>' + o.reviewCount + '</small>' : '') + '</span>'
-        : '') +
-      (photos.length > 1
-        ? '<span class="hotel-hero__count">' + icon('grid', 12) + photos.length + '</span>'
-        : '') +
-      '</div>';
-  }
-
   /** Wires dot indicators (and optional autoplay) for every carousel in root. */
   function initCarousels(root) {
     root.querySelectorAll('[data-carousel]').forEach(function (car) {
@@ -525,7 +488,7 @@
     timeAgo: timeAgo, runtime: runtime, initials: initials, toDate: toDate,
     toast: toast, sheet: sheet, confirm: confirmSheet,
     appbar: appbar, sectionHead: sectionHead, posterImg: posterImg, movieCard: movieCard,
-    promoSlider: promoSlider, heroCard: heroCard,
+    promoSlider: promoSlider,
     foodCard: foodCard, empty: empty, row: row, statusPill: statusPill,
     spinnerBlock: spinnerBlock, carousel: carousel, initCarousels: initCarousels,
     actions: actions, showAdultWarning: showAdultWarning, MONTHS: MONTHS, DOW: DOW, CURRENCY: CURRENCY,

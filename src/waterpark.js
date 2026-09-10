@@ -54,10 +54,6 @@ const DEFAULTS = {
   subline: 'Make every moment a family memory',
   address: 'Near Bichhiya Road, Mandla, Madhya Pradesh',
   phone: '93030 17878 / 79',
-  /** Hero photo(s) shown at the top of the Water Park tab. */
-  photos: [],
-  rating: 4.5,
-  reviewCount: 0,
   /** The one-line terms printed under the packages. */
   validityNote: 'Package valid for one day only.',
 
@@ -292,23 +288,6 @@ function saveSettings(patch = {}) {
   if (patch.inclusions !== undefined) {
     const list = Array.isArray(patch.inclusions) ? patch.inclusions : String(patch.inclusions || '').split(',');
     next.inclusions = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
-  }
-
-  if (patch.photos !== undefined) {
-    const list = Array.isArray(patch.photos) ? patch.photos : String(patch.photos || '').split(/\r?\n|,/);
-    next.photos = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 10);
-  }
-
-  if (patch.rating !== undefined && patch.rating !== '') {
-    const n = Number(patch.rating);
-    if (!Number.isFinite(n)) throw new HttpError(400, 'rating must be a number');
-    next.rating = Math.min(5, Math.max(0, Math.round(n * 10) / 10));
-  }
-
-  if (patch.reviewCount !== undefined && patch.reviewCount !== '') {
-    const n = Number(patch.reviewCount);
-    if (!Number.isFinite(n)) throw new HttpError(400, 'reviewCount must be a number');
-    next.reviewCount = Math.min(1000000, Math.max(0, Math.round(n)));
   }
 
   if (!TIME_RE.test(next.openTime) || !TIME_RE.test(next.closeTime)) {
