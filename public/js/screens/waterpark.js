@@ -147,8 +147,8 @@
           '<div class="scroll">' +
 
             UI.propertyHero(Object.assign({}, s, {
-              name: s.headline || s.parkName,
-              location: [s.parkName, s.address].filter(Boolean).join(', '),
+              name: s.parkName,
+              location: s.address,
             })) +
 
             (s.tagline ? '<p class="hotel-tagline">' + UI.esc(s.tagline) + '</p>' : '') +
