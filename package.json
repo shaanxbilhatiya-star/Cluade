@@ -14,6 +14,7 @@
     "test": "node tools/smoke-test.js",
     "test:dine-in": "node tools/dine-in-test.js",
     "test:waterpark": "node tools/waterpark-test.js",
+    "test:promos": "node tools/promos-test.js",
     "test:ui": "node tools/ui-check.js"
   },
   "keywords": [

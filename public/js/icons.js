@@ -28,6 +28,7 @@
     'chevron-right': '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
     'chevron-left': '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
     'chevron-down': '<path d="M5.5 9.5 12 16l6.5-6.5"/>',
+    'chevron-up': '<path d="M5.5 14.5 12 8l6.5 6.5"/>',
     'arrow-left': '<path d="M20 12H4.5"/><path d="M10.5 5.5 4 12l6.5 6.5"/>',
     'arrow-right': '<path d="M4 12h15.5"/><path d="M13.5 5.5 20 12l-6.5 6.5"/>',
     close: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',

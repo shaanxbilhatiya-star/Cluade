@@ -146,6 +146,8 @@
           UI.appbar({ title: s.headline || 'Water Park' }) +
           '<div class="scroll">' +
 
+            UI.promoSlider(data.slider) +
+
             '<div class="wp-hero">' +
               (s.subline ? '<span class="wp-hero__kicker">' + UI.esc(s.subline) + '</span>' : '') +
               '<h2 class="wp-hero__title">' + UI.esc(s.headline) + '</h2>' +
@@ -294,6 +296,7 @@
 
       UI.actions(view, {
         'build-own': function () { App.navigate('/waterpark/book?mode=individual'); },
+        promo: function (el) { App.navigate(el.getAttribute('data-path')); },
       });
 
       view.addEventListener('click', function (event) {

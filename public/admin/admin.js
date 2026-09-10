@@ -112,6 +112,7 @@
     { id: 'hotel', label: 'Hotel & Rooms', icon: 'bed' },
     { id: 'dinein', label: 'Dine-In', icon: 'dine' },
     { id: 'waterpark', label: 'Water Park', icon: 'waves' },
+    { id: 'sliders', label: 'Tab Sliders', icon: 'grid' },
     { id: 'food', label: 'Food & Drinks', icon: 'food' },
     { id: 'offers', label: 'Offers', icon: 'tag' },
     { id: 'experiences', label: 'Experiences', icon: 'sparkle' },
@@ -3091,6 +3092,282 @@
     });
   }
 
+  // ── Tab sliders ──────────────────────────────────────────────────────────
+
+  /* The auto-scrolling banner at the top of each customer tab.
+
+     One slider per tab, each with its own slides and its own scroll speed. The
+     preview on the right is the same markup and gradient the phone renders, so
+     what the admin approves here is what a customer sees.                     */
+  async function pageSliders(content, topActions) {
+    content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
+    var data = await API.get('/admin/promos');
+
+    // Survives a reload of this page so editing one tab does not bounce you back.
+    var current = state.cache.sliderSection || data.sections[0].id;
+    if (!data.sections.some(function (s) { return s.id === current; })) current = data.sections[0].id;
+
+    function sectionOf(id) {
+      return data.sections.filter(function (s) { return s.id === id; })[0];
+    }
+
+    function seconds(ms) {
+      return (Math.round((Number(ms) || 0) / 100) / 10) + 's';
+    }
+
+    topActions.innerHTML =
+      '<button class="btn btn--line" data-action="edit-slider">' + icon('edit', 17) + ' Slider settings</button> ' +
+      '<button class="btn" data-action="new-slide">' + icon('plus', 17) + ' Add slide</button>';
+
+    function slideRow(slide, index, total) {
+      return '<div class="sl-slide' + (slide.active === false ? ' sl-slide--off' : '') + '">' +
+        '<div class="sl-slide__order">' +
+          '<button class="btn btn--line btn--sm" data-move="up" data-id="' + esc(slide.id) + '"' +
+            (index === 0 ? ' disabled' : '') + ' aria-label="Move up">' + icon('chevron-up', 14) + '</button>' +
+          '<button class="btn btn--line btn--sm" data-move="down" data-id="' + esc(slide.id) + '"' +
+            (index === total - 1 ? ' disabled' : '') + ' aria-label="Move down">' + icon('chevron-down', 14) + '</button>' +
+        '</div>' +
+        '<div class="sl-slide__thumb">' +
+          (slide.imageUrl ? '<img src="' + esc(slide.imageUrl) + '" alt="">' : icon('sparkle', 20)) +
+        '</div>' +
+        '<div class="sl-slide__text">' +
+          '<div class="sl-slide__title">' + (slide.title ? esc(slide.title) : '<span class="hint">No heading</span>') + '</div>' +
+          (slide.subtitle ? '<div class="sl-slide__sub">' + esc(slide.subtitle) + '</div>' : '') +
+          '<div class="sl-slide__meta">' +
+            (slide.ctaPath
+              ? icon('arrow-right', 12) + ' ' + esc(slide.ctaLabel || 'Opens') + ' \u00B7 ' + esc(slide.ctaPath)
+              : 'Not tappable') +
+          '</div>' +
+        '</div>' +
+        '<div class="sl-slide__actions">' +
+          (slide.active === false
+            ? '<span class="pill pill--red">Hidden</span> '
+            : '<span class="pill pill--green">Live</span> ') +
+          '<button class="btn btn--line btn--sm" data-edit="' + esc(slide.id) + '">Edit</button> ' +
+          '<button class="btn btn--line btn--sm" data-del="' + esc(slide.id) + '">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    /** The slider as the phone draws it, first slide only. */
+    function preview(section) {
+      var live = section.slides.filter(function (s) { return s.active !== false; });
+      if (!live.length || section.settings.active === false) {
+        return '<div class="sl-preview"><div class="empty-state" style="padding:28px 12px">' +
+          (section.settings.active === false
+            ? 'The slider is switched off for this tab.'
+            : 'No live slides \u2014 nothing shows on this tab.') +
+          '</div></div>';
+      }
+      var first = live[0];
+      return '<div class="sl-preview">' +
+        '<div class="sl-preview__frame">' +
+          '<img src="' + esc(first.imageUrl) + '" alt="">' +
+          (first.title || first.subtitle ? '<div class="sl-preview__veil"></div>' +
+            '<div class="sl-preview__text">' +
+              (first.title ? '<span class="sl-preview__title">' + esc(first.title) + '</span>' : '') +
+              (first.subtitle ? '<span class="sl-preview__sub">' + esc(first.subtitle) + '</span>' : '') +
+              (first.ctaLabel ? '<span class="sl-preview__cta">' + esc(first.ctaLabel) + '</span>' : '') +
+            '</div>' : '') +
+        '</div>' +
+        (live.length > 1
+          ? '<div class="sl-preview__dots">' + live.map(function (_s, i) {
+              return '<span class="sl-preview__dot' + (i === 0 ? ' sl-preview__dot--on' : '') + '"></span>';
+            }).join('') + '</div>'
+          : '') +
+        '<div class="hint" style="text-align:center;margin-top:8px">' +
+          (live.length > 1 ? live.length + ' slides, advancing every ' + seconds(section.settings.intervalMs)
+            : 'Single slide \u2014 shown as a still, no auto-scroll') +
+        '</div>' +
+      '</div>';
+    }
+
+    function render() {
+      var section = sectionOf(current);
+
+      content.innerHTML = '';
+      var view = h('<div>' +
+        '<div class="sl-tabs">' +
+          data.sections.map(function (s) {
+            return '<button class="sl-tab" data-section="' + esc(s.id) + '"' +
+              ' aria-pressed="' + (s.id === current ? 'true' : 'false') + '">' +
+              esc(s.label) +
+              '<span class="sl-tab__count">' + s.liveCount + '</span>' +
+            '</button>';
+          }).join('') +
+        '</div>' +
+
+        '<div class="panel" style="margin-top:0"><div class="panel__head">' +
+          '<h2 class="panel__title">' + esc(section.label) + ' tab slider</h2>' +
+          (section.settings.active === false
+            ? '<span class="pill pill--red">Switched off</span>'
+            : '<span class="pill pill--green">Live \u00B7 every ' + seconds(section.settings.intervalMs) + '</span>') +
+        '</div><div class="panel__body">' +
+          '<div class="grid-2">' +
+            '<div>' +
+              '<div class="label">What this controls</div>' +
+              '<div style="font-size:13.5px;line-height:1.6">The banner at the top of the <strong>' +
+                esc(section.label) + '</strong> tab. Slides advance on their own every <strong>' +
+                seconds(section.settings.intervalMs) + '</strong>, pausing while a guest is swiping. ' +
+                'A slide with a link becomes tappable; one without is just artwork.' +
+                (section.id === 'stay'
+                  ? ' This speed also drives the property photo slider on that tab.'
+                  : '') +
+              '</div>' +
+              '<div class="hint" style="margin-top:10px">Slides are shown in the order below. ' +
+                'Hidden slides keep their place but are not sent to the app.</div>' +
+            '</div>' +
+            preview(section) +
+          '</div>' +
+        '</div></div>' +
+
+        '<div class="panel"><div class="panel__head">' +
+          '<h2 class="panel__title">' + section.slides.length + ' slide(s)</h2>' +
+          '<button class="btn btn--sm" data-action="new-slide-inline">' + icon('plus', 16) + ' Add slide</button>' +
+        '</div><div class="panel__body">' +
+          (section.slides.length
+            ? '<div class="sl-slides">' +
+              section.slides.map(function (s, i) { return slideRow(s, i, section.slides.length); }).join('') +
+              '</div>'
+            : '<div class="empty-state">No slides yet. Add one and it appears at the top of the ' +
+              esc(section.label) + ' tab.</div>') +
+        '</div></div>' +
+      '</div>');
+      content.appendChild(view);
+      wire(view);
+    }
+
+    // ── Forms ──
+    function slideForm(slide) {
+      var s = slide || { title: '', subtitle: '', imageUrl: '', ctaLabel: '', ctaPath: '', active: true };
+      var body = h('<div><div class="form-grid">' +
+        imageField('Slide image', 'imageUrl', s.imageUrl, {}) +
+        field('Heading', 'title', s.title, { placeholder: 'Family Fun Day', hint: 'Leave blank to show the artwork on its own.' }) +
+        field('Sub-heading', 'subtitle', s.subtitle, { placeholder: 'Water park, movie and more' }) +
+        field('Button label', 'ctaLabel', s.ctaLabel, { placeholder: 'See packages', hint: 'Optional. Needs a link below.' }) +
+        field('Opens', 'ctaPath', s.ctaPath, {
+          placeholder: '/waterpark',
+          hint: 'An in-app path starting with "/", e.g. /waterpark, /food, /dine-in. Leave blank to make the slide untappable.',
+        }) +
+        field('Status', 'active', s.active === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'Live' },
+          { value: 'false', label: 'Hidden' },
+        ] }) +
+      '</div></div>');
+      bindImageField(body, 'imageUrl');
+      return body;
+    }
+
+    function slidePayload(body) {
+      var raw = readForm(body);
+      return {
+        section: current,
+        imageUrl: raw.imageUrl,
+        title: raw.title,
+        subtitle: raw.subtitle,
+        ctaLabel: raw.ctaLabel,
+        ctaPath: raw.ctaPath,
+        active: raw.active === 'true',
+      };
+    }
+
+    function openSlideModal(slide) {
+      var m = modal({
+        title: slide ? 'Edit slide' : 'New ' + sectionOf(current).label + ' slide',
+        body: slideForm(slide),
+        confirmLabel: slide ? 'Save slide' : 'Add slide',
+      });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          if (slide) await API.put('/admin/promos/slides/' + slide.id, slidePayload(m.body));
+          else await API.post('/admin/promos', slidePayload(m.body));
+          toast('Slide saved \u2014 live on the ' + sectionOf(current).label + ' tab now', 'success');
+          navigate('sliders');
+        });
+      });
+    }
+
+    function openSettingsModal() {
+      var section = sectionOf(current);
+      var body = h('<div class="form-grid">' +
+        field('Slider', 'active', section.settings.active === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'Show it on the ' + section.label + ' tab' },
+          { value: 'false', label: 'Hide it completely' },
+        ] }) +
+        field('Seconds per slide', 'intervalSeconds', Math.round(section.settings.intervalMs / 100) / 10, {
+          type: 'number',
+          hint: 'Between ' + (data.intervalBounds.min / 1000) + ' and ' + (data.intervalBounds.max / 1000) +
+            ' seconds. Autoplay pauses while a guest is swiping.',
+        }) +
+      '</div>');
+
+      var m = modal({ title: section.label + ' slider settings', body: body, confirmLabel: 'Save settings' });
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          var raw = readForm(m.body);
+          await API.put('/admin/promos/' + current + '/settings', {
+            active: raw.active === 'true',
+            intervalMs: Math.round(Number(raw.intervalSeconds) * 1000),
+          });
+          toast('Slider settings saved', 'success');
+          navigate('sliders');
+        });
+      });
+    }
+
+    // ── Wiring ──
+    topActions.querySelector('[data-action="new-slide"]').addEventListener('click', function () { openSlideModal(null); });
+    topActions.querySelector('[data-action="edit-slider"]').addEventListener('click', openSettingsModal);
+
+    function wire(view) {
+      view.addEventListener('click', async function (event) {
+        var tab = event.target.closest('[data-section]');
+        if (tab) {
+          current = tab.getAttribute('data-section');
+          state.cache.sliderSection = current;
+          render();
+          return;
+        }
+
+        if (event.target.closest('[data-action="new-slide-inline"]')) { openSlideModal(null); return; }
+
+        var edit = event.target.closest('[data-edit]');
+        if (edit) {
+          var id = edit.getAttribute('data-edit');
+          openSlideModal(sectionOf(current).slides.filter(function (s) { return s.id === id; })[0]);
+          return;
+        }
+
+        var move = event.target.closest('[data-move]');
+        if (move) {
+          try {
+            await API.post('/admin/promos/slides/' + move.getAttribute('data-id') + '/move',
+              { direction: move.getAttribute('data-move') });
+            navigate('sliders');
+          } catch (err) { toast(err.message, 'error'); }
+          return;
+        }
+
+        var del = event.target.closest('[data-del]');
+        if (del) {
+          var ok = await confirmDialog(
+            'Delete this slide?',
+            'It disappears from the ' + sectionOf(current).label + ' tab straight away, and a starter slide will not come back on restart.',
+            'Delete slide'
+          );
+          if (!ok) return;
+          try {
+            await API.del('/admin/promos/slides/' + del.getAttribute('data-del'));
+            toast('Slide deleted', 'success');
+            navigate('sliders');
+          } catch (err) { toast(err.message, 'error'); }
+        }
+      });
+    }
+
+    render();
+  }
+
   // ── Hotel & rooms ────────────────────────────────────────────────────────
 
   /* Property photo galleries.
@@ -3588,6 +3865,7 @@
     hotel: pageHotel,
     dinein: pageDineIn,
     waterpark: pageWaterpark,
+    sliders: pageSliders,
     food: pageFood,
     offers: pageOffers,
     experiences: pageExperiences,

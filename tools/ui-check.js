@@ -991,6 +991,251 @@ async function run() {
       [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
     await screenshot(cdp, 'app-section-movie');
 
+    // ── Promo sliders ────────────────────────────────────────────────────────
+    section('Customer app \u2014 every tab carries its slider');
+    for (const [label, hash, sectionId] of [
+      ['Movie', '#/home', 'movie'],
+      ['Stay', '#/hotels', 'stay'],
+      ['Dine-In', '#/dine-in', 'dinein'],
+      ['Water Park', '#/waterpark', 'waterpark'],
+    ]) {
+      cdp.clearErrors();
+      await open(`${BASE}/${hash}`, customer, `document.querySelector('.promo-slider') !== null`, `the ${label} slider`);
+      const expected = (await api('GET', `/api/promos/${sectionId}`)).body;
+      const rendered = await cdp.eval(`
+        const wrap = document.querySelector('.promo-slider');
+        return {
+          slides: wrap.querySelectorAll('.promo').length,
+          dots: wrap.querySelectorAll('.carousel__dot').length,
+          autoplay: (wrap.querySelector('[data-carousel]') || {}).getAttribute
+            ? wrap.querySelector('[data-carousel]').getAttribute('data-autoplay') : null,
+          images: [...wrap.querySelectorAll('.promo__img')].map(i => i.getAttribute('src')),
+          linked: wrap.querySelectorAll('[data-action="promo"]').length,
+        };
+      `);
+      check(`${label}: renders every slide the API serves`,
+        rendered.slides === expected.slides.length, `${rendered.slides} vs ${expected.slides.length}`);
+      check(`${label}: has one dot per slide`, rendered.dots === expected.slides.length);
+      check(`${label}: autoplays at the admin's interval`,
+        Number(rendered.autoplay) === expected.intervalMs, `${rendered.autoplay} vs ${expected.intervalMs}`);
+      check(`${label}: uses the admin's artwork`,
+        JSON.stringify(rendered.images) === JSON.stringify(expected.slides.map((s) => s.imageUrl)),
+        JSON.stringify(rendered.images));
+      check(`${label}: only slides with a link are tappable`,
+        rendered.linked === expected.slides.filter((s) => s.ctaPath).length);
+      check(`${label}: no console errors`, cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+        [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+    }
+    await screenshot(cdp, 'app-promo-slider');
+
+    section('Customer app \u2014 the slider scrolls on its own');
+    // Speed it up so the test does not have to wait out the 4.5s default.
+    await api('PUT', '/api/admin/promos/waterpark/settings', { intervalMs: 1500 }, admin);
+    cdp.clearErrors();
+    await open(`${BASE}/#/waterpark`, customer, `document.querySelector('.promo-slider [data-carousel]') !== null`, 'the slider');
+    check('it picked up the faster interval',
+      (await cdp.eval(`return document.querySelector('.promo-slider [data-carousel]').getAttribute('data-autoplay');`)) === '1500');
+
+    const startedAt = await cdp.eval(`return document.querySelector('.promo-slider .carousel__track').scrollLeft;`);
+    check('it starts on the first slide', startedAt === 0, String(startedAt));
+
+    /* Sample the position over several ticks rather than at one moment. The
+       resting offset of the last slide is NOT index x step — the track's padding
+       and centre snapping mean it settles at the maximum scroll instead — so the
+       thing worth asserting is the sequence: it moves off the first slide, and it
+       comes back to it. */
+    const trail = await cdp.eval(`
+      const track = document.querySelector('.promo-slider .carousel__track');
+      const seen = [];
+      return new Promise(resolve => {
+        const t = setInterval(() => {
+          seen.push(Math.round(track.scrollLeft));
+          if (seen.length >= 40) { clearInterval(t); resolve(seen); }
+        }, 150);
+      });
+    `);
+    const advanced = trail.filter((x) => x > 0);
+    check('it advances with no interaction at all', advanced.length > 0, JSON.stringify(trail.slice(0, 12)));
+    check('it wraps back round to the first slide',
+      trail.indexOf(0) !== -1 && trail.lastIndexOf(0) > trail.indexOf(advanced[0]),
+      JSON.stringify(trail));
+    check('the dot follows the slide', await cdp.eval(`
+      const track = document.querySelector('.promo-slider .carousel__track');
+      const dots = [...document.querySelectorAll('.promo-slider .carousel__dot')];
+      const current = dots.findIndex(d => d.getAttribute('aria-current') === 'true');
+      const step = track.children[1].getBoundingClientRect().left - track.children[0].getBoundingClientRect().left;
+      return current === Math.round(track.scrollLeft / step);
+    `));
+
+    /* Autoplay must stand down while a finger is on the track, or it drags the
+       slide out from under whoever is reading it. */
+    const heldAt = await cdp.eval(`
+      const track = document.querySelector('.promo-slider .carousel__track');
+      track.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      return Math.round(track.scrollLeft);
+    `);
+    await sleep(2400);
+    const stillAt = await cdp.eval(`return Math.round(document.querySelector('.promo-slider .carousel__track').scrollLeft);`);
+    check('autoplay stands down while the guest is touching it', stillAt === heldAt, `${heldAt} -> ${stillAt}`);
+    check('no console errors while it scrolls',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+    await api('PUT', '/api/admin/promos/waterpark/settings', { intervalMs: 4500 }, admin);
+
+    section('Customer app \u2014 the Stay property photos scroll too');
+    /* The shipped catalogue gives the property a single photo, which renders as a
+       still. Give it a second so there is actually something to scroll — this is
+       the case in the report: two photos, sitting there not moving. */
+    const stayHotel = (await api('GET', '/api/hotels')).body.hotel;
+    await api('PUT', '/api/admin/hotel', {
+      photos: ['/img/hotels/kingfisher-mandla-1.svg', '/img/hotels/executive-room-1.svg', '/img/hotels/deluxe-double-room-1.svg'],
+      name: stayHotel.name,
+    }, admin);
+    cdp.clearErrors();
+    await open(`${BASE}/#/hotels`, customer, `document.querySelector('.hotel-hero') !== null`, 'the Stay hero');
+    const heroTrack = await cdp.eval(`
+      const hero = document.querySelector('.hotel-hero [data-carousel]');
+      return hero ? { autoplay: hero.getAttribute('data-autoplay'), slides: hero.querySelectorAll('.carousel__slide').length } : null;
+    `);
+    check('the property hero is a carousel with more than one photo', heroTrack && heroTrack.slides > 1,
+      JSON.stringify(heroTrack));
+    check('and it now auto-scrolls (it did not before)', heroTrack && Number(heroTrack.autoplay) > 0,
+      heroTrack && heroTrack.autoplay);
+    check('there are three photos to move through',
+      heroTrack && heroTrack.slides === 3, heroTrack && String(heroTrack.slides));
+    const heroTrail = await cdp.eval(`
+      const track = document.querySelector('.hotel-hero .carousel__track');
+      const seen = [];
+      return new Promise(resolve => {
+        const t = setInterval(() => {
+          seen.push(Math.round(track.scrollLeft));
+          if (seen.length >= 45) { clearInterval(t); resolve(seen); }
+        }, 200);
+      });
+    `);
+    check('the property photos advance on their own',
+      heroTrail.some((x) => x > 0), JSON.stringify(heroTrail.slice(0, 12)));
+    /* Three photos with gap:0 is exactly the case the old hard-coded 12px step
+       got wrong, so check it reaches the third and not some position between. */
+    check('and it reaches every photo, not just the second', await cdp.eval(`
+      const track = document.querySelector('.hotel-hero .carousel__track');
+      const step = track.children[1].getBoundingClientRect().left - track.children[0].getBoundingClientRect().left;
+      return step > 0 && Math.round(step) === Math.round(track.children[0].getBoundingClientRect().width);
+    `), 'gap should be 0 on the hero, so step === slide width');
+    check('the visited positions line up with the photos', (() => {
+      const unique = [...new Set(heroTrail)].sort((a, b) => a - b);
+      return unique.length >= 2;
+    })(), JSON.stringify([...new Set(heroTrail)]));
+    check('the hero dots track the photo', await cdp.eval(`
+      const dots = [...document.querySelectorAll('.hotel-hero .carousel__dot')];
+      return dots.length === 3 && dots.some(d => d.getAttribute('aria-current') === 'true');
+    `));
+    check('no console errors on the Stay tab',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+    section('Customer app \u2014 a slide opens where the admin pointed it');
+    cdp.clearErrors();
+    await open(`${BASE}/#/waterpark`, customer, `document.querySelector('[data-action="promo"]') !== null`, 'a tappable slide');
+    const promoTarget = await cdp.eval(`return document.querySelector('[data-action="promo"]').getAttribute('data-path');`);
+    await cdp.eval(`document.querySelector('[data-action="promo"]').click(); return true;`);
+    await sleep(500);
+    check('tapping a slide navigates to its configured path',
+      (await cdp.eval(`return location.hash;`)) === '#' + promoTarget,
+      `${await cdp.eval(`return location.hash;`)} vs #${promoTarget}`);
+    check('no console errors following a slide',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+    section('Admin console \u2014 the Tab Sliders page');
+    cdp.clearErrors();
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1500, height: 1400, deviceScaleFactor: 1, mobile: false,
+    });
+    await open(`${BASE}/admin/#sliders`, admin, `document.querySelector('.sl-tab') !== null`, 'the sliders page');
+    check('it appears in the sidebar',
+      await cdp.eval(`return [...document.querySelectorAll('.side__link')].some(b => b.textContent.trim() === 'Tab Sliders');`));
+    check('it offers one tab per section', await cdp.eval(`
+      return [...document.querySelectorAll('.sl-tab')].map(t => t.textContent.replace(/\\d+$/, '').trim()).join('|');
+    `) === 'Movie|Stay|Dine-In|Water Park', await cdp.eval(`
+      return [...document.querySelectorAll('.sl-tab')].map(t => t.textContent.trim()).join('|');
+    `));
+    check('the first section is selected',
+      await cdp.eval(`return document.querySelector('.sl-tab').getAttribute('aria-pressed') === 'true';`));
+    check('it lists that section\u2019s slides',
+      (await cdp.eval(`return document.querySelectorAll('.sl-slide').length;`)) > 0);
+    check('it shows a phone preview of the slider',
+      await cdp.eval(`return document.querySelector('.sl-preview__frame img') !== null;`));
+    check('the move-up control on the first slide is disabled',
+      await cdp.eval(`return document.querySelector('[data-move="up"]').disabled === true;`));
+    await screenshot(cdp, 'admin-sliders');
+
+    check('switching section swaps the slide list', await cdp.eval(`
+      const before = document.querySelector('.sl-slide__title').textContent.trim();
+      [...document.querySelectorAll('.sl-tab')].find(t => /Water Park/.test(t.textContent)).click();
+      const after = document.querySelector('.sl-slide__title').textContent.trim();
+      return before !== after;
+    `));
+    check('and the panel heading follows the section',
+      /Water Park tab slider/.test(await cdp.eval(`return document.querySelector('.panel__title').textContent;`)),
+      await cdp.eval(`return document.querySelector('.panel__title').textContent;`));
+    check('no console errors on the sliders page',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+    section('Admin console \u2014 an added slide reaches the app');
+    cdp.clearErrors();
+    await cdp.eval(`document.querySelector('[data-action="new-slide"]').click(); return true;`);
+    await waitFor(cdp, `document.querySelector('.modal [name="title"]') !== null`, 'the slide form');
+    check('the form offers an image picker', await cdp.eval(`return document.querySelector('.modal [data-imgfield="imageUrl"]') !== null;`));
+    await cdp.eval(`
+      const set = (name, value) => {
+        const el = document.querySelector('.modal [name="' + name + '"]');
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      set('imageUrl', '/img/banners/popcorn-party.svg');
+      set('title', 'Added from the console');
+      set('subtitle', 'Proof the admin drives the app');
+      set('ctaLabel', 'Open packages');
+      set('ctaPath', '/waterpark');
+      return true;
+    `);
+    await cdp.eval(`document.querySelector('.modal [data-confirm]').click(); return true;`);
+    await waitFor(cdp, `document.querySelector('.modal') === null`, 'the slide to save');
+    await waitFor(cdp, `/Added from the console/.test(document.body.textContent)`, 'the new slide to list');
+    check('the slide is added and listed', true);
+
+    const servedNow = (await api('GET', '/api/promos/waterpark')).body;
+    check('the API serves it straight away',
+      servedNow.slides.some((s) => s.title === 'Added from the console'),
+      JSON.stringify(servedNow.slides.map((s) => s.title)));
+
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 420, height: 900, deviceScaleFactor: 2, mobile: true,
+    });
+    cdp.clearErrors();
+    await open(`${BASE}/#/waterpark`, customer, `document.querySelector('.promo-slider') !== null`, 'the water park slider');
+    check('and the customer app shows it on the tab',
+      await cdp.eval(`return /Added from the console/.test(document.querySelector('.promo-slider').textContent);`),
+      await cdp.eval(`return document.querySelector('.promo-slider').textContent.slice(0, 120);`));
+    check('no console errors after the admin edit',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+
+    section('Admin console \u2014 switching a slider off empties the tab');
+    await api('PUT', '/api/admin/promos/dinein/settings', { active: false }, admin);
+    cdp.clearErrors();
+    await open(`${BASE}/#/dine-in`, customer, `document.querySelector('.dine-hero') !== null`, 'the Dine-In tab');
+    check('the Dine-In tab renders no slider band at all',
+      await cdp.eval(`return document.querySelector('.promo-slider') === null;`));
+    check('and the rest of the tab is untouched',
+      await cdp.eval(`return document.querySelector('.dine-hero') !== null;`));
+    check('no console errors with the slider off',
+      cdp.consoleErrors.length === 0 && cdp.pageErrors.length === 0,
+      [].concat(cdp.consoleErrors, cdp.pageErrors).join(' | '));
+    await api('PUT', '/api/admin/promos/dinein/settings', { active: true }, admin);
+
     section('Customer app \u2014 the other tabs still work');
     for (const [hash, ready, label] of [
       ['#/home', `document.querySelector('.screen') !== null`, 'Movie'],

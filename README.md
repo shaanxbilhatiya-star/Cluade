@@ -53,7 +53,8 @@ npm start              # node server.js
 npm test               # end-to-end API smoke test (134 assertions)
 npm run test:dine-in   # Dine-In tab, end to end (90 assertions)
 npm run test:waterpark # Water park tab, end to end (152 assertions)
-npm run test:ui        # renders the admin console + app in headless Chrome (163 assertions)
+npm run test:promos    # Tab sliders, end to end (87 assertions)
+npm run test:ui        # renders the admin console + app in headless Chrome (239 assertions)
 npm run seed           # wipe data/ and re-seed the demo catalogue
 npm run assets         # regenerate the SVG artwork
 PORT=8080 node server.js
@@ -143,6 +144,8 @@ the app cannot be scaled to multiple replicas as-is.
 
 Mobile-only, six tabs, dark mode throughout.
 
+Movie, Stay, Dine-In and Water Park each open with an **auto-scrolling slider** managed from the admin console (see *Tab Sliders* below). It advances on its own, pauses while a guest is swiping, and disappears entirely if the admin switches it off.
+
 **Home** — city picker, notification bell with unread badge, auto-playing hero carousel, "Your next show" card, *Now Playing* and *Coming Soon* rails with **View All**, personalised "Because you like…" rail, offer banners, nearby cinemas.
 
 **Cinemas** — nearby cinemas with distance, rating, formats and facilities; tap through to a cinema's day-by-day schedule grouped by movie.
@@ -161,7 +164,9 @@ The first three rows deep-link into My Tickets filtered by type (`#/tickets?type
 
 ## The admin console
 
-Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Hotel & Rooms · Dine-In · **Water Park** · Food CRUD · Offers CRUD · Customers (spend, enable/disable).
+Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Hotel & Rooms · Dine-In · **Water Park** · **Tab Sliders** · Food CRUD · Offers CRUD · Customers (spend, enable/disable).
+
+**Tab Sliders** manages the auto-scrolling banner at the top of the Movie, Stay, Dine-In and Water Park tabs. Each tab has its own slides and its own scroll speed, with a phone-accurate preview beside the form. Slides carry an uploaded image plus an optional heading, sub-heading and button, are reordered with one click, and can be hidden without deleting. A slide may only link to an in-app path — an external or `javascript:` target is refused at save time rather than quietly stripped. Switching a slider off removes the band from that tab entirely.
 
 **Water Park** is a full operations console for the tab: one editable **rate card** that every package line and every per-person booking is priced from, so changing the adult entry rate reprices both packages and the per-person builder at once. Packages are edited as quantities against that rate card — the total actual value and the "you save" figure are computed, never typed, and the editor recomputes them as you type while warning if a package is priced above its own parts or carries the wrong number of entry tickets. Plus add-on pricing, opening hours and slot capacity, admin-editable customer notices with `{token}` substitution, a live gate-load view, a filterable pass ledger with check-in, and **counter sales** — sell a walk-up pass (package or per person) with a live server-priced total and no customer account needed.
 
@@ -261,6 +266,10 @@ All responses are JSON. Authenticated routes take `Authorization: Bearer <token>
 `GET|PATCH /api/me` · `PATCH /api/me/settings` ·
 `GET /api/me/notifications` · `POST /api/me/notifications/read`
 
+### Tab sliders
+`GET /api/promos` · `GET /api/promos/:section` — also embedded as `slider` in
+`/api/home`, `/api/hotels`, `/api/dine-in` and `/api/waterpark`, so a tab needs no extra request.
+
 ### Water park
 `GET /api/waterpark` · `GET /api/waterpark/slots` · `POST /api/waterpark/quote` ·
 `POST /api/waterpark/offers/validate` · `GET|POST /api/waterpark/bookings` 🔒 ·
@@ -269,6 +278,8 @@ All responses are JSON. Authenticated routes take `Authorization: Bearer <token>
 
 ### Admin (🔒 admin role)
 `GET /api/admin/stats` · CRUD on `/api/admin/{movies,cinemas,screens,showtimes,food,offers}` ·
+`GET /api/admin/promos` · `PUT /api/admin/promos/:section/settings` ·
+`POST /api/admin/promos` · `PUT|DELETE /api/admin/promos/slides/:id` · `POST /api/admin/promos/slides/:id/move` ·
 `GET|PUT /api/admin/waterpark[/settings]` · CRUD on `/api/admin/waterpark/{items,packages,addons}` ·
 `POST /api/admin/waterpark/{quote,bookings,notices/reset,reset}` ·
 `POST /api/admin/waterpark/bookings/:id/{checkin,undo-checkin,cancel}` ·

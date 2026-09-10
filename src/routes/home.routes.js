@@ -1,6 +1,7 @@
 'use strict';
 const db = require('../db');
 const barcode = require('../barcode');
+const promos = require('../promos');
 const { Router, HttpError } = require('../router');
 const { CURRENCY } = require('../pricing');
 
@@ -78,6 +79,8 @@ router.get('/home', (ctx) => {
     city,
     cities: [...new Set(db.get('cinemas').map((c) => c.city))],
     currency: CURRENCY,
+    /** Admin-managed promo slider for this tab. */
+    slider: promos.publicSlider('movie'),
     hero,
     nowPlaying: nowPlaying.map(slim),
     comingSoon: comingSoon.map(slim),

@@ -110,6 +110,8 @@
           UI.appbar({ title: 'Dine-In' }) +
           '<div class="scroll">' +
 
+            UI.promoSlider(data.slider) +
+
             '<div class="dine-hero">' +
               '<h2 class="dine-hero__name">' + UI.esc(s.restaurantName) + '</h2>' +
               (s.tagline ? '<p class="dine-hero__tagline">' + UI.esc(s.tagline) + '</p>' : '') +
@@ -239,6 +241,7 @@
       }
 
       UI.actions(view, {
+        promo: function (el) { App.navigate(el.getAttribute('data-path')); },
         reserve: function () { App.navigate('/dine-in/reserve'); },
         pay: function () { App.navigate('/dine-in/bill'); },
         signin: function () { App.navigate('/login'); },
