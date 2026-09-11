@@ -375,8 +375,6 @@
             '<div class="section"><div class="subhead">Time</div>' +
               '<div data-slots>' + slotChips() + '</div></div>' +
 
-            areaChips() +
-
             '<div class="guests">' +
               '<div class="stepper-row">' +
                 '<div><div class="stepper-row__label">Guests</div>' +
@@ -391,11 +389,11 @@
 
             '<div class="field"><label class="field__label" for="dine-name">Name for the booking</label>' +
               '<div class="field__control">' + UI.icon('user', 19) +
-                '<input id="dine-name" type="text" value="' + UI.esc((Store.user && Store.user.name) || '') + '" placeholder="Your name"></div></div>' +
+                '<input id="dine-name" type="text" value="" placeholder="Your name"></div></div>' +
 
             '<div class="field"><label class="field__label" for="dine-phone">Phone</label>' +
               '<div class="field__control">' + UI.icon('phone', 19) +
-                '<input id="dine-phone" type="tel" value="' + UI.esc((Store.user && Store.user.phone) || '') + '" placeholder="Contact number"></div></div>' +
+                '<input id="dine-phone" type="tel" value="" placeholder="Contact number"></div></div>' +
 
             '<div class="field"><label class="field__label" for="dine-notes">Anything we should know? (optional)</label>' +
               '<div class="field__control">' +
