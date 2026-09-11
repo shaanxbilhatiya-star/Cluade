@@ -88,11 +88,59 @@
       '</div></div>';
   }
 
+  // ── Venue picker ──────────────────────────────────────────────────────────
+  /* Kingfisher Resort has two separate restaurants. This screen makes the guest
+     choose which one before anything else — a reservation or a bill only ever
+     means something once we know whether it's Rangoli or Dolphin. */
+  window.Screens.dineVenuePicker = {
+    tab: 'dinein',
+    render: async function () {
+      var data = await API.dineVenues();
+      var venues = data.venues || [];
+
+      var view = UI.h(
+        '<div class="screen">' +
+          UI.appbar({ title: 'Dine-In · Kingfisher Resort' }) +
+          '<div class="scroll">' +
+            '<p style="padding:14px 16px 4px;margin:0;font-size:13px;color:var(--ink-soft)">' +
+              'Two restaurants, one resort — pick where you\'re dining.' +
+            '</p>' +
+            '<div class="section">' +
+              venues.map(function (v) {
+                var vegClass = v.diet === 'veg' ? 'dine-venue-card--veg' : 'dine-venue-card--nonveg';
+                var dot = v.diet === 'veg'
+                  ? '<span class="dine-veg-dot dine-veg-dot--veg" aria-hidden="true"></span>'
+                  : '<span class="dine-veg-dot dine-veg-dot--nonveg" aria-hidden="true"></span>';
+                return '<button class="card dine-venue-card ' + vegClass + '" data-action="pick" data-venue="' + UI.esc(v.venueId) + '"' +
+                    (v.active === false ? ' disabled' : '') + '>' +
+                  '<div class="dine-venue-card__row">' + dot +
+                    '<span class="dine-venue-card__tag">' + UI.esc(v.diet === 'veg' ? 'Pure Veg' : 'Pure Non-Veg') + '</span>' +
+                  '</div>' +
+                  '<div class="dine-venue-card__name">' + UI.esc(v.restaurantName) + '</div>' +
+                  (v.tagline ? '<div class="dine-venue-card__tagline">' + UI.esc(v.tagline) + '</div>' : '') +
+                  (v.active === false ? '<div class="dine-venue-card__closed">Closed right now</div>' : '') +
+                '</button>';
+              }).join('') +
+            '</div>' +
+            '<div class="spacer-24"></div>' +
+          '</div>' +
+        '</div>'
+      );
+
+      UI.actions(view, {
+        pick: function (el) { App.navigate('/dine-in/' + el.getAttribute('data-venue')); },
+      });
+
+      return view;
+    },
+  };
+
   // ── Dine-In home ──────────────────────────────────────────────────────────
   window.Screens.dineIn = {
     tab: 'dinein',
-    render: async function () {
-      var data = await API.dineIn();
+    render: async function (params) {
+      var venueId = params.venueId;
+      var data = await API.dineIn(venueId);
       var s = data.settings;
       var reserved = data.tiers.reserved;
       var walkin = data.tiers.walkin;
@@ -101,16 +149,17 @@
 
       if (s.active === false) {
         return UI.h(
-          '<div class="screen">' + UI.appbar({ title: 'Dine-In' }) +
+          '<div class="screen">' + UI.appbar({ title: s.restaurantName, backTo: '/dine-in' }) +
             '<div class="scroll">' +
-              UI.empty({ icon: 'dine', title: 'Dine-In is closed', text: 'In-app billing is switched off right now. Please pay at the counter.' }) +
+              UI.empty({ icon: 'dine', title: s.restaurantName + ' is closed', text: 'In-app billing is switched off right now. Please pay at the counter.' }) +
             '</div></div>'
         );
       }
 
       var view = UI.h(
         '<div class="screen">' +
-          UI.appbar({ title: 'Dine-In' }) +
+          UI.appbar({ title: s.restaurantName, right:
+            '<button class="icon-btn" data-action="switch-venue" aria-label="Switch restaurant">' + UI.icon('refresh', 20) + '</button>' }) +
           '<div class="scroll">' +
 
             UI.propertyHero(Object.assign({}, s, {
@@ -277,10 +326,11 @@
       }
 
       UI.actions(view, {
-        reserve: function () { App.navigate('/dine-in/reserve'); },
-        pay: function () { App.navigate('/dine-in/bill'); },
+        reserve: function () { App.navigate('/dine-in/' + venueId + '/reserve'); },
+        pay: function () { App.navigate('/dine-in/' + venueId + '/bill'); },
         signin: function () { App.navigate('/login'); },
-        receipt: function (el) { App.navigate('/dine-in/paid/' + el.getAttribute('data-id')); },
+        receipt: function (el) { App.navigate('/dine-in/' + venueId + '/paid/' + el.getAttribute('data-id')); },
+        'switch-venue': function () { App.navigate('/dine-in'); },
         'cancel-res': async function () {
           var ok = await UI.confirm({
             title: 'Cancel this reservation?',
@@ -307,11 +357,12 @@
   window.Screens.dineReserve = {
     tab: 'dinein',
     auth: true,
-    backTo: '/dine-in',
-    render: async function () {
-      var data = await API.dineIn();
+    backTo: function (params) { return '/dine-in/' + params.venueId; },
+    render: async function (params) {
+      var venueId = params.venueId;
+      var data = await API.dineIn(venueId);
       var s = data.settings;
-      var slotData = await API.dineSlots();
+      var slotData = await API.dineSlots(venueId, undefined);
 
       var state = {
         date: slotData.date,
@@ -415,7 +466,7 @@
         var box = view.querySelector('[data-slots]');
         box.innerHTML = UI.spinnerBlock();
         try {
-          var fresh = await API.dineSlots(state.date);
+          var fresh = await API.dineSlots(venueId, state.date);
           state.slots = fresh.slots;
           state.time = null;
           box.innerHTML = slotChips();
@@ -455,7 +506,7 @@
           btn.disabled = true;
           btn.textContent = 'Reserving…';
           try {
-            var res = await API.reserveTable({
+            var res = await API.reserveTable(venueId, {
               date: state.date,
               time: state.time,
               partySize: state.partySize,
@@ -465,7 +516,7 @@
               notes: view.querySelector('#dine-notes').value.trim(),
             });
             UI.toast('Table reserved — billing unlocks at ' + res.reservation.lock.unlockLabel, 'success');
-            App.navigate('/dine-in');
+            App.navigate('/dine-in/' + venueId);
           } catch (err) {
             UI.toast(err.message, 'error');
             btn.disabled = false;
@@ -482,9 +533,10 @@
   window.Screens.dineBill = {
     tab: 'dinein',
     auth: true,
-    backTo: '/dine-in',
-    render: async function () {
-      var data = await API.dineIn();
+    backTo: function (params) { return '/dine-in/' + params.venueId; },
+    render: async function (params) {
+      var venueId = params.venueId;
+      var data = await API.dineIn(venueId);
       var s = data.settings;
       var reservation = data.reservation;
 
@@ -690,7 +742,7 @@
 
         var mySeq = ++state.seq;
         try {
-          var quote = await API.dineQuote({
+          var quote = await API.dineQuote(venueId, {
             billAmount: amount,
             mode: state.mode || undefined,
             offerCode: state.offerCode || undefined,
@@ -759,7 +811,7 @@
 
           btn.disabled = true;
           try {
-            await API.validateDineOffer({ code: code, billAmount: amount, mode: state.mode || undefined });
+            await API.validateDineOffer(venueId, { code: code, billAmount: amount, mode: state.mode || undefined });
             state.offerCode = code;
             offerMsg.style.color = 'var(--success)';
             offerMsg.textContent = code + ' applied';
@@ -787,14 +839,14 @@
           btn.disabled = true;
           btn.textContent = 'Paying…';
           try {
-            var res = await API.payDineBill({
+            var res = await API.payDineBill(venueId, {
               billAmount: amount,
               mode: state.mode || undefined,
               offerCode: state.offerCode || undefined,
               tableNumber: '',
               payment: { method: state.payment },
             });
-            App.navigate('/dine-in/paid/' + res.bill.id);
+            App.navigate('/dine-in/' + venueId + '/paid/' + res.bill.id);
           } catch (err) {
             UI.toast(err.message, 'error');
             btn.disabled = false;
@@ -813,8 +865,9 @@
   window.Screens.dinePaid = {
     tab: 'dinein',
     auth: true,
-    backTo: '/dine-in',
+    backTo: function (params) { return '/dine-in/' + params.venueId; },
     render: async function (params) {
+      var venueId = params.venueId;
       var data = await API.dineBill(params.id);
       var bill = data.bill;
       var pending = bill.payment && bill.payment.status === 'pending';
@@ -862,7 +915,7 @@
       );
 
       UI.actions(view, {
-        done: function () { App.navigate('/dine-in'); },
+        done: function () { App.navigate('/dine-in/' + venueId); },
       });
 
       return view;
@@ -877,10 +930,23 @@
     auth: true,
     backTo: '/account',
     render: async function () {
-      var res = await Promise.all([API.dineReservations(), API.dineBills()]);
-      var reservations = res[0].reservations || [];
-      var bills = res[1].bills || [];
-      var totalSaved = res[1].totalSaved || 0;
+      var res = await Promise.all(
+        window.DineIn.VENUE_IDS.map(function (v) { return API.dineReservations(v); })
+          .concat(window.DineIn.VENUE_IDS.map(function (v) { return API.dineBills(v); }))
+      );
+      var half = window.DineIn.VENUE_IDS.length;
+      var reservations = res.slice(0, half).reduce(function (all, r) { return all.concat(r.reservations || []); }, []);
+      var billResults = res.slice(half);
+      var bills = billResults.reduce(function (all, b) { return all.concat(b.bills || []); }, []);
+      var totalSaved = billResults.reduce(function (sum, b) { return sum + (b.totalSaved || 0); }, 0);
+
+      reservations.sort(function (a, b) { return new Date(b.startsAt) - new Date(a.startsAt); });
+      bills.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+      function venueLabel(venueId) {
+        var v = window.DineIn.VENUES[venueId];
+        return v ? v.restaurantName : '';
+      }
 
       function reservationCard(r) {
         var pill = r.status === 'cancelled'
@@ -892,9 +958,9 @@
               : '<span class="status-pill status-pill--confirmed">Confirmed</span>';
 
         return '<article class="card">' +
-          '<button class="ticket__main" data-action="open-tab">' +
+          '<button class="ticket__main" data-action="open-tab" data-venue="' + UI.esc(r.venueId) + '">' +
             '<div class="ticket__text">' +
-              '<h3 class="ticket__title">' + UI.esc(slotLabel(r)) + '</h3>' +
+              '<h3 class="ticket__title">' + UI.esc(venueLabel(r.venueId)) + ' · ' + UI.esc(slotLabel(r)) + '</h3>' +
               '<p class="ticket__sub">' + UI.esc(partyLine(r)) + '</p>' +
               '<p class="ticket__seats">' + UI.esc(r.reference) + '</p>' +
               '<div style="margin-top:7px">' + pill + '</div>' +
@@ -906,9 +972,9 @@
 
       function billCard(b) {
         return '<article class="card">' +
-          '<button class="ticket__main" data-action="open-bill" data-id="' + UI.esc(b.id) + '">' +
+          '<button class="ticket__main" data-action="open-bill" data-id="' + UI.esc(b.id) + '" data-venue="' + UI.esc(b.venueId) + '">' +
             '<div class="ticket__text">' +
-              '<h3 class="ticket__title">' + UI.money(b.amounts.total) + ' paid</h3>' +
+              '<h3 class="ticket__title">' + UI.esc(venueLabel(b.venueId)) + ' · ' + UI.money(b.amounts.total) + ' paid</h3>' +
               '<p class="ticket__sub">' + UI.esc(UI.shortDate(b.paidAt || b.createdAt)) +
                 ' · ' + (b.mode === 'reserved' ? 'Reserved table' : 'Walk-in') +
                 ' · ' + b.amounts.discountPercent + '% off</p>' +
@@ -956,11 +1022,21 @@
       );
 
       UI.actions(view, {
-        'open-tab': function () { App.navigate('/dine-in'); },
-        'open-bill': function (el) { App.navigate('/dine-in/paid/' + el.getAttribute('data-id')); },
+        'open-tab': function (el) {
+          var venueId = el && el.getAttribute('data-venue');
+          App.navigate(venueId ? '/dine-in/' + venueId : '/dine-in');
+        },
+        'open-bill': function (el) { App.navigate('/dine-in/' + el.getAttribute('data-venue') + '/paid/' + el.getAttribute('data-id')); },
       });
 
       return view;
     },
   };
+
+  // Exposed so other screens (restaurantBookings) can label bookings by venue
+  // without another round trip to the server.
+  window.DineIn = { VENUE_IDS: ['rangoli', 'dolphin'], VENUES: {
+    rangoli: { restaurantName: 'Rangoli' },
+    dolphin: { restaurantName: 'Dolphin' },
+  } };
 })();
