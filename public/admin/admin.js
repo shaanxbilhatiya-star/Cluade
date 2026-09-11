@@ -1824,9 +1824,19 @@
      Notices are templates: the {tokens} listed under each input are substituted
      when a guest reads them, so changing a percentage automatically updates the
      copy without anyone having to retype it. */
+  /* ── Dine-In ───────────────────────────────────────────────────────────────
+     The resort has TWO restaurants — Rangoli (pure veg) and Dolphin (non-veg) —
+     so this page is organised as: the venue and its one commercial policy at the
+     top, then a panel per restaurant, then ledgers that always name which
+     restaurant a table or a bill belongs to.
+
+     Discounts and the billing lock stay venue-wide on purpose. Two restaurants
+     under one brand running one offer is the intent; per-restaurant discounts
+     would let the two drift apart and re-create the confusion guests already
+     have about which is which. */
   async function pageDineIn(content, topActions) {
     topActions.innerHTML =
-      '<button class="btn btn--ghost" data-action="edit-property">' + icon('building', 17) + ' Property details</button> ' +
+      '<button class="btn btn--ghost" data-action="edit-property">' + icon('building', 17) + ' Venue details</button> ' +
       '<button class="btn btn--ghost" data-action="reset-notices">' + icon('refresh', 17) + ' Reset notices</button> ' +
       '<button class="btn" data-action="edit-settings">' + icon('edit', 17) + ' Edit discounts &amp; notices</button>';
 
@@ -1834,8 +1844,21 @@
     var data = await API.get('/admin/dine-in');
     var s = data.settings;
     var st = data.stats;
+    var outlets = data.outlets || [];
 
     function pct(n) { return (Number(n) || 0) + '%'; }
+
+    /** The veg / non-veg mark, same one guests see. */
+    function mark(diet) {
+      return '<span class="veg-mark veg-mark--' + (diet === 'nonveg' ? 'nonveg' : 'veg') + '" ' +
+        'role="img" aria-label="' + (diet === 'nonveg' ? 'Non-vegetarian' : 'Vegetarian') + '"></span>';
+    }
+
+    function outletLabel(row) {
+      if (row.outlet) return mark(row.outlet.diet) + ' ' + esc(row.outlet.name);
+      // Pre-split rows belong to neither, and saying so beats inventing one.
+      return '<span class="hint">not recorded</span>';
+    }
 
     function noticeBlock(label, text, when) {
       return '<div style="margin-bottom:16px">' +
@@ -1857,8 +1880,10 @@
         card('Reservations', String(st.reservations), st.upcoming + ' still upcoming') +
       '</div>' +
 
+      /* The venue and its single offer. Deliberately says nothing about hours or
+         seating — those differ per restaurant and live in the panels below. */
       '<div class="panel"><div class="panel__head">' +
-        '<h2 class="panel__title">' + esc(s.restaurantName) + '</h2>' +
+        '<h2 class="panel__title">' + esc(s.venueName) + '</h2>' +
         '<span class="pill ' + (s.active === false ? 'pill--red' : 'pill--green') + '">' +
           (s.active === false ? 'Tab hidden' : 'Live') + '</span>' +
       '</div><div class="panel__body">' +
@@ -1870,23 +1895,23 @@
               s.arriveEarlyMinutes + ' minutes</strong> of starting. That is what makes it "book before you ' +
               'arrive" — booking from the table, or booking a far-off slot to game the wait, earns nothing. ' +
               'Anyone without a reservation pays instantly at <strong>' + pct(s.walkinDiscountPercent) +
-              '</strong> off.</div></div>' +
-          '<div><div class="label">Restaurant</div>' +
+              '</strong> off.</div>' +
+            '<div class="hint" style="margin-top:10px">These rates apply at <strong>both</strong> restaurants. ' +
+              'A guest\u2019s table only earns the reserved rate on a bill from its own restaurant.</div></div>' +
+          '<div><div class="label">Venue</div>' +
             '<div>' + esc(s.address || '—') + '</div>' +
-            '<div class="cell-sub">' + esc(s.phone || '—') + ' · open ' + esc(s.openTime) + '–' + esc(s.closeTime) + '</div>' +
-            '<div class="cell-sub">Slots every ' + s.slotMinutes + ' min · up to ' + s.maxPartySize + ' guests · ' +
-              s.capacityPerSlot + ' seats per slot</div></div>' +
+            '<div class="cell-sub">' + esc(s.phone || '—') + '</div>' +
+            '<div class="cell-sub">Slots every ' + s.slotMinutes + ' min · up to ' + s.maxPartySize +
+              ' guests · bookable ' + s.advanceDays + ' days ahead</div>' +
+            '<div class="cell-sub">' + outlets.length + ' restaurants: ' +
+              outlets.map(function (o) { return esc(o.name) + ' (' + esc(o.dietLabel) + ')'; }).join(', ') +
+            '</div></div>' +
         '</div>' +
         '<div class="grid-2" style="margin-top:16px">' +
           '<div><div class="label">Discount cap</div><div>' +
             (s.maxDiscountAmount ? money(s.maxDiscountAmount) + ' maximum per bill' : 'No cap') + '</div></div>' +
           '<div><div class="label">Minimum bill</div><div>' +
             (s.minBillAmount ? money(s.minBillAmount) : 'No minimum') + '</div></div>' +
-        '</div>' +
-        '<div style="margin-top:16px"><div class="label">Seating areas</div>' +
-          ((s.areas || []).length
-            ? (s.areas || []).map(function (a) { return '<span class="pill" style="margin:0 6px 6px 0">' + esc(a) + '</span>'; }).join('')
-            : '<span class="hint">None configured</span>') +
         '</div>' +
         '<div class="hint" style="margin-top:14px">' +
           (s.allowWalkinWhileLocked !== false
@@ -1895,6 +1920,52 @@
         '</div>' +
       '</div></div>' +
 
+      /* One panel per restaurant. The diet mark is shown at the top of each,
+         because it is the field with real-world consequences if it is wrong. */
+      outlets.map(function (o) {
+        return '<div class="panel"><div class="panel__head">' +
+          '<h2 class="panel__title">' + mark(o.diet) + ' ' + esc(o.name) + '</h2>' +
+          '<span class="pill ' + (o.diet === 'nonveg' ? 'pill--red' : 'pill--green') + '">' +
+            esc(o.dietLabel) + '</span> ' +
+          '<span class="pill ' + (o.active === false ? 'pill--red' : '') + '">' +
+            (o.active === false ? 'Not bookable' : o.openNow ? 'Open now' : 'Closed now') + '</span>' +
+          '<span style="flex:1"></span>' +
+          '<button class="btn btn--ghost btn--sm" data-edit-outlet="' + esc(o.id) + '">' +
+            icon('edit', 15) + ' Edit ' + esc(o.name) + '</button>' +
+        '</div><div class="panel__body">' +
+          '<div class="grid-2">' +
+            '<div><div class="label">What it serves</div>' +
+              '<div>' + esc(o.cuisine || '—') + '</div>' +
+              '<div class="cell-sub">' + esc(o.dietNote || '') + '</div>' +
+              '<div class="cell-sub">' + esc(o.tagline || '') + '</div></div>' +
+            '<div><div class="label">Service</div>' +
+              '<div>Open ' + esc(o.openTime) + '–' + esc(o.closeTime) + '</div>' +
+              '<div class="cell-sub">' + o.capacityPerSlot + ' seats per slot · ' + esc(o.phone || s.phone) + '</div>' +
+              '<div class="cell-sub">Seating: ' +
+                ((o.areas || []).length ? esc((o.areas || []).join(', ')) : 'none configured') + '</div></div>' +
+          '</div>' +
+          '<div class="cards" style="margin-top:16px">' +
+            card('Revenue', money(o.stats.revenue), o.stats.bills + ' bill(s) in-app') +
+            card('Discount given', money(o.stats.discountGiven), 'taken off ' + esc(o.name) + ' bills') +
+            card('Reservations', String(o.stats.reservations), o.stats.upcoming + ' upcoming') +
+          '</div>' +
+        '</div></div>';
+      }).join('') +
+
+      /* Rows created before the restaurants were separated. Called out rather
+         than hidden, because they are the one place the ledger cannot say which
+         kitchen the money came from. */
+      (st.untaggedBills || st.untaggedReservations
+        ? '<div class="panel"><div class="panel__head">' +
+            '<h2 class="panel__title">Before the restaurants were split</h2>' +
+          '</div><div class="panel__body">' +
+            '<div class="hint">' + st.untaggedReservations + ' reservation(s) and ' + st.untaggedBills +
+            ' bill(s) were made when Dine-In was a single listing, so they are not attributed to ' +
+            'Rangoli or Dolphin. They are left as they are — guessing which kitchen served them would ' +
+            'put a claim in a guest\u2019s record that nobody can stand behind.</div>' +
+          '</div></div>'
+        : '') +
+
       '<div class="panel"><div class="panel__head">' +
         '<h2 class="panel__title">Customer notices</h2>' +
         '<span class="hint">Exactly what guests read, with tokens filled in</span>' +
@@ -1902,6 +1973,9 @@
         noticeBlock('Reserved — ready to pay', data.previews.reserved, 'Shown when a held reservation has cleared the lock.') +
         noticeBlock('Reserved — still locked', data.previews.locked, 'Shown during the ' + s.lockMinutes + '-minute wait, with a live countdown.') +
         noticeBlock('Walk-in', data.previews.walkin, 'Shown to a guest with no reservation — the "book ahead next time" nudge.') +
+        noticeBlock('Wrong restaurant', data.previews.otherOutlet,
+          'Shown when a guest holding a table at one restaurant settles a bill at the other. ' +
+          'It is the notice that keeps a downgraded discount from looking like a bug.') +
         noticeBlock('Receipt — reserved', data.previews.paidReserved, 'Shown after a reserved-table bill is paid.') +
         noticeBlock('Receipt — walk-in', data.previews.paidWalkin, 'Shown after a walk-in bill is paid.') +
       '</div></div>' +
@@ -1909,7 +1983,7 @@
       '<div class="panel"><div class="panel__head"><h2 class="panel__title">' +
         data.reservations.length + ' reservation(s)</h2></div>' +
       '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Guest</th><th>When</th><th class="num">Party</th><th>Seating</th>' +
+        '<thead><tr><th>Guest</th><th>Restaurant</th><th>When</th><th class="num">Party</th><th>Seating</th>' +
           '<th>Billing</th><th>Status</th><th></th></tr></thead>' +
         '<tbody>' + (data.reservations.length ? data.reservations.map(function (r) {
           var billing = r.status !== 'confirmed' ? '—'
@@ -1920,6 +1994,7 @@
           return '<tr>' +
             '<td><div class="cell-strong">' + esc((r.guest && r.guest.name) || r.customerName) + '</div>' +
               '<div class="cell-sub">' + esc(r.customerName) + ' · ' + esc(r.reference) + '</div></td>' +
+            '<td>' + outletLabel(r) + '</td>' +
             '<td>' + esc(shortDate(r.date)) + '<div class="cell-sub">' + esc(time12(r.time)) + '</div></td>' +
             '<td class="num">' + esc(r.partySize) + '</td>' +
             '<td>' + esc(r.area || '—') + '</td>' +
@@ -1932,17 +2007,18 @@
                 ? '<button class="btn btn--ghost btn--sm" data-cancel="' + esc(r.id) + '">Cancel</button> '
                 : '') +
               '<button class="btn btn--line btn--sm" data-del="' + esc(r.id) + '">Delete</button></td></tr>';
-        }).join('') : '<tr><td colspan="7" class="empty-state">No reservations yet.</td></tr>') +
+        }).join('') : '<tr><td colspan="8" class="empty-state">No reservations yet.</td></tr>') +
       '</tbody></table></div></div></div>' +
 
       '<div class="panel"><div class="panel__head"><h2 class="panel__title">' +
         data.bills.length + ' bill(s) paid in-app</h2></div>' +
       '<div class="panel__body panel__body--flush"><div class="table-wrap"><table>' +
-        '<thead><tr><th>Reference</th><th>Guest</th><th>Paid</th><th>Tier</th>' +
+        '<thead><tr><th>Reference</th><th>Restaurant</th><th>Guest</th><th>Paid</th><th>Tier</th>' +
           '<th class="num">Bill</th><th class="num">Discount</th><th class="num">Collected</th><th>Payment</th></tr></thead>' +
         '<tbody>' + (data.bills.length ? data.bills.map(function (b) {
           return '<tr>' +
             '<td class="mono cell-strong">' + esc(b.reference) + '</td>' +
+            '<td>' + outletLabel(b) + '</td>' +
             '<td>' + esc(b.customerName) + '</td>' +
             '<td>' + esc(dateTime(b.paidAt || b.createdAt)) + '</td>' +
             '<td>' + (b.mode === 'reserved'
@@ -1953,22 +2029,28 @@
             '<td class="num cell-strong">' + money(b.amounts.total) + '</td>' +
             '<td>' + esc(b.payment.methodLabel) +
               (b.payment.status === 'pending' ? ' <span class="pill">due</span>' : '') + '</td></tr>';
-        }).join('') : '<tr><td colspan="8" class="empty-state">No bills settled through the app yet.</td></tr>') +
+        }).join('') : '<tr><td colspan="9" class="empty-state">No bills settled through the app yet.</td></tr>') +
       '</tbody></table></div></div></div>';
 
     /** The token cheat-sheet shown under every notice input. */
     var tokenHint = 'Tokens: ' + data.noticeTokens.map(function (t) { return '{' + t + '}'; }).join('  ');
 
-    // ── Property details ──
+    // ── Venue details (the resort, not a restaurant) ──
     function propertyForm() {
       return h('<div class="form-grid">' +
-        field('Restaurant name', 'restaurantName', s.restaurantName, { span: true, placeholder: 'Kingfisher Restaurant' }) +
+        '<div class="col-span"><div class="hint">This is the <strong>venue</strong> — the resort that ' +
+          'contains both restaurants. Each restaurant has its own name, diet mark, hours and photos, ' +
+          'edited from its own panel.</div></div>' +
+        field('Venue name', 'venueName', s.venueName, { span: true, placeholder: 'Kingfisher Resort' }) +
         field('Address', 'address', s.address, { span: true, placeholder: 'Kingfisher Resort, Mandla' }) +
         field('Rating (0-5)', 'rating', s.rating, { type: 'number', placeholder: '4.3' }) +
         field('Review count', 'reviewCount', s.reviewCount, { type: 'number' }) +
-        field('Tagline', 'tagline', s.tagline, { span: true, placeholder: 'Great food, great vibes — right inside the resort' }) +
+        field('Tagline', 'tagline', s.tagline, {
+          span: true,
+          placeholder: 'Two restaurants inside the resort — reserve a table, then pay your bill from your seat.',
+        }) +
         imageField('Cover photo', 'coverPhoto', s.coverPhoto, {}) +
-        galleryField('Property photos', 'photos', s.photos, {
+        galleryField('Venue photos', 'photos', s.photos, {
           hint: 'Shown in the hero at the top of the Dine-In tab. Add more than one and guests can swipe through them.',
         }) +
         field('Amenities (comma separated)', 'amenities', (s.amenities || []).join(', '),
@@ -1981,7 +2063,7 @@
     function propertyPayload(body) {
       var raw = readForm(body);
       return {
-        restaurantName: raw.restaurantName || '',
+        venueName: raw.venueName || '',
         address: raw.address || '',
         rating: Number(raw.rating) || 0,
         reviewCount: Number(raw.reviewCount) || 0,
@@ -1994,27 +2076,108 @@
     }
 
     function editProperty() {
-      var m = modal({ title: 'Dine-In property details', body: propertyForm(), confirmLabel: 'Save property' });
+      var m = modal({ title: 'Venue details', body: propertyForm(), confirmLabel: 'Save venue' });
       bindImageField(m.body, 'coverPhoto');
       bindGalleryField(m.body, 'photos');
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
           var res = await API.put('/admin/dine-in/settings', propertyPayload(m.body));
           s = res.settings;
-          toast('Property details saved — live for customers now', 'success');
+          toast('Venue details saved — live for customers now', 'success');
           navigate('dinein');
         });
       });
     }
 
-    // ── Property details ──
+    // ── One restaurant ──
+    /* The diet field is first and carries a warning, because it is the one input
+       on this page whose being wrong sends a vegetarian into a non-veg dining
+       room. Everything else here is recoverable. */
+    function outletForm(o) {
+      return h('<div class="form-grid">' +
+        field('Restaurant name', 'name', o.name, { span: true, placeholder: 'Rangoli' }) +
+        field('Veg / non-veg', 'diet', o.diet, {
+          options: (data.diets || []).map(function (d) { return { value: d.value, label: d.long }; }),
+          hint: 'Sets the green-dot / maroon-triangle mark guests read before anything else. Getting this ' +
+            'wrong sends vegetarian guests to the wrong kitchen.',
+        }) +
+        field('Bookable', 'active', o.active === false ? 'false' : 'true', { options: [
+          { value: 'true', label: 'Yes — guests can reserve and pay here' },
+          { value: 'false', label: 'No — hide this restaurant from guests' },
+        ] }) +
+        field('Diet note (plain words)', 'dietNote', o.dietNote, {
+          span: true,
+          placeholder: 'No meat, no egg, no fish. Separate kitchen from Dolphin.',
+          hint: 'Shown under the mark, so the same fact is stated twice — once as a symbol, once in words.',
+        }) +
+        field('Cuisine', 'cuisine', o.cuisine, { span: true, placeholder: 'North Indian · South Indian · Chinese' }) +
+        field('Tagline', 'tagline', o.tagline, { span: true }) +
+        field('Phone', 'phone', o.phone) +
+
+        '<div class="col-span"><div class="label" style="margin-top:6px">Service</div>' +
+          '<div class="hint">Hours and seats are per restaurant — the two do not open at the same time.</div></div>' +
+        field('Opens', 'openTime', o.openTime, { placeholder: '11:00' }) +
+        field('Closes', 'closeTime', o.closeTime, { placeholder: '23:00' }) +
+        field('Seats per slot', 'capacityPerSlot', o.capacityPerSlot, {
+          type: 'number', hint: 'This restaurant\u2019s own seat pool — a full slot here leaves the other one untouched.',
+        }) +
+        field('Seating areas (comma separated)', 'areas', (o.areas || []).join(', '), {
+          span: true, placeholder: 'Indoor AC, Garden, Rooftop',
+        }) +
+
+        '<div class="col-span"><div class="label" style="margin-top:6px">Photos</div></div>' +
+        imageField('Cover photo', 'coverPhoto', o.coverPhoto, {}) +
+        galleryField('Restaurant photos', 'photos', o.photos, {
+          hint: 'Used wherever this restaurant is shown on its own.',
+        }) +
+        '</div>');
+    }
+
+    function outletPayload(body) {
+      var raw = readForm(body);
+      return {
+        name: raw.name,
+        diet: raw.diet,
+        active: raw.active === 'true',
+        dietNote: raw.dietNote,
+        cuisine: raw.cuisine,
+        tagline: raw.tagline,
+        phone: raw.phone,
+        openTime: raw.openTime,
+        closeTime: raw.closeTime,
+        capacityPerSlot: Number(raw.capacityPerSlot),
+        areas: csvList(raw.areas),
+        coverPhoto: raw.coverPhoto || '',
+        photos: (raw.photos || '').split('\n').filter(Boolean),
+      };
+    }
+
+    function editOutlet(id) {
+      var o = outlets.find(function (x) { return x.id === id; });
+      if (!o) return;
+      var m = modal({ title: 'Edit ' + o.name, body: outletForm(o), confirmLabel: 'Save ' + o.name });
+      bindImageField(m.body, 'coverPhoto');
+      bindGalleryField(m.body, 'photos');
+      m.confirmBtn.addEventListener('click', function () {
+        submitModal(m, async function () {
+          await API.put('/admin/dine-in/outlets/' + id, outletPayload(m.body));
+          toast(o.name + ' saved — live for customers now', 'success');
+          navigate('dinein');
+        });
+      });
+    }
+
+    // ── Discounts, the lock and the notice copy (venue-wide) ──
     function settingsForm() {
       return h('<div class="form-grid">' +
+        '<div class="col-span"><div class="hint">Everything here applies to <strong>both</strong> ' +
+          'restaurants. One brand, one offer — per-restaurant discounts would give guests a reason to ' +
+          'pick a kitchen on price instead of on what they want to eat.</div></div>' +
         field('Dine-In tab', 'active', s.active === false ? 'false' : 'true', { options: [
           { value: 'true', label: 'Live (customers can reserve and pay)' },
           { value: 'false', label: 'Hidden (in-app billing switched off)' },
         ] }) +
-        field('Restaurant name', 'restaurantName', s.restaurantName) +
+        field('Venue name', 'venueName', s.venueName) +
         field('Tagline', 'tagline', s.tagline, { span: true }) +
         field('Address', 'address', s.address, { span: true }) +
         field('Phone', 'phone', s.phone) +
@@ -2054,19 +2217,17 @@
           { value: 'false', label: 'Make them wait for the window' },
         ] }) +
 
-        '<div class="col-span"><div class="label" style="margin-top:6px">Reservation window</div></div>' +
-        field('Opens', 'openTime', s.openTime, { placeholder: '11:00' }) +
-        field('Closes', 'closeTime', s.closeTime, { placeholder: '23:00' }) +
+        '<div class="col-span"><div class="label" style="margin-top:6px">Reservation window</div>' +
+          '<div class="hint">Opening hours, seat capacity and seating areas are set per restaurant, ' +
+            'from each restaurant\u2019s own panel.</div></div>' +
         field('Slot length (minutes)', 'slotMinutes', s.slotMinutes, { type: 'number' }) +
-        field('Seats per slot', 'capacityPerSlot', s.capacityPerSlot, { type: 'number' }) +
         field('Maximum party size', 'maxPartySize', s.maxPartySize, { type: 'number' }) +
         field('Bookable days ahead', 'advanceDays', s.advanceDays, { type: 'number' }) +
-        field('Seating areas (comma separated)', 'areas', (s.areas || []).join(', '), {
-          span: true, placeholder: 'Indoor AC, Garden, Rooftop',
-        }) +
 
         '<div class="col-span"><div class="label" style="margin-top:6px">Customer notices</div>' +
-          '<div class="hint">' + esc(tokenHint) + '</div></div>' +
+          '<div class="hint">' + esc(tokenHint) + '</div>' +
+          '<div class="hint">{outlet} is the restaurant the notice is about; {reservedOutlet} is the one ' +
+            'holding the guest\u2019s table; {venue} is the resort.</div></div>' +
         field('Reserved — ready to pay', 'reservedNotice', s.reservedNotice, { type: 'textarea', span: true }) +
         field('Reserved — still locked', 'lockedNotice', s.lockedNotice, {
           type: 'textarea', span: true,
@@ -2075,6 +2236,11 @@
         field('Walk-in', 'walkinNotice', s.walkinNotice, {
           type: 'textarea', span: true,
           hint: 'The "book a table before you arrive next time" nudge.',
+        }) +
+        field('Wrong restaurant', 'otherOutletNotice', s.otherOutletNotice, {
+          type: 'textarea', span: true,
+          hint: 'Shown when the guest\u2019s table is at the other restaurant. Use {reservedOutlet} and ' +
+            '{outlet} to name both — a guest who silently gets the lower rate assumes something broke.',
         }) +
         field('Receipt — reserved', 'paidReservedNotice', s.paidReservedNotice, { type: 'textarea', span: true }) +
         field('Receipt — walk-in', 'paidWalkinNotice', s.paidWalkinNotice, { type: 'textarea', span: true }) +
@@ -2085,7 +2251,7 @@
       var raw = readForm(body);
       return {
         active: raw.active === 'true',
-        restaurantName: raw.restaurantName,
+        venueName: raw.venueName,
         tagline: raw.tagline,
         address: raw.address,
         phone: raw.phone,
@@ -2099,16 +2265,13 @@
         arriveEarlyMinutes: Number(raw.arriveEarlyMinutes),
         graceHours: Number(raw.graceHours),
         allowWalkinWhileLocked: raw.allowWalkinWhileLocked === 'true',
-        openTime: raw.openTime,
-        closeTime: raw.closeTime,
         slotMinutes: Number(raw.slotMinutes),
-        capacityPerSlot: Number(raw.capacityPerSlot),
         maxPartySize: Number(raw.maxPartySize),
         advanceDays: Number(raw.advanceDays),
-        areas: csvList(raw.areas),
         reservedNotice: raw.reservedNotice,
         lockedNotice: raw.lockedNotice,
         walkinNotice: raw.walkinNotice,
+        otherOutletNotice: raw.otherOutletNotice,
         paidReservedNotice: raw.paidReservedNotice,
         paidWalkinNotice: raw.paidWalkinNotice,
       };
@@ -2127,10 +2290,15 @@
       });
     });
 
+    /* Each restaurant panel has its own Edit button. */
+    content.querySelectorAll('[data-edit-outlet]').forEach(function (btn) {
+      btn.addEventListener('click', function () { editOutlet(btn.getAttribute('data-edit-outlet')); });
+    });
+
     topActions.querySelector('[data-action="reset-notices"]').addEventListener('click', async function () {
       var ok = await confirmDialog(
         'Reset all notices?',
-        'The five customer notices go back to their default wording. Your discount percentages and lock window are not touched.',
+        'The six customer notices go back to their default wording. Your discount percentages, lock window and restaurant details are not touched.',
         'Reset notices'
       );
       if (!ok) return;

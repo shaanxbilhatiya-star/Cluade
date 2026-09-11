@@ -258,6 +258,20 @@ router.get('/admin/stats', auth.requireAdmin, () => {
       'dineReservations',
       (r) => r.status === 'confirmed' && new Date(r.startsAt).getTime() > Date.now()
     ).length,
+    /* Split by restaurant. The resort runs two kitchens with two cost bases, so a
+       single blended "Dine-In revenue" figure hides the question management
+       actually asks: which of the two is carrying the offer? */
+    byOutlet: dine.outlets().map((o) => {
+      const mine = dineBills.filter((b) => b.outletId === o.id);
+      return {
+        id: o.id,
+        name: o.name,
+        diet: o.diet,
+        bills: mine.length,
+        revenue: mine.reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+        discountGiven: mine.reduce((sum, b) => sum + (b.amounts?.discount || 0), 0),
+      };
+    }),
   };
 
   // The water park sells day passes out of its own collection, so it is
@@ -780,6 +794,7 @@ router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
  */
 router.get('/admin/dine-in', auth.requireAdmin, () => {
   const s = dine.settings();
+  const outlets = dine.outlets(s);
   const customerName = (userId) => {
     const user = db.byId('users', userId);
     return user ? user.name : 'Unknown';
@@ -793,46 +808,110 @@ router.get('/admin/dine-in', auth.requireAdmin, () => {
   const bills = [...db.get('dineBills')]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 200)
-    .map((b) => Object.assign({}, b, { customerName: customerName(b.userId) }));
+    .map((b) => Object.assign({}, b, { customerName: customerName(b.userId), outlet: dine.outletOf(b, s) }));
+
+  /* Previews are rendered against a real outlet — the first one — so the admin
+     reads the notice the way a guest will, restaurant name included, rather than
+     a version with the venue name standing in for it. */
+  const sample = outlets[0];
+  const other = outlets[1] || sample;
+  const withOutlet = (extra = {}, reservedAt = null) =>
+    dine.noticeTokens(s, Object.assign({}, extra, dine.outletTokens(s, sample, reservedAt)));
+
+  const allBills = db.get('dineBills');
+  const allReservations = db.get('dineReservations');
 
   return {
     settings: s,
     defaults: dine.DEFAULTS,
+    /** The two restaurants, editable. */
+    outlets: outlets.map((o) =>
+      Object.assign({}, o, {
+        dietLabel: dine.diet(o.diet).label,
+        dietLong: dine.diet(o.diet).long,
+        openNow: dine.outletOpenNow(o),
+        /** Per-restaurant trade, so the split is visible where it is managed. */
+        stats: (() => {
+          const mine = allBills.filter((b) => b.outletId === o.id);
+          const tables = allReservations.filter((r) => r.outletId === o.id);
+          return {
+            bills: mine.length,
+            revenue: mine.reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+            discountGiven: mine.reduce((sum, b) => sum + (b.amounts?.discount || 0), 0),
+            reservations: tables.length,
+            upcoming: tables.filter(
+              (r) => r.status === 'confirmed' && new Date(r.startsAt).getTime() > Date.now()
+            ).length,
+          };
+        })(),
+      })
+    ),
+    /** Diet options for the outlet form. */
+    diets: Object.entries(dine.DIETS).map(([value, meta]) => ({ value, label: meta.label, long: meta.long })),
     /** Token reference shown under the notice inputs in the admin form. */
     noticeTokens: Object.keys(dine.noticeTokens(s)),
     /** Live render of each notice, so the admin sees exactly what a guest reads. */
     previews: {
-      reserved: dine.renderNotice(s.reservedNotice, dine.noticeTokens(s)),
+      reserved: dine.renderNotice(s.reservedNotice, withOutlet()),
       locked: dine.renderNotice(
         s.lockedNotice,
-        dine.noticeTokens(s, {
+        withOutlet({
           minutesLeft: dine.durationLabel(s.lockMinutes),
           unlockTime: dine.clockLabel(new Date(Date.now() + s.lockMinutes * 60000)),
         })
       ),
-      walkin: dine.renderNotice(s.walkinNotice, dine.noticeTokens(s)),
+      walkin: dine.renderNotice(s.walkinNotice, withOutlet()),
+      /* Previewed the way it actually fires: billing at one restaurant while the
+         table is held at the other. */
+      otherOutlet: dine.renderNotice(
+        s.otherOutletNotice,
+        dine.noticeTokens(s, dine.outletTokens(s, other, sample))
+      ),
       paidReserved: dine.renderNotice(
         s.paidReservedNotice,
-        dine.noticeTokens(s, { saving: dine.money(Math.round((1000 * s.reservedDiscountPercent) / 100)) })
+        withOutlet({ saving: dine.money(Math.round((1000 * s.reservedDiscountPercent) / 100)) })
       ),
       paidWalkin: dine.renderNotice(
         s.paidWalkinNotice,
-        dine.noticeTokens(s, { saving: dine.money(Math.round((1000 * s.walkinDiscountPercent) / 100)) })
+        withOutlet({ saving: dine.money(Math.round((1000 * s.walkinDiscountPercent) / 100)) })
       ),
     },
     stats: {
-      bills: db.get('dineBills').length,
-      revenue: db.get('dineBills').reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
-      discountGiven: db.get('dineBills').reduce((sum, b) => sum + (b.amounts?.discount || 0), 0),
-      reservations: db.get('dineReservations').length,
+      bills: allBills.length,
+      revenue: allBills.reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+      discountGiven: allBills.reduce((sum, b) => sum + (b.amounts?.discount || 0), 0),
+      reservations: allReservations.length,
       upcoming: db.find(
         'dineReservations',
         (r) => r.status === 'confirmed' && new Date(r.startsAt).getTime() > Date.now()
       ).length,
+      /** Rows that predate the split and are attributed to neither restaurant. */
+      untaggedBills: allBills.filter((b) => !b.outletId).length,
+      untaggedReservations: allReservations.filter((r) => !r.outletId).length,
     },
     reservations,
     bills,
   };
+});
+
+/**
+ * Updates one restaurant: its name, its veg/non-veg mark, cuisine, hours, seat
+ * capacity, seating areas and photos.
+ *
+ * It is a separate endpoint from the settings PUT because the two are different
+ * kinds of decision. Discounts are one commercial policy for the resort; this is
+ * the identity of a specific dining room, and the diet mark in particular is the
+ * single most consequential field in the whole tab.
+ */
+router.put('/admin/dine-in/outlets/:id', auth.requireAdmin, (ctx) => {
+  const body = Object.assign({}, ctx.body);
+  const key = `dinein-${String(ctx.params.id).replace(/[^a-z0-9-]/gi, '')}`;
+  if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('dinein', key, body.coverPhoto);
+  const photos = resolvePhotoList(body.photos, 'dinein', key);
+  if (photos !== undefined) body.photos = photos;
+
+  const outlet = dine.saveOutlet(ctx.params.id, body);
+  return { outlet, settings: dine.settings() };
 });
 
 /**
@@ -868,11 +947,12 @@ router.post('/admin/dine-in/reservations/:id/cancel', auth.requireAdmin, (ctx) =
   });
   // The guest loses their in-app discount, so they are told — same as when they
   // cancel it themselves.
+  const where = dine.outletOf(reservation);
   notify(
     reservation.userId,
     'Reservation cancelled',
-    `Your table at ${dine.settings().restaurantName} on ${reservation.date} at ${reservation.time} ` +
-      'was cancelled by the restaurant. Please call us to rebook.',
+    `Your table at ${where ? where.name : dine.settings().venueName} on ${reservation.date} at ` +
+      `${reservation.time} was cancelled by the restaurant. Please call us to rebook.`,
     'booking'
   );
   return { reservation: dine.decorateReservation(updated) };

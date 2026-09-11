@@ -51,7 +51,8 @@ Open that on your phone (same network). The customer UI is designed phone-first;
 ```bash
 npm start              # node server.js
 npm test               # end-to-end API smoke test (134 assertions)
-npm run test:dine-in   # Dine-In tab, end to end (90 assertions)
+npm run test:dine-in   # Dine-In tab, end to end (126 assertions)
+npm run test:dine-in-ui  # renders both restaurants in headless Chrome (71 assertions)
 npm run test:waterpark # Water park tab, end to end (152 assertions)
 npm run test:promos    # Tab sliders, end to end (59 assertions)
 npm run test:ui        # renders the admin console + app in headless Chrome (224 assertions)
@@ -152,6 +153,17 @@ Movie, Stay, Dine-In and Water Park can each open with an **auto-scrolling photo
 
 **Food Order** — offer-banner carousel, category rails (*Most Popular*, *New Beverages*, *Value Combos*…), item detail pages, a persistent cart, and checkout with cinema + pickup-slot selection.
 
+**Dine-In** — the resort's restaurants, and the tab's whole job is making sure a guest always knows *which one* they are dealing with. Kingfisher Resort has two, side by side: **Rangoli** (pure veg, its own kitchen) and **Dolphin** (non-veg). Guests routinely do not realise that, which produces two real failures — a vegetarian family walking into the wrong dining room, and a bill settled against the outlet they did not eat at — so the restaurant is part of the data model, not a label:
+
+- the tab opens on the **resort**, with a *"Two restaurants, one resort"* explainer and one card per restaurant, each carrying the FSSAI-style **green dot / maroon triangle** mark plus the same fact in words;
+- reserving and paying are per restaurant (`/dine-in/reserve/:outletId`, `/dine-in/bill/:outletId`), each behind a **sticky banner** naming it, with a *Change* button; a link that arrives without a restaurant gets a chooser rather than a default;
+- **paying asks for confirmation**, naming the restaurant and its diet mark, because a wrong-restaurant payment is the one mistake a guest cannot undo;
+- each restaurant keeps its **own hours, seating areas and seat pool**, so a full Saturday at Dolphin never hides a free table at Rangoli;
+- a table earns its discount **at its own restaurant only** — holding a Rangoli table and paying at Dolphin gets the walk-in rate, and the screen says so in words rather than quietly charging less than the guest expected;
+- reservations, bills, receipts, notifications and the Account history all carry the restaurant and its mark.
+
+The **discount** itself is deliberately venue-wide: 30% off with a reservation held at least `lockMinutes` before you arrive, 10% walking in, the same at both restaurants. One brand running one offer — per-restaurant rates would give guests a reason to pick a kitchen on price instead of on what they want to eat, which is the confusion this design exists to remove. Billing against a reservation is **locked** until the table has been held for the full window *and* the sitting is about to start, so booking from your seat cannot buy the bigger discount.
+
 **Water Park** — the *Family Fun Day* tab. All-in-one family packages, each showing its full value breakup (every line, its quantity, its rate and its value) so the guest can see why the flat price is a saving; or **build the day person by person** from the same rate card with every quantity editable. Add-ons (fish spa, bull ride, massage chair, photography) on top of either, entry-slot capacity, and a day pass with a scannable gate barcode. Totals are always quoted by the server, so the price shown is the price charged.
 
 **My Tickets** — `Upcoming / Passed / Canceled` tabs × `Movie / Food / Event` filters, per-booking **"Remind me 30 minutes earlier"** toggle, and a full ticket view with a scannable barcode, itemised bill and cancellation.
@@ -167,6 +179,8 @@ The first three rows deep-link into My Tickets filtered by type (`#/tickets?type
 Dashboard (revenue, 7-day trend, occupancy, top movies) · Movies CRUD · Cinemas CRUD · Screens with seat-layout presets · Showtimes (manual + auto-scheduler, clash detection) · Bookings (search, check-in, cancel) · **Verify Ticket** gate scanner · Hotel & Rooms · Dine-In · **Water Park** · **Tab Sliders** · Food CRUD · Offers CRUD · Customers (spend, enable/disable).
 
 **Tab Sliders** manages the auto-scrolling photo strip at the top of the Movie, Stay, Dine-In and Water Park tabs. Pick a tab, add photos, set the seconds per photo, save. It uses the same multi-photo picker as the hotel's *Property photos*, so slider photos are managed exactly like property photos: any size or ratio, uploaded at full quality, shown whole rather than cropped, first photo first. Nothing is drawn over a photo — these are finished creatives. A tab with no photos shows no slider at all, and the whole strip can be switched off per tab.
+
+**Dine-In** is organised the way the tab is: the **venue** and its one commercial policy at the top (discounts, the billing lock, bill bounds, the six `{token}`-aware customer notices), then **one panel per restaurant** — name, veg/non-veg mark, cuisine, diet note, hours, seats per slot, seating areas, photos, and that restaurant's own revenue, discount given and reservations. Both ledgers carry a **Restaurant** column with the diet mark, so no row is ambiguous. The diet field is guarded: only `veg` or `nonveg` are accepted, a restaurant that closes before it opens is refused, and the last open restaurant cannot be hidden (switch the whole tab off instead). Rows created before the two restaurants were separated are called out as unattributed rather than being guessed at.
 
 **Water Park** is a full operations console for the tab: one editable **rate card** that every package line and every per-person booking is priced from, so changing the adult entry rate reprices both packages and the per-person builder at once. Packages are edited as quantities against that rate card — the total actual value and the "you save" figure are computed, never typed, and the editor recomputes them as you type while warning if a package is priced above its own parts or carries the wrong number of entry tickets. Plus add-on pricing, opening hours and slot capacity, admin-editable customer notices with `{token}` substitution, a live gate-load view, a filterable pass ledger with check-in, and **counter sales** — sell a walk-up pass (package or per person) with a live server-priced total and no customer account needed.
 
