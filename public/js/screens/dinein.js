@@ -232,8 +232,8 @@
               ? '<div class="section">' +
                   '<a class="card exp-call" href="' + telHref(s.phone) + '">' +
                     '<span class="exp-call__icon">' + UI.icon('phone', 22) + '</span>' +
-                    '<span class="exp-call__text"><strong>Call the restaurant</strong>' +
-                      '<span>' + UI.esc(s.phone) + '</span></span>' +
+                    '<span class="exp-call__text"><strong>Having doubts on discounts?</strong>' +
+                      '<span>Call us · ' + UI.esc(s.phone) + '</span></span>' +
                     '<span class="exp-call__arrow">' + UI.icon('arrow-right', 18) + '</span>' +
                   '</a></div>'
               : '') +

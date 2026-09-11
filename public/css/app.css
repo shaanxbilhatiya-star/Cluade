@@ -1079,7 +1079,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .exp-call {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px; margin-bottom: 4px;
-  background: var(--primary-600); border-color: var(--primary-600); color: #fff;
+  background: #DC2626; border-color: #DC2626; color: #fff;
 }
 .exp-call__icon {
   width: 40px; height: 40px; border-radius: 50%;
