@@ -1489,108 +1489,245 @@ body.photo-viewer-open { overflow: hidden; }
 
 
 /* ── Dine-In ────────────────────────────────────────────────────────────── */
-.dine-hero {
-  padding: 12px 16px 16px;
-  background: transparent;
-  color: var(--ink);
-}
-.dine-hero__name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; }
-.dine-hero__tagline { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
-.dine-hero__meta { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
-.dine-hero__meta svg { flex: none; color: var(--muted); }
-.dine-hero__actions { display: flex; gap: 10px; margin-top: 14px; }
-.dine-hero__btn {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 12px 10px; border-radius: var(--radius);
-  font-size: 14px; font-weight: 700;
-  background: var(--card); color: var(--ink); border: 1.5px solid var(--line-strong);
-}
-.dine-hero__btn--solid { background: var(--primary); color: #fff; border-color: var(--primary); }
+/* The resort has TWO restaurants — Rangoli (pure veg) and Dolphin (non-veg) —
+   and every style below exists to keep them told apart. */
 
-/* The headline discount pair: 30% with a reservation vs 10% walking in. */
-.dine-tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
-.dine-tier {
-  padding: 14px; border-radius: var(--radius);
-  border: 1.5px solid var(--line-strong); background: var(--card);
-  display: flex; flex-direction: column; gap: 4px;
+/* ── The veg / non-veg mark ──────────────────────────────────────────────────
+   The FSSAI convention Indian diners already read fluently: a filled circle in a
+   green box for vegetarian, a filled triangle in a maroon box for non-veg. Drawn
+   in CSS so it renders identically everywhere, and in fixed brand-independent
+   colours: these two greens and reds mean something specific to guests, so they
+   are deliberately NOT themeable and do not change between light and dark mode. */
+.veg-mark {
+  flex: none;
+  display: inline-block; position: relative;
+  width: 15px; height: 15px;
+  border: 1.5px solid; border-radius: 3px;
+  box-sizing: border-box;
+  vertical-align: -2px;
 }
-.dine-tier--best { border-color: var(--primary-600); background: var(--primary-soft); }
-.dine-tier__off { font-size: 27px; font-weight: 800; color: var(--primary-700); line-height: 1.05; }
-.dine-tier--plain .dine-tier__off { color: var(--ink); }
-.dine-tier__label { font-size: 13.5px; font-weight: 700; }
-.dine-tier__hint { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
-.dine-tier__flag {
-  align-self: flex-start; margin-bottom: 2px;
-  font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 20px;
-  background: var(--primary-600); color: #fff;
+.veg-mark--veg { border-color: #1e8e3e; }
+.veg-mark--veg::after {
+  content: ''; position: absolute; inset: 2.5px;
+  border-radius: 50%; background: #1e8e3e;
+}
+.veg-mark--nonveg { border-color: #a01a12; }
+/* A triangle, not a square — shape carries the meaning for anyone who cannot
+   rely on the colour difference. */
+.veg-mark--nonveg::after {
+  content: ''; position: absolute; left: 2px; right: 2px; bottom: 2.5px;
+  border-left: 4.5px solid transparent;
+  border-right: 4.5px solid transparent;
+  border-bottom: 8px solid #a01a12;
+}
+/* Where the mark is dropped inline ahead of a restaurant name in a dense list
+   row, it needs its own breathing room — flex gap does not apply there. */
+.ticket__sub .veg-mark,
+.dine-bill-row__title .veg-mark { margin-right: 5px; }
+
+/* Mark + wording, e.g. a green mark beside "PURE VEG". */
+.diet-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px 3px 6px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .5px;
+  border: 1px solid;
+}
+.diet-tag--veg { color: #1e8e3e; border-color: rgba(30, 142, 62, .35); background: rgba(30, 142, 62, .1); }
+.diet-tag--nonveg { color: #a01a12; border-color: rgba(160, 26, 18, .35); background: rgba(160, 26, 18, .1); }
+
+/* ── "Two restaurants, one resort" explainer ─────────────────────────────────
+   Sits directly under the hero, because the fact that there are two is the thing
+   guests do not know. */
+.dine-explainer {
+  margin: 14px 16px 0; padding: 14px 16px;
+  border-radius: var(--radius); border: 1px solid var(--line);
+  background: var(--bg-sunken);
+}
+.dine-explainer__title {
+  display: flex; align-items: center; gap: 7px;
+  margin: 0; font-size: 14px; font-weight: 800;
+}
+.dine-explainer__title svg { flex: none; color: var(--primary); }
+.dine-explainer__text { margin: 7px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-soft); }
+.dine-explainer__list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 9px; }
+.dine-explainer__list li { display: flex; align-items: flex-start; gap: 9px; font-size: 12.5px; line-height: 1.45; }
+.dine-explainer__list strong { font-weight: 800; }
+.dine-explainer__list small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
+/* ── The offer, stated once for the whole resort ─────────────────────────────
+   Venue-wide on purpose: printing it on each restaurant card would suggest the
+   two compete on price, when the only real choice is veg or non-veg. */
+.dine-deal { margin: 12px 16px 0; padding: 14px 16px; border-radius: var(--radius); background: var(--primary-soft); }
+.dine-deal__row { display: flex; align-items: center; gap: 12px; }
+.dine-deal__row + .dine-deal__row { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0, 0, 0, .07); }
+.dine-deal__pct {
+  flex: none; min-width: 52px;
+  font-size: 25px; font-weight: 800; line-height: 1; color: var(--primary-700);
+}
+.dine-deal__row--plain .dine-deal__pct { color: var(--ink-soft); font-size: 21px; }
+.dine-deal__text { min-width: 0; }
+.dine-deal__text strong { display: block; font-size: 13.5px; font-weight: 700; }
+.dine-deal__text span { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
+.dine-deal__note { margin: 12px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-soft); }
+
+/* ── One card per restaurant ─────────────────────────────────────────────────
+   The coloured left edge repeats the diet mark as a second, peripheral signal, so
+   the two cards never read as one list of options. */
+.dine-outlets { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px 0; }
+.dine-outlet {
+  padding: 16px; border-radius: 16px;
+  border: 1px solid var(--line); border-left-width: 4px;
+  background: var(--card);
+}
+.dine-outlet--veg { border-left-color: #1e8e3e; }
+.dine-outlet--nonveg { border-left-color: #a01a12; }
+.dine-outlet__head { margin-bottom: 10px; }
+.dine-outlet__title { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.dine-outlet__name { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+.dine-outlet__cuisine { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.dine-outlet__diet-note {
+  margin: 0 0 10px; padding: 9px 11px; border-radius: 10px;
+  background: var(--bg-sunken);
+  font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+}
+.dine-outlet__hours {
+  display: flex; align-items: center; gap: 7px;
+  margin: 0; font-size: 12.5px; color: var(--muted);
+}
+.dine-outlet__hours svg { flex: none; }
+.dine-outlet__closed { color: var(--warning); font-weight: 700; }
+.dine-outlet__shut { margin: 10px 0 0; font-size: 12.5px; font-weight: 700; color: var(--danger); }
+
+/* The booked-table block, scoped inside its own restaurant's card so a guest
+   holding tables at both sees two independent countdowns. */
+.dine-outlet__res {
+  margin-top: 14px; padding: 13px 14px;
+  border-radius: 12px; background: var(--primary-soft);
+}
+.dine-outlet__res-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dine-outlet__res-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--primary-700);
+}
+.dine-outlet__res-badge svg { flex: none; }
+.dine-outlet__res-pct { font-size: 14px; font-weight: 800; color: var(--primary-700); }
+.dine-outlet__res-when { margin-top: 8px; font-size: 15.5px; font-weight: 800; }
+.dine-outlet__res-meta { margin-top: 3px; font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
+.dine-outlet__res .dine-lock { margin-top: 12px; }
+.dine-outlet__actions { display: flex; flex-direction: column; gap: 9px; margin-top: 14px; }
+
+/* ── "Which restaurant?" chooser ─────────────────────────────────────────────
+   Where an old link arrives without naming one. It asks instead of defaulting,
+   the same rule the API enforces. */
+.dine-pick-intro { padding: 18px 16px 4px; }
+.dine-pick-intro h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.2px; }
+.dine-pick-intro p { margin: 7px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+.dine-picks { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 0; }
+.dine-pick {
+  display: block; width: 100%; text-align: left;
+  padding: 16px; border-radius: 16px;
+  border: 1px solid var(--line); border-left-width: 4px;
+  background: var(--card); color: inherit;
+}
+.dine-pick:disabled { opacity: .55; }
+.dine-pick--veg { border-left-color: #1e8e3e; }
+.dine-pick--nonveg { border-left-color: #a01a12; }
+.dine-pick__top { display: flex; align-items: center; gap: 9px; }
+.dine-pick__name { display: block; margin-top: 9px; font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+.dine-pick__cuisine { display: block; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.dine-pick__note { display: block; margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--ink-soft); }
+.dine-pick__hours { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.dine-pick__flag {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
+  font-size: 11.5px; font-weight: 700; color: var(--primary-700);
+}
+.dine-pick__shut { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--danger); }
+
+/* ── The identity banner on every reserve / pay screen ───────────────────────
+   Sticky: however far down a bill a guest scrolls, the restaurant they are about
+   to pay stays on screen. */
+.dine-ident {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid;
+  background: var(--card);
+}
+.dine-ident--veg { border-left-color: #1e8e3e; }
+.dine-ident--nonveg { border-left-color: #a01a12; }
+.dine-ident .veg-mark { width: 18px; height: 18px; }
+.dine-ident__text { flex: 1; min-width: 0; }
+.dine-ident__name { display: flex; align-items: baseline; gap: 8px; font-size: 16.5px; font-weight: 800; }
+.dine-ident__name small { font-size: 11px; font-weight: 700; letter-spacing: .4px; color: var(--muted); text-transform: uppercase; }
+.dine-ident__sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+.dine-ident__switch {
+  flex: none; padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: none; color: var(--ink-soft);
+  font-size: 12px; font-weight: 700;
+}
+.dine-ident-note {
+  margin: 10px 16px 0; padding: 9px 11px; border-radius: 10px;
+  background: var(--bg-sunken);
+  font-size: 12px; line-height: 1.5; color: var(--ink-soft);
 }
 
-/* ── Eligibility status section ───────────────────────────────────────────── */
-/* One clear card that answers "which discount am I getting right now?" */
-.dine-elig-section { padding: 0 16px 4px; display: flex; flex-direction: column; gap: 10px; }
+/* "Check your printed bill says Rangoli" — the cheap guard against paying the
+   wrong restaurant, placed before the amount field. */
+.dine-bill-check {
+  display: flex; align-items: flex-start; gap: 7px;
+  margin: 12px 16px 0; font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+}
+.dine-bill-check svg { flex: none; margin-top: 1px; color: var(--muted); }
+.dine-bill-check strong { font-weight: 800; color: var(--ink); }
 
-.dine-elig-card {
-  border-radius: var(--radius); padding: 16px;
-  border: 1.5px solid var(--line-strong); background: var(--card);
+/* Holding a table at the OTHER restaurant: explain it, and offer the switch. */
+.dine-elsewhere {
+  display: flex; align-items: center; gap: 11px;
+  margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px;
+  border: 1px dashed var(--line-strong); background: var(--bg-sunken);
 }
-.dine-elig-card--best {
-  border-color: var(--primary-600); background: var(--primary-soft);
-}
-.dine-elig-card--walkin {
-  border-color: var(--line-strong); background: var(--card);
-}
-
-.dine-elig-card__header {
-  display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
-}
-.dine-elig-card__pct {
-  font-size: 44px; font-weight: 800; color: var(--primary-700);
-  line-height: 1; flex: none; letter-spacing: -1px;
-}
-.dine-elig-card__pct--plain { color: var(--ink); }
-.dine-elig-card__pct-off {
-  font-size: 16px; font-weight: 800; vertical-align: super; letter-spacing: 0;
+.dine-elsewhere__text { flex: 1; min-width: 0; }
+.dine-elsewhere__text strong { display: block; font-size: 13px; font-weight: 700; }
+.dine-elsewhere__text span { display: block; margin-top: 3px; font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }
+.dine-elsewhere__btn {
+  flex: none; padding: 8px 13px; border-radius: 999px;
+  border: 1px solid var(--primary); background: var(--primary); color: #fff;
+  font-size: 12px; font-weight: 700;
 }
 
-.dine-elig-card__info { flex: 1; min-width: 0; }
-.dine-elig-card__badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
-  padding: 3px 9px; border-radius: 20px; margin-bottom: 5px;
-  background: var(--primary-600); color: #fff;
+/* The confirm-the-restaurant sheet, shown before any payment goes through. */
+.dine-confirm {
+  display: flex; align-items: center; gap: 11px;
+  padding: 13px 14px; border-radius: 12px;
+  border: 1px solid var(--line); border-left: 4px solid;
+  background: var(--bg-sunken);
 }
-.dine-elig-card__badge svg { width: 11px; height: 11px; }
-.dine-elig-card__badge--walkin { background: var(--bg-sunken); color: var(--ink-soft); }
+.dine-confirm--veg { border-left-color: #1e8e3e; }
+.dine-confirm--nonveg { border-left-color: #a01a12; }
+.dine-confirm .veg-mark { width: 20px; height: 20px; }
+.dine-confirm strong { display: block; font-size: 17px; font-weight: 800; }
+.dine-confirm small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
 
-.dine-elig-card__title { font-size: 14.5px; font-weight: 700; line-height: 1.3; }
-.dine-elig-card__meta { font-size: 12px; color: var(--ink-soft); margin-top: 3px; line-height: 1.45; }
-.dine-elig-card__ref { font-size: 11px; color: var(--muted); letter-spacing: .5px; margin-top: 4px; }
+/* ── Grouped history (Account → Restaurant Reservations) ─────────────────── */
+.dine-group + .dine-group { margin-top: 18px; }
+.dine-group-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 9px;
+  font-size: 13px;
+}
+.dine-group-head strong { font-weight: 800; }
+.dine-group-head span { font-size: 11px; color: var(--muted); }
+.dine-group-head--unknown { flex-direction: column; align-items: flex-start; gap: 2px; }
 
-/* Upgrade nudge — shown when walk-in, suggesting a reservation for a better deal */
-.dine-upgrade-card {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px; border-radius: var(--radius);
-  background: var(--bg-sunken); border: 1.5px dashed var(--line-strong);
-}
-.dine-upgrade-card__pct {
-  font-size: 22px; font-weight: 800; color: var(--primary-700); flex: none;
-  background: var(--primary-soft); border-radius: 8px;
-  padding: 6px 10px; line-height: 1;
-}
-.dine-upgrade-card__body {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;
-}
-.dine-upgrade-card__body strong { font-size: 13.5px; font-weight: 700; }
-.dine-upgrade-card__body span { font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
-.dine-upgrade-card__btn { flex: none; padding: 9px 12px; font-size: 13px; }
+/* Spend per restaurant. */
+.dine-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dine-split__cell { padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
+.dine-split__head { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+.dine-split__amt { margin-top: 7px; font-size: 18px; font-weight: 800; }
+.dine-split__meta { margin-top: 3px; font-size: 11px; color: var(--muted); line-height: 1.4; }
 
-/* Live reservation card with the billing-lock countdown. */
-.dine-res { margin: 0 16px 16px; padding: 16px; }
-.dine-res__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.dine-res__when { font-size: 16px; font-weight: 800; }
-.dine-res__meta { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-.dine-res__ref { font-size: 11px; color: var(--muted); letter-spacing: .6px; margin-top: 6px; }
+/* Live billing-lock countdown, used inside each restaurant's card. */
 .dine-lock {
   display: flex; align-items: center; gap: 12px;
   margin-top: 14px; padding: 12px 14px; border-radius: var(--radius);

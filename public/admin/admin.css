@@ -400,3 +400,30 @@ textarea.input { resize: vertical; min-height: 84px; }
   font-size: 11px; font-weight: 700;
 }
 .sl-tab[aria-pressed="true"] .sl-tab__count { background: rgba(255, 255, 255, .22); color: #fff; }
+
+
+/* ── The veg / non-veg mark ──────────────────────────────────────────────────
+   The same FSSAI-style mark guests see in the app, reused in the Dine-In console
+   so an operator reading the ledger identifies a restaurant the same way their
+   customers do. Colours are fixed rather than themed: these two mean something
+   specific and must not drift with the palette. */
+.veg-mark {
+  flex: none;
+  display: inline-block; position: relative;
+  width: 14px; height: 14px;
+  border: 1.5px solid; border-radius: 3px;
+  box-sizing: border-box;
+  vertical-align: -2px;
+}
+.veg-mark--veg { border-color: #1e8e3e; }
+.veg-mark--veg::after {
+  content: ''; position: absolute; inset: 2.5px;
+  border-radius: 50%; background: #1e8e3e;
+}
+.veg-mark--nonveg { border-color: #a01a12; }
+.veg-mark--nonveg::after {
+  content: ''; position: absolute; left: 2px; right: 2px; bottom: 2.5px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 7.5px solid #a01a12;
+}

@@ -2,14 +2,18 @@
 /**
  * Dine-In end-to-end test.
  *
- * Spawns the server against a throwaway data directory and proves the two rules
- * the tab exists to enforce:
+ * Spawns the server against a throwaway data directory and proves the three
+ * rules the tab exists to enforce:
  *
  *   1. A guest holding a reservation bills at the reserved rate (30% by
  *      default) — but billing against that reservation is REFUSED until the
  *      reservation has been held for `lockMinutes` (30 by default).
  *   2. A guest with no reservation bills instantly at the walk-in rate (10% by
  *      default) and is shown the "book a table ahead next time" notice.
+ *   3. There are TWO restaurants in the resort — Rangoli (pure veg) and Dolphin
+ *      (non-veg) — and neither a table nor a bill can exist without saying which
+ *      one it belongs to. A table at one does not discount a bill at the other,
+ *      and the two keep separate seat pools.
  *
  * It then changes the discounts and the notice wording through the admin API and
  * checks the customer side follows immediately, which is the whole point of
@@ -110,9 +114,71 @@ async function run() {
     check('a guest with no reservation is on the walk-in tier', home.body.current.mode === 'walkin');
     check('health reports the new collections', (await api('GET', '/api/health')).body.counts.dineBills === 0);
 
+    // ── Rule 3: the venue is a venue, and it has two restaurants ─────────────
+    /* This is the block that exists because guests could not tell which
+       restaurant they were dealing with. The tab must describe the resort and
+       then both outlets, each with the veg / non-veg mark that settles the
+       question at a glance. */
+    section('Rule 3 \u2014 one venue, two restaurants');
+    check('the tab names the VENUE, not an invented restaurant',
+      home.body.venue.name === 'Kingfisher Resort', home.body?.venue?.name);
+    check('no "Kingfisher Restaurant" anywhere in the payload',
+      !/Kingfisher Restaurant/i.test(JSON.stringify(home.body)));
+    check('two restaurants are listed', (home.body.outlets || []).length === 2,
+      `got ${home.body?.outlets?.length}`);
+    const rangoli = (home.body.outlets || []).find((o) => o.id === 'rangoli');
+    const dolphin = (home.body.outlets || []).find((o) => o.id === 'dolphin');
+    check('Rangoli is listed and marked pure veg',
+      Boolean(rangoli) && rangoli.name === 'Rangoli' && rangoli.diet === 'veg' && rangoli.dietLabel === 'Pure Veg',
+      JSON.stringify(rangoli && { name: rangoli.name, diet: rangoli.diet }));
+    check('Dolphin is listed and marked non-veg',
+      Boolean(dolphin) && dolphin.name === 'Dolphin' && dolphin.diet === 'nonveg',
+      JSON.stringify(dolphin && { name: dolphin.name, diet: dolphin.diet }));
+    check('each restaurant states its diet in words too, not only as a mark',
+      /no meat/i.test(rangoli.dietNote || '') && /chicken|mutton|fish/i.test(dolphin.dietNote || ''),
+      JSON.stringify({ veg: rangoli?.dietNote, nonveg: dolphin?.dietNote }));
+    check('each restaurant keeps its own opening hours',
+      rangoli.openTime === '07:00' && dolphin.openTime === '11:00',
+      JSON.stringify({ rangoli: rangoli?.openTime, dolphin: dolphin?.openTime }));
+    check('each restaurant carries its own state for this guest',
+      rangoli.current.mode === 'walkin' && dolphin.current.mode === 'walkin' &&
+      rangoli.reservation === null && dolphin.reservation === null);
+    check('the discount is declared shared across both restaurants',
+      home.body.tiers.sharedAcrossOutlets === true);
+
+    // Naming a restaurant is not optional on anything that commits the guest.
+    const namelessRes = await api('POST', '/api/dine-in/reservations', {
+      token,
+      body: { date: (await api('GET', '/api/dine-in/slots?outletId=rangoli', { token })).body.date, time: '20:00', partySize: 2, guestName: 'Andrew' },
+    });
+    check('reserving without naming a restaurant is refused',
+      namelessRes.status === 400 && /which restaurant/i.test(namelessRes.body?.error || ''),
+      `status ${namelessRes.status}: ${namelessRes.body?.error}`);
+    check('and the refusal names both restaurants with their diet',
+      /Rangoli \(pure vegetarian\)/i.test(namelessRes.body?.error || '') &&
+      /Dolphin \(serves non-vegetarian\)/i.test(namelessRes.body?.error || ''), namelessRes.body?.error);
+    const namelessBill = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, payment: { method: 'upi' } } });
+    check('paying without naming a restaurant is refused',
+      namelessBill.status === 400 && /which restaurant/i.test(namelessBill.body?.error || ''),
+      `status ${namelessBill.status}: ${namelessBill.body?.error}`);
+    const namelessSlots = await api('GET', '/api/dine-in/slots', { token });
+    check('asking for availability without a restaurant is refused', namelessSlots.status === 400,
+      `status ${namelessSlots.status}`);
+    const bogus = await api('GET', '/api/dine-in/slots?outletId=kingfisher', { token });
+    check('an invented restaurant name is a 404', bogus.status === 404, `status ${bogus.status}: ${bogus.body?.error}`);
+
+    // Separate dining rooms mean separate seat pools.
+    const rangoliSlots = await api('GET', '/api/dine-in/slots?outletId=rangoli', { token });
+    const dolphinSlots = await api('GET', '/api/dine-in/slots?outletId=dolphin', { token });
+    check('availability is reported per restaurant and echoes which one',
+      rangoliSlots.body.outlet.id === 'rangoli' && dolphinSlots.body.outlet.id === 'dolphin');
+    check('Rangoli opens earlier, so it offers more slots than Dolphin',
+      rangoliSlots.body.slots.length >= dolphinSlots.body.slots.length,
+      `${rangoliSlots.body?.slots?.length} vs ${dolphinSlots.body?.slots?.length}`);
+
     // ── Rule 2: walk-in, instant, 10% ────────────────────────────────────────
     section('Rule 2 \u2014 walk-in pays instantly at 10%');
-    const walkQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000 } });
+    const walkQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000, outletId: 'dolphin' } });
     check('walk-in quote applies 10%',
       walkQuote.body.mode === 'walkin' && walkQuote.body.amounts.discount === 200 && walkQuote.body.amounts.total === 1800,
       JSON.stringify(walkQuote.body?.amounts));
@@ -121,20 +187,31 @@ async function run() {
       /book a reservation at least 30 minutes ahead/i.test(walkQuote.body.notice || ''), walkQuote.body?.notice);
     check('walk-in notice quotes both live percentages',
       /10% off/.test(walkQuote.body.notice || '') && /30% off instead/.test(walkQuote.body.notice || ''));
+    check('the quote says which restaurant it priced', walkQuote.body.outlet?.name === 'Dolphin',
+      JSON.stringify(walkQuote.body?.outlet));
 
     let expectedBills = 0;
     let expectedSaved = 0;
-    const walkBill = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 2000, payment: { method: 'upi' }, tableNumber: '7' } });
+    const walkBill = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 2000, outletId: 'dolphin', payment: { method: 'upi' }, tableNumber: '7' } });
     check('walk-in bill is accepted right away', walkBill.status === 201, `status ${walkBill.status}: ${walkBill.body?.error}`);
     check('walk-in bill charges 1800 of 2000', walkBill.body.bill.amounts.total === 1800 && walkBill.body.bill.mode === 'walkin');
-    check('walk-in receipt repeats the book-ahead advice',
-      /Book a table at least 30 minutes/i.test(walkBill.body.bill.notice || ''), walkBill.body?.bill?.notice);
+    check('the bill records WHICH restaurant it belongs to',
+      walkBill.body.bill.outletId === 'dolphin' && walkBill.body.bill.outlet.name === 'Dolphin' &&
+      walkBill.body.bill.outlet.diet === 'nonveg',
+      JSON.stringify(walkBill.body?.bill?.outlet));
+    check('restaurantName on the bill is the restaurant, not the resort',
+      walkBill.body.bill.restaurantName === 'Dolphin' && walkBill.body.bill.venueName === 'Kingfisher Resort',
+      JSON.stringify({ r: walkBill.body?.bill?.restaurantName, v: walkBill.body?.bill?.venueName }));
+    check('walk-in receipt repeats the book-ahead advice and names the restaurant',
+      /Book a table at least 30 minutes/i.test(walkBill.body.bill.notice || '') &&
+      /reach Dolphin next time/i.test(walkBill.body.bill.notice || ''), walkBill.body?.bill?.notice);
     expectedBills += 1;
     expectedSaved += 200;
 
     // ── Rule 1: reservation locks billing for 30 minutes ─────────────────────
     section('Rule 1 \u2014 a fresh reservation is locked for 30 minutes');
-    const slots = await api('GET', '/api/dine-in/slots', { token });
+    // Everything from here on is at Rangoli unless a check says otherwise.
+    const slots = await api('GET', '/api/dine-in/slots?outletId=rangoli', { token });
     check('slots are offered for today', slots.status === 200 && slots.body.slots.length > 0, `got ${slots.body?.slots?.length}`);
     const slot = slots.body.slots[0]; // soonest slot
 
@@ -145,15 +222,27 @@ async function run() {
 
     const made = await api('POST', '/api/dine-in/reservations', {
       token,
-      body: { date: slots.body.date, time: slot.time, partySize: 4, guestName: 'Andrew Smith', area: 'Garden' },
+      body: { outletId: 'rangoli', date: slots.body.date, time: slot.time, partySize: 4, guestName: 'Andrew Smith', area: 'Garden' },
     });
     check('a table can be reserved', made.status === 201, `status ${made.status}: ${made.body?.error}`);
     const reservation = made.body.reservation;
+    check('the reservation records which restaurant it is at',
+      reservation.outletId === 'rangoli' && reservation.outlet.name === 'Rangoli' && reservation.outlet.diet === 'veg',
+      JSON.stringify(reservation?.outlet));
     check('the new reservation is locked', reservation.lock.locked === true && reservation.billable === false);
     check('lock countdown is ~30 minutes', reservation.lock.minutesLeft > 27 && reservation.lock.minutesLeft <= 30, `got ${reservation.lock?.minutesLeft}`);
     check('blockedReason explains why', reservation.blockedReason === 'locked');
 
-    const lockedQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000 } });
+    // The Rangoli table must show up under Rangoli, and nowhere else.
+    const afterBooking = await api('GET', '/api/dine-in', { token });
+    check('the table appears under Rangoli on the tab',
+      afterBooking.body.outlets.find((o) => o.id === 'rangoli').reservation?.id === reservation.id);
+    check('and Dolphin still shows no table',
+      afterBooking.body.outlets.find((o) => o.id === 'dolphin').reservation === null);
+    check('Dolphin still quotes the walk-in rate for this guest',
+      afterBooking.body.outlets.find((o) => o.id === 'dolphin').current.mode === 'walkin');
+
+    const lockedQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000, outletId: 'rangoli' } });
     check('the locked reservation still quotes the 30% tier',
       lockedQuote.body.mode === 'reserved' && lockedQuote.body.discountPercent === 30, JSON.stringify(lockedQuote.body?.mode));
     check('but it reports canPayNow = false', lockedQuote.body.canPayNow === false && lockedQuote.body.locked === true);
@@ -162,13 +251,46 @@ async function run() {
       lockedQuote.body?.notice);
     check('locked notice offers the 10% fallback', /pay now at 10% off/i.test(lockedQuote.body.notice || ''));
 
-    const lockedPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 2000, payment: { method: 'upi' } } });
+    const lockedPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 2000, outletId: 'rangoli', payment: { method: 'upi' } } });
     check('paying against a locked reservation is refused (423)', lockedPay.status === 423, `status ${lockedPay.status}: ${lockedPay.body?.error}`);
     check('the refusal names the unlock time', /unlocks at/i.test(lockedPay.body?.error || ''), lockedPay.body?.error);
 
-    const fallbackQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000, mode: 'walkin' } });
+    const fallbackQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000, outletId: 'rangoli', mode: 'walkin' } });
     check('a locked guest may still choose the 10% walk-in rate',
       fallbackQuote.body.mode === 'walkin' && fallbackQuote.body.canPayNow === true && fallbackQuote.body.amounts.total === 1800);
+
+    /* ── The mix-up this whole model exists to prevent ──────────────────────
+       The guest holds a table at Rangoli. They are now settling a bill at
+       Dolphin. That must NOT get the reserved rate, must say so plainly, and
+       must leave the Rangoli booking intact. */
+    section('A table at one restaurant does not discount the other');
+    const wrongOutlet = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000, outletId: 'dolphin' } });
+    check('a Dolphin bill does not inherit the Rangoli table discount',
+      wrongOutlet.body.mode === 'walkin' && wrongOutlet.body.discountPercent === 10,
+      JSON.stringify({ mode: wrongOutlet.body?.mode, pct: wrongOutlet.body?.discountPercent }));
+    check('it is flagged as an other-restaurant downgrade, not a plain walk-in',
+      wrongOutlet.body.downgradedFrom === 'other-outlet', wrongOutlet.body?.downgradedFrom);
+    check('the notice names both restaurants so the guest is not left guessing',
+      /booked at Rangoli/i.test(wrongOutlet.body.notice || '') && /bill is for Dolphin/i.test(wrongOutlet.body.notice || ''),
+      wrongOutlet.body?.notice);
+    check('and it reassures them their table is untouched',
+      /Rangoli table is untouched/i.test(wrongOutlet.body.notice || ''), wrongOutlet.body?.notice);
+    check('the quote reports both restaurants separately',
+      wrongOutlet.body.outlet.id === 'dolphin' && wrongOutlet.body.reservedOutlet.id === 'rangoli',
+      JSON.stringify({ billing: wrongOutlet.body?.outlet?.id, reserved: wrongOutlet.body?.reservedOutlet?.id }));
+    // Naming the Rangoli reservation explicitly must not launder it into Dolphin.
+    const laundered = await api('POST', '/api/dine-in/quote', {
+      token,
+      body: { billAmount: 2000, outletId: 'dolphin', reservationId: reservation.id },
+    });
+    check('pointing a Dolphin bill at the Rangoli reservation still only gets 10%',
+      laundered.body.mode === 'walkin' && laundered.body.downgradedFrom === 'other-outlet',
+      JSON.stringify({ mode: laundered.body?.mode, from: laundered.body?.downgradedFrom }));
+    const stillMine = await api('GET', '/api/dine-in', { token });
+    check('the Rangoli table survived the Dolphin quote',
+      stillMine.body.outlets.find((o) => o.id === 'rangoli').reservation?.id === reservation.id);
+
+    section('Rule 1 (continued)');
 
     // ── Rule 1 continued: once the window elapses, 30% applies ───────────────
     /* The lock is measured against the clock, so to reach the unlocked state we
@@ -176,7 +298,7 @@ async function run() {
        to additionally watch a 1-minute window actually expire in real time. */
     section('Rule 1 \u2014 once the window elapses the reservation bills at 30%');
     await api('PUT', '/api/admin/dine-in/settings', { token: adminToken, body: { lockMinutes: 0, arriveEarlyMinutes: 1440 } });
-    const unlocked = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000 } });
+    const unlocked = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000, outletId: 'rangoli' } });
     check('the reservation is now unlocked',
       unlocked.body.mode === 'reserved' && unlocked.body.locked === false && unlocked.body.canPayNow === true,
       JSON.stringify({ mode: unlocked.body?.mode, locked: unlocked.body?.locked }));
@@ -185,18 +307,19 @@ async function run() {
     check('the reserved notice is shown instead of the locked one',
       /pay this bill in the app/i.test(unlocked.body.notice || ''), unlocked.body?.notice);
 
-    const reservedPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 2000, payment: { method: 'card' } } });
+    const reservedPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 2000, outletId: 'rangoli', payment: { method: 'card' } } });
     check('the reserved bill is accepted', reservedPay.status === 201, `status ${reservedPay.status}: ${reservedPay.body?.error}`);
     check('it charges 1400 and records the reserved mode',
       reservedPay.body.bill.amounts.total === 1400 && reservedPay.body.bill.mode === 'reserved');
     check('it is linked to the reservation', reservedPay.body.bill.reservationId === reservation.id);
-    check('the receipt notice thanks them for reserving',
-      /reserved-table discount/i.test(reservedPay.body.bill.notice || ''), reservedPay.body?.bill?.notice);
+    check('it is filed under Rangoli', reservedPay.body.bill.outletId === 'rangoli');
+    check('the receipt notice thanks them for reserving, by restaurant name',
+      /reserved-table discount at Rangoli/i.test(reservedPay.body.bill.notice || ''), reservedPay.body?.bill?.notice);
     check('the applied terms are frozen on the bill', reservedPay.body.bill.appliedSettings.discountPercent === 30);
     expectedBills += 1;
     expectedSaved += 600;
 
-    const reused = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000 } });
+    const reused = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 2000, outletId: 'rangoli' } });
     check('a spent reservation cannot be billed twice (falls back to walk-in)',
       reused.body.mode === 'walkin', JSON.stringify(reused.body?.mode));
     await api('PUT', '/api/admin/dine-in/settings', { token: adminToken, body: { lockMinutes: 30, arriveEarlyMinutes: 30 } });
@@ -207,18 +330,18 @@ async function run() {
       await api('PUT', '/api/admin/dine-in/settings', { token: adminToken, body: { lockMinutes: 1, arriveEarlyMinutes: 1440 } });
       const slow = await api('POST', '/api/dine-in/reservations', {
         token,
-        body: { date: slots.body.date, time: slot.time, partySize: 2, guestName: 'Andrew Smith' },
+        body: { outletId: 'rangoli', date: slots.body.date, time: slot.time, partySize: 2, guestName: 'Andrew Smith' },
       });
       check('reservation starts locked', slow.body.reservation.lock.locked === true);
-      const beforePay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, payment: { method: 'upi' } } });
+      const beforePay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, outletId: 'rangoli', payment: { method: 'upi' } } });
       check('billing is refused inside the window', beforePay.status === 423, `status ${beforePay.status}`);
       console.log('    waiting 65s for the window to expire...');
       await sleep(65000);
-      const afterWait = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 1000 } });
+      const afterWait = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 1000, outletId: 'rangoli' } });
       check('the lock releases on its own once the window passes',
         afterWait.body.locked === false && afterWait.body.mode === 'reserved' && afterWait.body.amounts.total === 700,
         JSON.stringify({ locked: afterWait.body?.locked, mode: afterWait.body?.mode, total: afterWait.body?.amounts?.total }));
-      const afterPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, payment: { method: 'upi' } } });
+      const afterPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, outletId: 'rangoli', payment: { method: 'upi' } } });
       check('and the bill then goes through at 30%', afterPay.status === 201 && afterPay.body.bill.amounts.total === 700);
       expectedBills += 1;
       expectedSaved += 300;
@@ -234,20 +357,20 @@ async function run() {
     far.setDate(far.getDate() + 6);
     var farDate = far.getFullYear() + '-' + String(far.getMonth() + 1).padStart(2, '0') + '-' +
       String(far.getDate()).padStart(2, '0');
-    var farSlots = await api('GET', '/api/dine-in/slots?date=' + farDate, { token });
+    var farSlots = await api('GET', '/api/dine-in/slots?outletId=rangoli&date=' + farDate, { token });
     var farSlot = farSlots.body.slots[0];
     await api('PUT', '/api/admin/dine-in/settings', { token: adminToken, body: { lockMinutes: 0, arriveEarlyMinutes: 30 } });
     var farRes = await api('POST', '/api/dine-in/reservations', {
       token,
-      body: { date: farDate, time: farSlot.time, partySize: 2, guestName: 'Andrew Ainsely' },
+      body: { outletId: 'rangoli', date: farDate, time: farSlot.time, partySize: 2, guestName: 'Andrew Ainsely' },
     });
     check('a far-future table can be reserved', farRes.status === 201, `status ${farRes.status}`);
     check('but it is not billable today even with the lock elapsed',
       farRes.body.reservation.billable === false && farRes.body.reservation.blockedReason === 'locked',
       JSON.stringify({ billable: farRes.body.reservation?.billable, reason: farRes.body.reservation?.blockedReason }));
-    var farQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 1000, reservationId: farRes.body.reservation.id } });
+    var farQuote = await api('POST', '/api/dine-in/quote', { token, body: { billAmount: 1000, outletId: 'rangoli', reservationId: farRes.body.reservation.id } });
     check('quoting against it cannot be paid at the reserved rate', farQuote.body.canPayNow === false);
-    var farPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, reservationId: farRes.body.reservation.id, payment: { method: 'upi' } } });
+    var farPay = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, outletId: 'rangoli', reservationId: farRes.body.reservation.id, payment: { method: 'upi' } } });
     check('paying against a far-future reservation is refused', farPay.status === 423, `status ${farPay.status}`);
     await api('POST', '/api/dine-in/reservations/' + farRes.body.reservation.id + '/cancel', { token });
     await api('PUT', '/api/admin/dine-in/settings', { token: adminToken, body: { lockMinutes: 30 } });
@@ -398,12 +521,12 @@ async function run() {
 
     const bigParty = await api('POST', '/api/dine-in/reservations', {
       token,
-      body: { date: slots.body.date, time: slot.time, partySize: 999, guestName: 'Andrew' },
+      body: { outletId: 'rangoli', date: slots.body.date, time: slot.time, partySize: 999, guestName: 'Andrew' },
     });
     check('an oversized party is rejected with the phone number', bigParty.status === 400 && /please call/i.test(bigParty.body?.error || ''));
     const pastDate = await api('POST', '/api/dine-in/reservations', {
       token,
-      body: { date: '2020-01-01', time: slot.time, partySize: 2, guestName: 'Andrew' },
+      body: { outletId: 'rangoli', date: '2020-01-01', time: slot.time, partySize: 2, guestName: 'Andrew' },
     });
     check('a past date is rejected', pastDate.status === 400);
 
@@ -416,7 +539,7 @@ async function run() {
     // ── Pay at the counter ───────────────────────────────────────────────────
     /* 'cash' is money not yet collected, so the bill must not claim to be paid. */
     section('Pay at the counter is not settled money');
-    const cashBill = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, payment: { method: 'cash' } } });
+    const cashBill = await api('POST', '/api/dine-in/bills', { token, body: { billAmount: 1000, outletId: 'dolphin', payment: { method: 'cash' } } });
     check('a counter bill is accepted', cashBill.status === 201, `status ${cashBill.status}`);
     check('but its status is pending, not paid',
       cashBill.body.bill.status === 'pending' && cashBill.body.bill.payment.status === 'pending',
@@ -442,8 +565,26 @@ async function run() {
     const bills = await api('GET', '/api/dine-in/bills', { token });
     check('a guest can list their bills', bills.status === 200 && bills.body.bills.length === expectedBills);
     check('total saved is reported', bills.body.totalSaved === expectedSaved, `got ${bills.body?.totalSaved}, expected ${expectedSaved}`);
+    check('every bill in the list is labelled with its restaurant',
+      bills.body.bills.every((b) => b.outlet && b.outlet.name && b.outlet.diet),
+      JSON.stringify(bills.body.bills.map((b) => b.outlet?.name)));
+    const byOutlet = bills.body.byOutlet || [];
+    check('spend is broken down per restaurant', byOutlet.length === 2 &&
+      byOutlet.every((o) => o.name && typeof o.paid === 'number'), JSON.stringify(byOutlet));
+    check('the per-restaurant breakdown adds up to the total saved',
+      byOutlet.reduce((sum, o) => sum + o.saved, 0) === expectedSaved,
+      `${byOutlet.reduce((sum, o) => sum + o.saved, 0)} vs ${expectedSaved}`);
     const one = await api('GET', `/api/dine-in/bills/${reservedPay.body.bill.id}`, { token });
     check('a single receipt is retrievable with its notice', one.status === 200 && Boolean(one.body.bill.notice));
+    check('the receipt names the restaurant and the resort separately',
+      one.body.bill.outlet.name === 'Rangoli' && one.body.bill.venueName === 'Kingfisher Resort',
+      JSON.stringify({ outlet: one.body.bill?.outlet?.name, venue: one.body.bill?.venueName }));
+
+    const myTables = await api('GET', '/api/dine-in/reservations', { token });
+    check('the reservation list ships the restaurant list for grouping',
+      (myTables.body.outlets || []).length === 2);
+    check('every reservation is labelled with its restaurant',
+      myTables.body.reservations.every((r) => r.outlet && r.outlet.name));
   } catch (err) {
     failed += 1;
     failures.push(`Harness error: ${err.message}`);

@@ -28,10 +28,16 @@
     ['/hotel/checkout', 'hotelCheckout'],
     ['/hotel/confirmed/:bookingId', 'hotelConfirmation'],
     ['/hotel/room/:id', 'hotelRoom'],
-    // Literal dine-in paths must precede /dine-in/:anything patterns.
+    /* Dine-In. The resort has two restaurants (Rangoli, veg / Dolphin, non-veg),
+       so reserving and paying are always scoped to one of them by :outletId.
+       The bare /dine-in/reserve and /dine-in/bill paths still resolve — old links
+       and bookmarks land on a "which restaurant?" chooser rather than a 404 or,
+       worse, a silent default. Literal paths precede /dine-in/:anything. */
     ['/dine-in', 'dineIn'],
-    ['/dine-in/reserve', 'dineReserve'],
-    ['/dine-in/bill', 'dineBill'],
+    ['/dine-in/reserve', 'dineReservePick'],
+    ['/dine-in/bill', 'dineBillPick'],
+    ['/dine-in/reserve/:outletId', 'dineReserve'],
+    ['/dine-in/bill/:outletId', 'dineBill'],
     ['/dine-in/paid/:id', 'dinePaid'],
     // Literal water park paths must precede /waterpark/:anything patterns.
     ['/waterpark', 'waterpark'],

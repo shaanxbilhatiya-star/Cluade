@@ -2,10 +2,32 @@
 /**
  * Dine-In domain logic.
  *
- * The tab lets a guest settle their restaurant bill from the table and take an
- * instant discount. There are exactly two tiers, and which one applies is
- * decided here so the tab header, the quote endpoint and the pay endpoint can
- * never disagree:
+ * ── One venue, two restaurants ──────────────────────────────────────────────
+ * Kingfisher Resort does not have "a restaurant". It has TWO, side by side,
+ * under one roof:
+ *
+ *   rangoli  - Rangoli, PURE VEGETARIAN. No meat, no egg, separate kitchen.
+ *   dolphin  - Dolphin, NON-VEGETARIAN.
+ *
+ * Guests routinely do not know that, which produces two very real failures: a
+ * vegetarian family walking into the wrong dining room, and a guest settling
+ * their bill against the outlet they did not eat at. Both are this module's
+ * problem, not the UI's, so the outlet is part of the domain:
+ *
+ *   · every reservation and every bill carries an `outletId`;
+ *   · each outlet keeps its own hours, seating areas and seat pool, so a full
+ *     Saturday at Dolphin never blocks a table at Rangoli;
+ *   · a reservation earns its discount AT ITS OWN OUTLET ONLY - holding a
+ *     Rangoli table does not discount a Dolphin bill (see `resolveTier`).
+ *
+ * Commercial policy - the discount percentages, the billing lock, the bill
+ * bounds - is deliberately VENUE-WIDE rather than per outlet. It is one brand
+ * running one offer, and letting the two outlets drift to different discounts
+ * would manufacture exactly the confusion this model exists to remove.
+ *
+ * ── The two discount tiers ──────────────────────────────────────────────────
+ * Which one applies is decided here so the tab header, the quote endpoint and
+ * the pay endpoint can never disagree:
  *
  *   reserved  - the guest holds a table reservation that has been live for at
  *               least `lockMinutes`. Earns `reservedDiscountPercent` (30% by
@@ -30,6 +52,55 @@ const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const MS_PER_MIN = 60 * 1000;
 
 /**
+ * The two restaurants, as shipped.
+ *
+ * `diet` is the load-bearing field. It drives the green-dot / brown-triangle
+ * mark that Indian diners read before they read any name, and it is what makes
+ * "which one am I booking?" answerable at a glance rather than from memory.
+ * Only these two values are accepted, because a third would have no mark.
+ */
+const DIETS = {
+  veg: { label: 'Pure Veg', long: 'Pure vegetarian' },
+  nonveg: { label: 'Non-Veg', long: 'Serves non-vegetarian' },
+};
+
+const OUTLET_DEFAULTS = [
+  {
+    id: 'rangoli',
+    name: 'Rangoli',
+    diet: 'veg',
+    active: true,
+    cuisine: 'North Indian · South Indian · Chinese',
+    tagline: 'Pure vegetarian, cooked in its own kitchen — Jain on request.',
+    /** One line the guest reads before choosing. Kept blunt on purpose. */
+    dietNote: 'No meat, no egg, no fish. Separate kitchen from Dolphin.',
+    phone: '7648913272',
+    openTime: '07:00',
+    closeTime: '23:00',
+    capacityPerSlot: 40,
+    areas: ['Indoor AC', 'Garden', 'Poolside'],
+    coverPhoto: '',
+    photos: [],
+  },
+  {
+    id: 'dolphin',
+    name: 'Dolphin',
+    diet: 'nonveg',
+    active: true,
+    cuisine: 'Mughlai · Tandoor · Coastal · Chinese',
+    tagline: 'The non-veg grill house — kebabs, curries and catch of the day.',
+    dietNote: 'Serves chicken, mutton, fish and egg. Veg dishes are limited.',
+    phone: '7648913272',
+    openTime: '11:00',
+    closeTime: '23:00',
+    capacityPerSlot: 40,
+    areas: ['Indoor AC', 'Rooftop', 'Poolside'],
+    coverPhoto: '',
+    photos: [],
+  },
+];
+
+/**
  * Shipped defaults. `settings()` merges the admin's saved values over these, so
  * a field the admin has never touched keeps working after an upgrade.
  *
@@ -40,11 +111,20 @@ const MS_PER_MIN = 60 * 1000;
 const DEFAULTS = {
   active: true,
 
-  // ── Restaurant identity ──
-  restaurantName: 'Kingfisher Restaurant',
-  tagline: 'Pay your bill from the table and save instantly',
+  // ── Venue identity (the resort, NOT a restaurant) ──
+  /**
+   * The venue name. There is deliberately no single "restaurant name" any more:
+   * inventing one ("Kingfisher Restaurant") was what hid the fact that there are
+   * two outlets. The tab is titled with the venue; food is always attributed to
+   * an outlet.
+   */
+  venueName: 'Kingfisher Resort',
+  tagline: 'Two restaurants inside the resort — reserve a table, then pay your bill from your seat.',
   address: 'Kingfisher Resort, Mandla',
   phone: '7648913272',
+
+  /** The outlets. Order is the order guests see them in. */
+  outlets: OUTLET_DEFAULTS,
 
   // ── Property details (same shape as the hotel's, for the tab's own hero) ──
   rating: 0,
@@ -83,11 +163,15 @@ const DEFAULTS = {
   maxBillAmount: 200000,
 
   // ── Reservation window ──
-  openTime: '11:00',
+  /* Slot length, party ceiling and how far ahead tables open are venue-wide.
+     Opening hours, seat capacity and seating areas are NOT: they belong to the
+     outlet, and the values below are only the fallback an outlet inherits when
+     the admin has not set its own. */
+  openTime: '07:00',
   closeTime: '23:00',
   slotMinutes: 30,
   maxPartySize: 20,
-  /** Guests that can be seated in any one slot. */
+  /** Fallback seats per slot for an outlet that has none of its own. */
   capacityPerSlot: 40,
   /** How many days ahead a table can be reserved. */
   advanceDays: 14,
@@ -102,11 +186,21 @@ const DEFAULTS = {
   walkinNotice:
     'Paying as a walk-in guest, so this bill gets {walkinDiscount}% off. Before you arrive next time, ' +
     'book a reservation at least {lockMinutes} minutes ahead and get {reservedDiscount}% off instead.',
+  /**
+   * The two-restaurant notice. Shown when a guest holds a table at one outlet
+   * and is settling a bill at the other, which is the single most confusing
+   * thing that can happen on this tab — so it is spelled out rather than
+   * silently downgraded.
+   */
+  otherOutletNotice:
+    'Your {reservedDiscount}% table is booked at {reservedOutlet}, but this bill is for {outlet}. ' +
+    'The two restaurants are billed separately, so this one gets the {walkinDiscount}% walk-in rate. ' +
+    'Your {reservedOutlet} table is untouched.',
   paidReservedNotice:
-    'You saved {saving} with your {reservedDiscount}% reserved-table discount. See you again soon!',
+    'You saved {saving} with your {reservedDiscount}% reserved-table discount at {outlet}. See you again soon!',
   paidWalkinNotice:
     'You saved {saving} at the {walkinDiscount}% walk-in rate. Book a table at least {lockMinutes} minutes ' +
-    'before you reach {restaurant} next time and save {reservedDiscount}% instead.',
+    'before you reach {outlet} next time and save {reservedDiscount}% instead.',
 };
 
 /** Numeric fields, with the bounds the admin form is validated against. */
@@ -125,15 +219,120 @@ const NUMERIC_FIELDS = {
   advanceDays: { min: 0, max: 365 },
 };
 
-const TEXT_FIELDS = ['restaurantName', 'tagline', 'address', 'phone'];
+const TEXT_FIELDS = ['venueName', 'tagline', 'address', 'phone'];
 const TIME_FIELDS = ['openTime', 'closeTime'];
 const NOTICE_FIELDS = [
   'reservedNotice',
   'lockedNotice',
   'walkinNotice',
+  'otherOutletNotice',
   'paidReservedNotice',
   'paidWalkinNotice',
 ];
+
+// ── Outlets ─────────────────────────────────────────────────────────────────
+/** Per-outlet numeric bounds. Everything else about an outlet is text. */
+const OUTLET_NUMERIC_FIELDS = { capacityPerSlot: { min: 1, max: 5000 } };
+const OUTLET_TEXT_FIELDS = ['name', 'cuisine', 'tagline', 'dietNote', 'phone'];
+
+/** A diet descriptor, always resolvable so a label never renders as blank. */
+function diet(key) {
+  return DIETS[key] || DIETS.veg;
+}
+
+/**
+ * Merges one saved outlet over its shipped default, inheriting venue-level
+ * values for anything the admin has not set on the outlet itself.
+ */
+function mergeOutlet(base, saved = {}, venue = {}) {
+  const merged = Object.assign({}, base, saved);
+  merged.id = base.id;
+  merged.diet = DIETS[merged.diet] ? merged.diet : base.diet;
+  merged.active = merged.active !== false;
+  merged.openTime = TIME_RE.test(String(merged.openTime || '')) ? merged.openTime : venue.openTime || base.openTime;
+  merged.closeTime = TIME_RE.test(String(merged.closeTime || '')) ? merged.closeTime : venue.closeTime || base.closeTime;
+  merged.capacityPerSlot = Number(merged.capacityPerSlot) > 0
+    ? Math.round(Number(merged.capacityPerSlot))
+    : Number(venue.capacityPerSlot) || base.capacityPerSlot;
+  const areas = (Array.isArray(merged.areas) ? merged.areas : []).map((a) => String(a).trim()).filter(Boolean);
+  merged.areas = areas.length ? areas : (base.areas || []).slice();
+  merged.photos = (Array.isArray(merged.photos) ? merged.photos : []).filter(Boolean);
+  merged.coverPhoto = String(merged.coverPhoto || '');
+  return merged;
+}
+
+/**
+ * Every outlet, in display order, with defaults merged in.
+ *
+ * The shipped outlets are always present: an admin can rename Rangoli or hide
+ * it for the evening, but cannot delete one and leave bills pointing at an
+ * outlet the app can no longer name.
+ */
+function outlets(s = settings()) {
+  const saved = Array.isArray(s.outlets) ? s.outlets : [];
+  return OUTLET_DEFAULTS.map((base) =>
+    mergeOutlet(base, saved.find((o) => o && o.id === base.id) || {}, s)
+  );
+}
+
+/** Outlets a guest may currently book or bill against. */
+function bookableOutlets(s = settings()) {
+  return outlets(s).filter((o) => o.active !== false);
+}
+
+/** One outlet by id, or null. Never throws — callers decide the error wording. */
+function outletById(id, s = settings()) {
+  const wanted = String(id || '').trim().toLowerCase();
+  return outlets(s).find((o) => o.id === wanted) || null;
+}
+
+/** Is this outlet serving right now? Drives the "Closed now" tag on its card. */
+function outletOpenNow(outlet, now = new Date()) {
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  return minutes >= minutesOfDay(outlet.openTime) && minutes < minutesOfDay(outlet.closeTime);
+}
+
+/** The slice of an outlet the customer app needs. */
+function publicOutlet(outlet, s = settings()) {
+  const d = diet(outlet.diet);
+  return {
+    id: outlet.id,
+    name: outlet.name,
+    diet: outlet.diet,
+    dietLabel: d.label,
+    dietLong: d.long,
+    dietNote: outlet.dietNote || '',
+    cuisine: outlet.cuisine || '',
+    tagline: outlet.tagline || '',
+    phone: outlet.phone || s.phone,
+    openTime: outlet.openTime,
+    closeTime: outlet.closeTime,
+    openNow: outletOpenNow(outlet),
+    active: outlet.active !== false,
+    areas: (outlet.areas || []).slice(),
+    coverPhoto: outlet.coverPhoto || '',
+    photos: (outlet.photos || []).slice(),
+  };
+}
+
+/**
+ * The outlet stamp written onto a reservation or a bill, and read back for
+ * display. Rows created before the split have no outletId; rather than guessing
+ * an outlet for them (which would put words in a guest's mouth about whether
+ * they ate veg or non-veg), they resolve to null and the UI says so.
+ */
+function outletStamp(outlet) {
+  if (!outlet) return null;
+  const d = diet(outlet.diet);
+  return { id: outlet.id, name: outlet.name, diet: outlet.diet, dietLabel: d.label };
+}
+
+/** Reads the outlet off a stored row, tolerating pre-split rows. */
+function outletOf(row, s = settings()) {
+  if (!row || !row.outletId) return null;
+  const found = outletById(row.outletId, s);
+  return found ? outletStamp(found) : (row.outlet || null);
+}
 
 // ── Settings ────────────────────────────────────────────────────────────────
 /** Current settings: shipped defaults with the admin's saved values merged over. */
@@ -144,6 +343,12 @@ function settings() {
   merged.photos = (saved.photos || DEFAULTS.photos).slice();
   merged.amenities = (saved.amenities || DEFAULTS.amenities).slice();
   merged.policies = (saved.policies || DEFAULTS.policies).slice();
+  /* A venue saved before the split stored its name under `restaurantName`. Carry
+     it over rather than silently reverting the admin's own wording. */
+  if (!saved.venueName && saved.restaurantName) merged.venueName = saved.restaurantName;
+  merged.outlets = OUTLET_DEFAULTS.map((base) =>
+    mergeOutlet(base, (Array.isArray(saved.outlets) ? saved.outlets : []).find((o) => o && o.id === base.id) || {}, merged)
+  );
   return merged;
 }
 
@@ -157,9 +362,98 @@ function clampNumber(value, bounds, fallback) {
  * Validates and persists a settings patch. Only known keys are written, so a
  * stray field in the request body can never end up in the stored record.
  */
+/**
+ * Validates one outlet patch against the outlet as it stands. Returns the whole
+ * outlet, so a patch touching only the name cannot blank its hours.
+ */
+function validateOutletPatch(currentOutlet, patch = {}, venue = {}) {
+  const next = Object.assign({}, currentOutlet);
+
+  for (const key of OUTLET_TEXT_FIELDS) {
+    if (patch[key] === undefined) continue;
+    next[key] = String(patch[key]).trim().slice(0, 200);
+  }
+  if (patch.name !== undefined && !next.name) {
+    throw new HttpError(400, 'Every restaurant needs a name — guests choose between them by name');
+  }
+
+  if (patch.diet !== undefined) {
+    const key = String(patch.diet);
+    if (!DIETS[key]) {
+      throw new HttpError(400, "A restaurant must be marked either 'veg' or 'nonveg' — that mark is how guests tell them apart");
+    }
+    next.diet = key;
+  }
+
+  if (patch.active !== undefined) next.active = patch.active === true || patch.active === 'true';
+
+  for (const key of TIME_FIELDS) {
+    if (patch[key] === undefined || patch[key] === '') continue;
+    if (!TIME_RE.test(String(patch[key]))) {
+      throw new HttpError(400, `${next.name}: ${key} must be a 24-hour time like 11:00`);
+    }
+    next[key] = String(patch[key]);
+  }
+  if (minutesOfDay(next.closeTime) <= minutesOfDay(next.openTime)) {
+    throw new HttpError(400, `${next.name} closes before it opens — check its timings`);
+  }
+
+  for (const [key, bounds] of Object.entries(OUTLET_NUMERIC_FIELDS)) {
+    if (patch[key] === undefined || patch[key] === '') continue;
+    if (!Number.isFinite(Number(patch[key]))) throw new HttpError(400, `${next.name}: ${key} must be a number`);
+    next[key] = clampNumber(patch[key], bounds, currentOutlet[key]);
+  }
+
+  if (patch.areas !== undefined) {
+    const list = Array.isArray(patch.areas) ? patch.areas : String(patch.areas || '').split(',');
+    const areas = list.map((a) => String(a).trim()).filter(Boolean).slice(0, 12);
+    if (!areas.length) throw new HttpError(400, `${next.name} needs at least one seating area`);
+    next.areas = areas;
+  }
+
+  if (patch.coverPhoto !== undefined) next.coverPhoto = String(patch.coverPhoto || '').trim();
+  if (patch.photos !== undefined) {
+    const list = Array.isArray(patch.photos) ? patch.photos : String(patch.photos || '').split('\n');
+    next.photos = list.map((p) => String(p).trim()).filter(Boolean);
+  }
+
+  return mergeOutlet(OUTLET_DEFAULTS.find((o) => o.id === currentOutlet.id) || currentOutlet, next, venue);
+}
+
+/**
+ * Saves one outlet. Separate from `saveSettings` because an outlet is edited on
+ * its own screen and its own photos are uploaded with it.
+ */
+function saveOutlet(id, patch = {}) {
+  const current = settings();
+  const existing = outletById(id, current);
+  if (!existing) throw new HttpError(404, 'No such restaurant');
+
+  const updated = validateOutletPatch(existing, patch, current);
+  const nextOutlets = outlets(current).map((o) => (o.id === updated.id ? updated : o));
+
+  if (!nextOutlets.some((o) => o.active !== false)) {
+    throw new HttpError(
+      400,
+      'At least one restaurant has to stay open — switch the whole Dine-In tab off instead if the kitchens are closed'
+    );
+  }
+
+  const meta = db.get('meta');
+  meta.dineIn = Object.assign({}, current, { outlets: nextOutlets });
+  db.markDirty('meta');
+  return updated;
+}
+
 function saveSettings(patch = {}) {
   const current = settings();
   const next = Object.assign({}, current);
+
+  /* Pre-split admin payloads (and the old form) send `restaurantName`. Treat it
+     as the venue name so an old client cannot wipe it. */
+  if (patch.venueName === undefined && patch.restaurantName !== undefined) {
+    patch = Object.assign({}, patch, { venueName: patch.restaurantName });
+  }
 
   for (const [key, bounds] of Object.entries(NUMERIC_FIELDS)) {
     if (patch[key] === undefined || patch[key] === '') continue;
@@ -203,6 +497,18 @@ function saveSettings(patch = {}) {
       ? patch.areas
       : String(patch.areas || '').split(',');
     next.areas = list.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
+  }
+
+  /* Outlets may also arrive as a batch, each entry keyed by id. Unknown ids are
+     ignored rather than appended: the two restaurants are fixed. */
+  if (Array.isArray(patch.outlets)) {
+    next.outlets = outlets(current).map((outlet) => {
+      const incoming = patch.outlets.find((o) => o && o.id === outlet.id);
+      return incoming ? validateOutletPatch(outlet, incoming, next) : outlet;
+    });
+    if (!next.outlets.some((o) => o.active !== false)) {
+      throw new HttpError(400, 'At least one restaurant has to stay open');
+    }
   }
 
   // ── Property details ──
@@ -269,7 +575,15 @@ function saveSettings(patch = {}) {
 function publicSettings(s = settings()) {
   return {
     active: s.active !== false,
-    restaurantName: s.restaurantName,
+    venueName: s.venueName,
+    /**
+     * Legacy alias. Old clients read `restaurantName` for the tab heading, and
+     * the venue name is the honest answer for a heading — but nothing that
+     * attributes food to a kitchen may use it. Bills carry an outlet instead.
+     */
+    restaurantName: s.venueName,
+    /** The two restaurants. This is what the tab is actually built around. */
+    outlets: outlets(s).map((o) => publicOutlet(o, s)),
     tagline: s.tagline,
     address: s.address,
     phone: s.phone,
@@ -364,30 +678,40 @@ function durationLabel(minutes) {
  * its bill is 'completed' but is very much still at the table, so those count
  * too — only a cancellation frees the seats.
  */
-function reservationsOn(key) {
+function reservationsOn(key, outletId = null) {
   return db.find(
     'dineReservations',
-    (r) => r.date === key && (r.status === 'confirmed' || r.status === 'completed')
+    (r) =>
+      r.date === key &&
+      (r.status === 'confirmed' || r.status === 'completed') &&
+      /* Seats are counted per restaurant: the two have separate dining rooms, so
+         a packed Saturday at Dolphin must not hide a free table at Rangoli.
+         Pre-split rows have no outletId and are counted against neither. */
+      (outletId === null || r.outletId === outletId)
   );
 }
 
 /**
- * Bookable slots for a date, with the seats left in each. Past slots on today's
- * date are dropped, and a slot too close to now to clear the lock is flagged so
- * the UI can be honest about it up front.
+ * Bookable slots for a date at one outlet, with the seats left in each. Past
+ * slots on today's date are dropped.
+ *
+ * The hours and the seat count come from the OUTLET, not the venue — Rangoli
+ * opens for breakfast, Dolphin does not, and quoting one's hours for the other
+ * is the sort of small lie that ends with a guest standing at a locked door.
  */
-function slotsFor(key, s = settings()) {
+function slotsFor(key, outlet, s = settings()) {
   const date = parseKey(key);
   if (!date) throw new HttpError(400, 'Pick a valid date (YYYY-MM-DD)');
+  if (!outlet) throw new HttpError(400, 'Pick which restaurant you want a table at');
 
   const step = Math.max(5, Number(s.slotMinutes) || 30);
-  const open = minutesOfDay(s.openTime);
-  const close = minutesOfDay(s.closeTime);
+  const open = minutesOfDay(outlet.openTime);
+  const close = minutesOfDay(outlet.closeTime);
   const isToday = key === today();
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const taken = reservationsOn(key).reduce((map, r) => {
+  const taken = reservationsOn(key, outlet.id).reduce((map, r) => {
     map[r.time] = (map[r.time] || 0) + (Number(r.partySize) || 0);
     return map;
   }, {});
@@ -397,7 +721,7 @@ function slotsFor(key, s = settings()) {
     if (isToday && minutes < nowMinutes) continue;
     const time = timeLabel(minutes);
     const seated = taken[time] || 0;
-    const capacity = Math.max(1, Number(s.capacityPerSlot) || 40);
+    const capacity = Math.max(1, Number(outlet.capacityPerSlot) || Number(s.capacityPerSlot) || 40);
     out.push({
       time,
       label: clockLabel(stampFor(key, time)),
@@ -424,7 +748,14 @@ function money(amount) {
   return `\u20B9${(Number(amount) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
 
-/** Every token a notice may reference. */
+/**
+ * Every token a notice may reference.
+ *
+ * `{outlet}` is the restaurant the notice is about and `{reservedOutlet}` the one
+ * a guest's table is at — the same value most of the time, and different exactly
+ * when the guest needs telling. Both fall back to a readable phrase rather than
+ * an empty string, so a notice never reads "...before you reach  next time".
+ */
 function noticeTokens(s, extra = {}) {
   return Object.assign(
     {
@@ -432,7 +763,14 @@ function noticeTokens(s, extra = {}) {
       walkinDiscount: s.walkinDiscountPercent,
       lockMinutes: s.lockMinutes,
       graceHours: s.graceHours,
-      restaurant: s.restaurantName,
+      venue: s.venueName,
+      /* Falls back to the venue, never to one of the two outlets: naming Rangoli
+         on a bill we cannot attribute would be a guess about what someone ate. */
+      outlet: s.venueName,
+      reservedOutlet: s.venueName,
+      diet: '',
+      /** Legacy token, kept working: it now means the outlet. */
+      restaurant: s.venueName,
       minutesLeft: '0 minutes',
       unlockTime: '',
       bill: money(0),
@@ -441,6 +779,24 @@ function noticeTokens(s, extra = {}) {
     },
     extra
   );
+}
+
+/**
+ * Notice tokens naming a specific outlet (and, if different, the one the guest's
+ * table is at). Only keys we can actually fill are returned, so an unknown
+ * outlet falls through to the defaults in `noticeTokens` instead of blanking
+ * them.
+ */
+function outletTokens(s, outlet, reservedOutlet = null) {
+  const tokens = {};
+  if (outlet) {
+    tokens.outlet = outlet.name;
+    tokens.restaurant = outlet.name;
+    tokens.diet = diet(outlet.diet).label;
+    tokens.reservedOutlet = outlet.name;
+  }
+  if (reservedOutlet) tokens.reservedOutlet = reservedOutlet.name;
+  return tokens;
 }
 
 // ── The lock ────────────────────────────────────────────────────────────────
@@ -498,6 +854,12 @@ function decorateReservation(reservation, s = settings(), now = Date.now()) {
   const expired = expiresAt.getTime() < now;
 
   return Object.assign({}, reservation, {
+    /**
+     * Which restaurant this table is at, resolved live so a renamed outlet shows
+     * its new name. null for a pre-split reservation, which the UI labels
+     * honestly rather than guessing.
+     */
+    outlet: outletOf(reservation, s),
     lock,
     expiresAt: expiresAt.toISOString(),
     expired,
@@ -519,10 +881,23 @@ function decorateReservation(reservation, s = settings(), now = Date.now()) {
   });
 }
 
-/** The reservation a guest should be billed against: soonest usable one. */
-function activeReservationFor(userId, s = settings(), now = Date.now()) {
+/**
+ * The reservation a guest should be billed against: soonest usable one.
+ *
+ * `outletId` narrows it to one restaurant, which is what the bill screen wants —
+ * a guest can hold a table at both, and pulling the Rangoli booking into a
+ * Dolphin bill is precisely the mix-up this parameter exists to prevent.
+ */
+function activeReservationFor(userId, s = settings(), now = Date.now(), outletId = null) {
   const mine = db
-    .find('dineReservations', (r) => r.userId === userId && r.status === 'confirmed' && !r.billId)
+    .find(
+      'dineReservations',
+      (r) =>
+        r.userId === userId &&
+        r.status === 'confirmed' &&
+        !r.billId &&
+        (outletId === null || r.outletId === outletId)
+    )
     .map((r) => decorateReservation(r, s, now))
     .filter((r) => !r.expired)
     // Billable ones first, then the one that unlocks soonest.
@@ -539,9 +914,16 @@ function activeReservationFor(userId, s = settings(), now = Date.now()) {
  * @param {object} input
  * @param {object|null} input.reservation  decorated reservation, or null for a walk-in
  * @param {boolean} input.walkinRequested  guest explicitly chose to pay at the walk-in rate
+ * @param {object|null} input.outlet       the restaurant this bill is for
  * @returns tier descriptor including the rendered, admin-authored notice
  */
-function resolveTier({ reservation = null, walkinRequested = false, s = settings(), now = Date.now() } = {}) {
+function resolveTier({
+  reservation = null,
+  walkinRequested = false,
+  outlet = null,
+  s = settings(),
+  now = Date.now(),
+} = {}) {
   const reserved = Number(s.reservedDiscountPercent) || 0;
   const walkin = Number(s.walkinDiscountPercent) || 0;
 
@@ -554,7 +936,31 @@ function resolveTier({ reservation = null, walkinRequested = false, s = settings
       canPayNow: true,
       reservationId: null,
       lock: null,
+      outlet: outletStamp(outlet),
       noticeKey: 'walkinNotice',
+      noticeKind: 'warn',
+    };
+  }
+
+  /**
+   * Wrong restaurant. The table is real and the guest keeps it, but it buys
+   * nothing here: Rangoli and Dolphin ring up separately, so a Rangoli booking
+   * cannot take 30% off a Dolphin bill. Downgraded to the walk-in rate with its
+   * own notice, because a guest who silently got 10% where they expected 30%
+   * would reasonably think the app had cheated them.
+   */
+  if (outlet && reservation.outletId && reservation.outletId !== outlet.id) {
+    return {
+      mode: 'walkin',
+      discountPercent: walkin,
+      locked: false,
+      canPayNow: true,
+      reservationId: null,
+      lock: null,
+      outlet: outletStamp(outlet),
+      reservedOutlet: outletOf(reservation, s),
+      downgradedFrom: 'other-outlet',
+      noticeKey: 'otherOutletNotice',
       noticeKind: 'warn',
     };
   }
@@ -567,6 +973,7 @@ function resolveTier({ reservation = null, walkinRequested = false, s = settings
       canPayNow: false,
       reservationId: reservation.id,
       lock: reservation.lock,
+      outlet: outletStamp(outlet) || outletOf(reservation, s),
       // Falling back to the walk-in rate keeps the guest from being stuck.
       walkinFallback: s.allowWalkinWhileLocked !== false ? walkin : null,
       noticeKey: 'lockedNotice',
@@ -583,6 +990,7 @@ function resolveTier({ reservation = null, walkinRequested = false, s = settings
       canPayNow: true,
       reservationId: null,
       lock: null,
+      outlet: outletStamp(outlet),
       noticeKey: 'walkinNotice',
       noticeKind: 'warn',
       downgradedFrom: reservation.blockedReason,
@@ -596,6 +1004,7 @@ function resolveTier({ reservation = null, walkinRequested = false, s = settings
     canPayNow: true,
     reservationId: reservation.id,
     lock: reservation.lock,
+    outlet: outletStamp(outlet) || outletOf(reservation, s),
     noticeKey: 'reservedNotice',
     noticeKind: 'info',
   };
@@ -603,13 +1012,20 @@ function resolveTier({ reservation = null, walkinRequested = false, s = settings
 
 /** Renders the notice for a tier, filling in live amounts and countdown. */
 function tierNotice(tier, s = settings(), amounts = null) {
-  const tokens = noticeTokens(s, {
-    minutesLeft: tier.lock ? durationLabel(tier.lock.minutesLeft) : '0 minutes',
-    unlockTime: tier.lock ? tier.lock.unlockLabel : '',
-    bill: money(amounts ? amounts.billAmount : 0),
-    saving: money(amounts ? amounts.discount : 0),
-    payable: money(amounts ? amounts.total : 0),
-  });
+  const tokens = noticeTokens(
+    s,
+    Object.assign(
+      {
+        minutesLeft: tier.lock ? durationLabel(tier.lock.minutesLeft) : '0 minutes',
+        unlockTime: tier.lock ? tier.lock.unlockLabel : '',
+        bill: money(amounts ? amounts.billAmount : 0),
+        saving: money(amounts ? amounts.discount : 0),
+        payable: money(amounts ? amounts.total : 0),
+      },
+      // Names the restaurant the notice is about, and the one holding the table.
+      outletTokens(s, tier.outlet, tier.reservedOutlet)
+    )
+  );
   return renderNotice(s[tier.noticeKey], tokens);
 }
 
@@ -618,22 +1034,42 @@ function paidNotice(bill, s = settings()) {
   const key = bill.mode === 'reserved' ? 'paidReservedNotice' : 'paidWalkinNotice';
   return renderNotice(
     s[key],
-    noticeTokens(s, {
-      bill: money(bill.amounts.billAmount),
-      saving: money(bill.amounts.discount),
-      payable: money(bill.amounts.total),
-    })
+    noticeTokens(
+      s,
+      Object.assign(
+        {
+          bill: money(bill.amounts.billAmount),
+          saving: money(bill.amounts.discount),
+          payable: money(bill.amounts.total),
+        },
+        /* Read off the bill, not off live settings: the receipt must keep naming
+           the restaurant the guest actually ate at. */
+        outletTokens(s, outletOf(bill, s) || bill.outlet || null)
+      )
+    )
   );
 }
 
 module.exports = {
   DEFAULTS,
+  DIETS,
+  OUTLET_DEFAULTS,
   NOTICE_FIELDS,
   DATE_RE,
   TIME_RE,
   settings,
   saveSettings,
+  saveOutlet,
   publicSettings,
+  diet,
+  outlets,
+  bookableOutlets,
+  outletById,
+  outletOpenNow,
+  publicOutlet,
+  outletStamp,
+  outletOf,
+  outletTokens,
   dateKey,
   today,
   parseKey,

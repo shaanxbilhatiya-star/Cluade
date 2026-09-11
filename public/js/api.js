@@ -129,13 +129,22 @@
     bookHotel: function (payload) { return request('POST', '/hotels/bookings', payload); },
 
     // ── Dine-In ──
-    /** Tab payload: live discount tiers, my reservation + its billing lock. */
+    /* The resort has two restaurants — Rangoli (pure veg) and Dolphin (non-veg).
+       Every call that reserves a table or settles a bill must carry an
+       `outletId`; the server refuses rather than defaulting, because guessing
+       would seat a vegetarian in the non-veg dining room or post one
+       restaurant's money to the other. */
+    /** Tab payload: the venue, both restaurants with their own state, live tiers. */
     dineIn: function () { return request('GET', '/dine-in'); },
-    dineSlots: function (date) { return request('GET', '/dine-in/slots' + (date ? '?date=' + encodeURIComponent(date) : '')); },
+    /** Availability at ONE restaurant — hours and seats are per outlet. */
+    dineSlots: function (outletId, date) {
+      return request('GET', '/dine-in/slots?outletId=' + encodeURIComponent(outletId) +
+        (date ? '&date=' + encodeURIComponent(date) : ''));
+    },
     dineReservations: function () { return request('GET', '/dine-in/reservations'); },
     reserveTable: function (payload) { return request('POST', '/dine-in/reservations', payload); },
     cancelReservation: function (id) { return request('POST', '/dine-in/reservations/' + id + '/cancel', {}); },
-    /** Server decides the tier, the lock state and the notice wording. */
+    /** Server decides the tier, the lock state, the outlet match and the notice. */
     dineQuote: function (payload) { return request('POST', '/dine-in/quote', payload); },
     validateDineOffer: function (payload) { return request('POST', '/dine-in/offers/validate', payload); },
     payDineBill: function (payload) { return request('POST', '/dine-in/bills', payload); },

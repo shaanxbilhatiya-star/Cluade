@@ -1,18 +1,36 @@
-/* Dine-In tab — reserve a table, then settle the restaurant bill from your seat
-   and take the instant discount.
+/* Dine-In tab — the resort's TWO restaurants, then reserve a table and settle
+   the bill from your seat.
 
-   Two tiers, and the server decides which one applies:
+   ── Which restaurant? ─────────────────────────────────────────────────────
+   Kingfisher Resort has two, and guests frequently do not know that:
+
+     · Rangoli — PURE VEG, its own kitchen
+     · Dolphin — NON-VEG
+
+   That single fact drives the whole layout. The tab opens on the resort with
+   both restaurants side by side and their veg / non-veg marks in the first
+   thing you see; reserving and paying are separate screens per restaurant, each
+   wearing a banner naming it; and the pay button asks you to confirm the
+   restaurant before it takes any money. Nothing in this file can render a table
+   or a bill without saying which kitchen it belongs to.
+
+   ── The two discount tiers ────────────────────────────────────────────────
+   The server decides which applies:
      · reserved — a reservation held for at least `lockMinutes` (30 by default)
-       bills at the higher rate (30% by default). Billing against a reservation
-       is LOCKED until that window passes, so booking a table while already
-       sitting at it cannot buy the bigger discount. This screen shows the
-       countdown and unlocks itself when it reaches zero.
-     · walk-in — no reservation, bills instantly at the lower rate (10%) and the
-       guest is shown the "book ahead next time" notice.
+       bills at the higher rate (30%). Billing against a reservation is LOCKED
+       until that window passes, so booking a table while already sitting at it
+       cannot buy the bigger discount. This screen shows the countdown and
+       unlocks itself when it reaches zero.
+     · walk-in — no reservation, bills instantly at the lower rate (10%).
 
-   Every percentage and every line of notice copy comes from the API, which reads
-   it from admin-editable settings — nothing here hardcodes a discount or a
-   message, so changing them in the admin panel changes this screen. */
+   A table earns its discount AT ITS OWN RESTAURANT ONLY. Holding a Rangoli
+   table and paying a Dolphin bill gets the walk-in rate, and the screen says so
+   out loud rather than quietly charging the lower saving.
+
+   The same offer runs at both restaurants, so choosing between them is only ever
+   about what you feel like eating. Every percentage and every line of notice
+   copy comes from the API, which reads admin-editable settings — nothing here
+   hardcodes a discount or a message. */
 (function () {
   'use strict';
 
@@ -25,6 +43,52 @@
 
   // ── shared bits ───────────────────────────────────────────────────────────
   function telHref(phone) { return 'tel:' + String(phone || '').replace(/\s+/g, ''); }
+
+  /**
+   * The mark Indian diners read before they read anything else: a green dot in a
+   * green box for vegetarian, a maroon triangle in a maroon box for non-veg.
+   *
+   * It is drawn in CSS rather than as text so it survives every font, and it
+   * always ships an accessible label — a colour-blind or screen-reader guest must
+   * get the same answer as everyone else, since this is the one detail on the
+   * screen that nobody can afford to misread.
+   */
+  function dietMark(diet, label) {
+    var veg = diet !== 'nonveg';
+    return '<span class="veg-mark veg-mark--' + (veg ? 'veg' : 'nonveg') + '" role="img" aria-label="' +
+      UI.esc(label || (veg ? 'Vegetarian' : 'Non-vegetarian')) + '"></span>';
+  }
+
+  /** Mark + wording together, e.g. a green mark next to "PURE VEG". */
+  function dietTag(outlet) {
+    return '<span class="diet-tag diet-tag--' + (outlet.diet === 'nonveg' ? 'nonveg' : 'veg') + '">' +
+      dietMark(outlet.diet, outlet.dietLong) +
+      UI.esc((outlet.dietLabel || '').toUpperCase()) +
+    '</span>';
+  }
+
+  /**
+   * The banner every reserve/pay screen wears.
+   *
+   * It is sticky, so however far a guest scrolls down a bill they can still see
+   * which restaurant they are about to pay. "Change" is offered right there
+   * because realising you are on the wrong one is exactly the moment this whole
+   * design is built for.
+   */
+  function outletIdentity(outlet, venueName, options) {
+    var o = options || {};
+    return '<div class="dine-ident dine-ident--' + (outlet.diet === 'nonveg' ? 'nonveg' : 'veg') + '">' +
+      dietMark(outlet.diet, outlet.dietLong) +
+      '<span class="dine-ident__text">' +
+        '<span class="dine-ident__name">' + UI.esc(outlet.name) +
+          '<small>' + UI.esc(outlet.dietLabel) + '</small></span>' +
+        '<span class="dine-ident__sub">' + UI.esc(o.sub || (outlet.dietLong + ' · ' + (venueName || ''))) + '</span>' +
+      '</span>' +
+      (o.switchable === false
+        ? ''
+        : '<button class="dine-ident__switch" data-action="switch-outlet">Change</button>') +
+    '</div>';
+  }
 
   function noticeBanner(text, kind, style) {
     if (!text) return '';
@@ -64,6 +128,16 @@
     return UI.relativeDay(reservation.date) + ' · ' + UI.hhmm(reservation.startsAt);
   }
 
+  /** "Rangoli" for a tagged row, and an honest shrug for a pre-split one. */
+  function outletName(row) {
+    return (row && row.outlet && row.outlet.name) || row.restaurantName || 'Restaurant not recorded';
+  }
+
+  function hoursLine(outlet) {
+    return 'Open ' + UI.esc(outlet.openTime) + ' – ' + UI.esc(outlet.closeTime) +
+      (outlet.openNow ? '' : ' · <span class="dine-outlet__closed">Closed right now</span>');
+  }
+
   /** Bill breakdown, shared by the pay screen and the receipt. */
   function billKv(amounts, discountLabel) {
     return '<div class="kv"><span class="kv__key">Restaurant bill</span>' +
@@ -88,16 +162,48 @@
       '</div></div>';
   }
 
+  /**
+   * Loads the tab payload and pins it to one restaurant.
+   *
+   * A bad or missing id bounces the guest back to the chooser instead of falling
+   * through to a default — the whole point is that the app never decides which
+   * restaurant someone is eating at.
+   */
+  async function loadOutlet(outletId) {
+    var data = await API.dineIn();
+    var outlet = (data.outlets || []).find(function (o) { return o.id === outletId; });
+    if (!outlet) {
+      UI.toast('Choose which restaurant first', 'error');
+      App.navigate('/dine-in');
+      return null;
+    }
+    return { data: data, outlet: outlet };
+  }
+
+  /** Wires up the "Change" button on the identity banner. */
+  function bindSwitch(view, data, outlet, basePath) {
+    var others = (data.outlets || []).filter(function (o) { return o.id !== outlet.id; });
+    return function () {
+      // Two restaurants means "change" has exactly one answer — just go there.
+      if (others.length === 1) App.navigate(basePath + '/' + others[0].id);
+      else App.navigate(basePath);
+    };
+  }
+
   // ── Dine-In home ──────────────────────────────────────────────────────────
+  /* The tab opens on the RESORT and lists both restaurants. It deliberately does
+     not open on a single restaurant, and it deliberately does not open on a
+     forced chooser either: a guest who does not yet know there are two needs to
+     see them together, marked, with their hours, before being asked to pick. */
   window.Screens.dineIn = {
     tab: 'dinein',
     render: async function () {
       var data = await API.dineIn();
       var s = data.settings;
+      var venue = data.venue;
+      var outlets = data.outlets || [];
       var reserved = data.tiers.reserved;
       var walkin = data.tiers.walkin;
-      var current = data.current;
-      var reservation = data.reservation;
 
       if (s.active === false) {
         return UI.h(
@@ -108,107 +214,130 @@
         );
       }
 
+      /** One card per restaurant: what it is, when it opens, and my state there. */
+      function outletCard(outlet) {
+        var mine = outlet.reservation;
+        var pct = mine ? reserved.discountPercent : walkin.discountPercent;
+
+        return '<section class="dine-outlet dine-outlet--' + (outlet.diet === 'nonveg' ? 'nonveg' : 'veg') + '"' +
+            ' data-outlet="' + UI.esc(outlet.id) + '">' +
+
+          '<header class="dine-outlet__head">' +
+            '<div class="dine-outlet__title">' +
+              '<h3 class="dine-outlet__name">' + UI.esc(outlet.name) + '</h3>' +
+              dietTag(outlet) +
+            '</div>' +
+            (outlet.cuisine ? '<p class="dine-outlet__cuisine">' + UI.esc(outlet.cuisine) + '</p>' : '') +
+          '</header>' +
+
+          /* The diet note in plain words, under the mark. Two ways of saying the
+             same thing, because this is the detail nobody may misread. */
+          (outlet.dietNote
+            ? '<p class="dine-outlet__diet-note">' + UI.esc(outlet.dietNote) + '</p>'
+            : '') +
+
+          '<p class="dine-outlet__hours">' + UI.icon('clock', 14) + '<span>' + hoursLine(outlet) + '</span></p>' +
+
+          (mine
+            /* A table here. The countdown and the pay button belong to THIS card,
+               so a guest holding tables at both can never confuse the two. */
+            ? '<div class="dine-outlet__res" data-res="' + UI.esc(outlet.id) + '">' +
+                '<div class="dine-outlet__res-head">' +
+                  '<span class="dine-outlet__res-badge">' + UI.icon('check', 12) + ' Table booked here</span>' +
+                  '<span class="dine-outlet__res-pct">' + reserved.discountPercent + '% off</span>' +
+                '</div>' +
+                '<div class="dine-outlet__res-when">' + UI.esc(slotLabel(mine)) + '</div>' +
+                '<div class="dine-outlet__res-meta">' + UI.esc(partyLine(mine)) + ' · ' + UI.esc(mine.reference) + '</div>' +
+                '<div class="dine-lock" data-lock>' +
+                  UI.icon('lock', 20) +
+                  '<span class="dine-lock__text">' +
+                    '<span class="dine-lock__title" data-lock-title></span>' +
+                    '<span class="dine-lock__sub" data-lock-sub></span>' +
+                  '</span>' +
+                  '<span class="dine-lock__clock" data-lock-clock></span>' +
+                '</div>' +
+              '</div>' +
+              '<div class="dine-outlet__actions">' +
+                '<button class="btn" data-action="pay" data-id="' + UI.esc(outlet.id) + '" data-pay-btn>' +
+                  'Pay ' + UI.esc(outlet.name) + ' bill · ' + reserved.discountPercent + '% off</button>' +
+                '<button class="btn-outline" data-action="cancel-res" data-id="' + UI.esc(mine.id) + '"' +
+                  ' data-name="' + UI.esc(outlet.name) + '">Cancel this table</button>' +
+              '</div>'
+
+            /* No table here. Reserving is the primary action because it is worth
+               three times as much to the guest. */
+            : '<div class="dine-outlet__actions">' +
+                '<button class="btn" data-action="reserve" data-id="' + UI.esc(outlet.id) + '">' +
+                  UI.icon('calendar', 16) + ' Reserve at ' + UI.esc(outlet.name) + ' · ' +
+                  reserved.discountPercent + '% off</button>' +
+                '<button class="btn-outline" data-action="pay" data-id="' + UI.esc(outlet.id) + '">' +
+                  'Pay ' + UI.esc(outlet.name) + ' bill now · ' + walkin.discountPercent + '% off</button>' +
+              '</div>') +
+
+          (outlet.active === false
+            ? '<p class="dine-outlet__shut">' + UI.esc(outlet.name) + ' is not taking bookings right now.</p>'
+            : '') +
+        '</section>';
+      }
+
       var view = UI.h(
         '<div class="screen">' +
           UI.appbar({ title: 'Dine-In' }) +
           '<div class="scroll">' +
 
-            UI.propertyHero(Object.assign({}, s, {
-              name: s.restaurantName,
-              location: s.address,
+            /* The hero is the RESORT. It used to carry an invented single
+               restaurant name, which is what hid the second one. */
+            UI.propertyHero(Object.assign({}, venue, {
+              name: venue.name,
+              location: venue.address,
             })) +
 
-            (s.tagline ? '<p class="hotel-tagline">' + UI.esc(s.tagline) + '</p>' : '') +
+            (venue.tagline ? '<p class="hotel-tagline">' + UI.esc(venue.tagline) + '</p>' : '') +
 
-            '<div class="dine-hero">' +
-              '<div class="dine-hero__meta">' + UI.icon('clock', 15) +
-                '<span>Open ' + UI.esc(s.openTime) + ' – ' + UI.esc(s.closeTime) + '</span></div>' +
+            /* The explainer. First thing after the hero, because "there are two
+               restaurants in here" is the fact guests are missing. */
+            '<div class="dine-explainer">' +
+              '<h2 class="dine-explainer__title">' + UI.icon('info', 16) +
+                ' Two restaurants, one resort</h2>' +
+              '<p class="dine-explainer__text">' +
+                UI.esc(venue.name) + ' has two separate restaurants with separate kitchens, ' +
+                'separate tables and separate bills. Pick the one you are eating at — ' +
+                'the discount is the same at both.' +
+              '</p>' +
+              '<ul class="dine-explainer__list">' +
+                outlets.map(function (o) {
+                  return '<li>' + dietMark(o.diet, o.dietLong) +
+                    '<span><strong>' + UI.esc(o.name) + '</strong> — ' + UI.esc(o.dietLong) +
+                    (o.cuisine ? '<small>' + UI.esc(o.cuisine) + '</small>' : '') + '</span></li>';
+                }).join('') +
+              '</ul>' +
             '</div>' +
 
-            /* ── Eligibility status: one card that answers "what discount do I get?" ── */
-            '<div class="dine-elig-section">' +
-              (!data.signedIn
-                /* Not signed in — show both tiers as reference, prompt to sign in. */
-                ? '<div class="dine-tiers">' +
-                    '<div class="dine-tier dine-tier--best">' +
-                      '<span class="dine-tier__flag">Best deal</span>' +
-                      '<span class="dine-tier__off">' + reserved.discountPercent + '% OFF</span>' +
-                      '<span class="dine-tier__label">With a reservation</span>' +
-                      '<span class="dine-tier__hint">Book at least ' + reserved.lockMinutes + ' min before you arrive, then pay in the app.</span>' +
-                    '</div>' +
-                    '<div class="dine-tier dine-tier--plain">' +
-                      '<span class="dine-tier__off">' + walkin.discountPercent + '% OFF</span>' +
-                      '<span class="dine-tier__label">Walk in &amp; pay</span>' +
-                      '<span class="dine-tier__hint">No booking needed — pay your bill instantly.</span>' +
-                    '</div>' +
-                  '</div>' +
-                  signInPrompt('Sign in to reserve a table and pay your bill with an instant discount.')
-
-                : reservation
-                  /* HAS A RESERVATION — unified card: discount badge + lock countdown + pay button */
-                  ? '<div class="dine-elig-card dine-elig-card--best" data-res>' +
-                      '<div class="dine-elig-card__header">' +
-                        '<div class="dine-elig-card__pct">' +
-                          reserved.discountPercent + '<span class="dine-elig-card__pct-off">%&nbsp;OFF</span>' +
-                        '</div>' +
-                        '<div class="dine-elig-card__info">' +
-                          '<div class="dine-elig-card__badge">' + UI.icon('check', 12) + ' Your discount</div>' +
-                          '<div class="dine-elig-card__title">Reserved table discount</div>' +
-                          '<div class="dine-elig-card__meta">' +
-                            UI.esc(slotLabel(reservation)) + ' · ' + UI.esc(partyLine(reservation)) +
-                          '</div>' +
-                          '<div class="dine-elig-card__ref">' + UI.esc(reservation.reference) + '</div>' +
-                        '</div>' +
-                      '</div>' +
-                      '<div class="dine-lock" data-lock>' +
-                        UI.icon('lock', 20) +
-                        '<span class="dine-lock__text">' +
-                          '<span class="dine-lock__title" data-lock-title></span>' +
-                          '<span class="dine-lock__sub" data-lock-sub></span>' +
-                        '</span>' +
-                        '<span class="dine-lock__clock" data-lock-clock></span>' +
-                      '</div>' +
-                      '<div style="height:14px"></div>' +
-                      '<button class="btn" data-action="pay" data-pay-btn>Pay bill with ' +
-                        reserved.discountPercent + '% off</button>' +
-                      '<div style="height:8px"></div>' +
-                      '<button class="btn-outline" data-action="cancel-res">Cancel reservation</button>' +
-                      /* Reserved notice: green/info style to feel like a confirmation, not a warning */
-                      (current.notice ? '<div style="height:10px"></div>' + noticeBanner(current.notice, 'info') : '') +
-                    '</div>'
-
-                  /* NO RESERVATION — walk-in rate card + notice + upgrade nudge */
-                  : '<div class="dine-elig-card dine-elig-card--walkin">' +
-                      '<div class="dine-elig-card__header">' +
-                        '<div class="dine-elig-card__pct dine-elig-card__pct--plain">' +
-                          walkin.discountPercent + '<span class="dine-elig-card__pct-off">%&nbsp;OFF</span>' +
-                        '</div>' +
-                        '<div class="dine-elig-card__info">' +
-                          '<div class="dine-elig-card__badge dine-elig-card__badge--walkin">Walk-in rate</div>' +
-                          '<div class="dine-elig-card__title">No booking needed</div>' +
-                          '<div class="dine-elig-card__meta">Pay your bill instantly.</div>' +
-                        '</div>' +
-                      '</div>' +
-                      '<button class="btn" data-action="pay">Pay bill · ' +
-                        walkin.discountPercent + '% off</button>' +
-                    '</div>' +
-                    /* Walk-in notice sits right under the 10% card */
-                    noticeBanner(current.notice, current.noticeKind) +
-                    /* Upgrade nudge */
-                    '<div class="dine-upgrade-card">' +
-                      '<div class="dine-upgrade-card__pct">' + reserved.discountPercent + '%</div>' +
-                      '<div class="dine-upgrade-card__body">' +
-                        '<strong>Reserve to save more</strong>' +
-                        '<span>Book at least ' + reserved.lockMinutes + ' min before you arrive — get ' +
-                          reserved.discountPercent + '% off instead of ' + walkin.discountPercent + '%.</span>' +
-                      '</div>' +
-                      '<button class="dine-hero__btn dine-hero__btn--solid dine-upgrade-card__btn" data-action="reserve">' +
-                        UI.icon('calendar', 15) + 'Reserve</button>' +
-                    '</div>'
-              ) +
+            /* The offer, stated once for the whole resort. Saying it per card
+               would imply the two restaurants compete on price. */
+            '<div class="dine-deal">' +
+              '<div class="dine-deal__row">' +
+                '<span class="dine-deal__pct">' + reserved.discountPercent + '%</span>' +
+                '<span class="dine-deal__text"><strong>With a reservation</strong>' +
+                  '<span>Book at least ' + reserved.lockMinutes + ' min before you arrive.</span></span>' +
+              '</div>' +
+              '<div class="dine-deal__row dine-deal__row--plain">' +
+                '<span class="dine-deal__pct">' + walkin.discountPercent + '%</span>' +
+                '<span class="dine-deal__text"><strong>Walk in &amp; pay</strong>' +
+                  '<span>No booking needed — pay your bill instantly.</span></span>' +
+              '</div>' +
+              '<p class="dine-deal__note">Same offer at ' +
+                UI.esc(outlets.map(function (o) { return o.name; }).join(' and ')) +
+                '. Your table earns its discount at its own restaurant only.</p>' +
             '</div>' +
 
-            /* Past bills, so the savings are visible over time. */
+            '<div class="dine-outlets">' + outlets.map(outletCard).join('') + '</div>' +
+
+            (!data.signedIn
+              ? signInPrompt('Sign in to reserve a table and pay your bill with an instant discount.')
+              : '') +
+
+            /* Past bills, each labelled with the restaurant it was rung up at. */
             (data.recentBills && data.recentBills.length
               ? '<div class="section">' +
                   UI.sectionHead('Recent bills') +
@@ -216,7 +345,9 @@
                     data.recentBills.map(function (b) {
                       return '<button class="dine-bill-row" data-action="receipt" data-id="' + UI.esc(b.id) + '" style="width:100%;text-align:left">' +
                         '<span class="dine-bill-row__text">' +
-                          '<span class="dine-bill-row__title">' + UI.esc(b.restaurantName || s.restaurantName) + '</span>' +
+                          '<span class="dine-bill-row__title">' +
+                            (b.outlet ? dietMark(b.outlet.diet, b.outlet.dietLabel) : '') +
+                            UI.esc(outletName(b)) + '</span>' +
                           '<span class="dine-bill-row__meta">' + UI.esc(UI.shortDate(b.paidAt || b.createdAt)) +
                             ' · ' + (b.mode === 'reserved' ? 'Reserved table' : 'Walk-in') + '</span>' +
                         '</span>' +
@@ -228,72 +359,83 @@
                 '</div>'
               : '') +
 
-            (s.phone
+            (venue.phone
               ? '<div class="section">' +
-                  '<a class="card exp-call" href="' + telHref(s.phone) + '">' +
+                  '<a class="card exp-call" href="' + telHref(venue.phone) + '">' +
                     '<span class="exp-call__icon">' + UI.icon('phone', 22) + '</span>' +
-                    '<span class="exp-call__text"><strong>Having doubts on discounts?</strong>' +
-                      '<span>Call us · ' + UI.esc(s.phone) + '</span></span>' +
+                    '<span class="exp-call__text"><strong>Not sure which restaurant to book?</strong>' +
+                      '<span>Call the resort · ' + UI.esc(venue.phone) + '</span></span>' +
                     '<span class="exp-call__arrow">' + UI.icon('arrow-right', 18) + '</span>' +
                   '</a></div>'
               : '') +
 
-            UI.propertyExtras(s) +
+            UI.propertyExtras(venue) +
 
             '<div class="spacer-24"></div>' +
           '</div>' +
         '</div>'
       );
 
-      /* Countdown: re-renders the lock row each second and flips the pay button
-         on by itself the moment the window opens, with no reload needed. */
-      if (reservation) {
-        var lockRow = view.querySelector('[data-lock]');
-        var titleEl = view.querySelector('[data-lock-title]');
-        var subEl = view.querySelector('[data-lock-sub]');
-        var clockEl = view.querySelector('[data-lock-clock]');
-        var payBtn = view.querySelector('[data-pay-btn]');
-        var deadline = new Date(reservation.lock.unlocksAt).getTime();
+      /* One countdown per booked restaurant. Each is scoped to its own card, so
+         a guest holding tables at both sees two independent timers rather than
+         one ambiguous one. */
+      outlets.forEach(function (outlet) {
+        if (!outlet.reservation) return;
+        var card = view.querySelector('[data-res="' + outlet.id + '"]');
+        if (!card) return;
+        var lockRow = card.querySelector('[data-lock]');
+        var titleEl = card.querySelector('[data-lock-title]');
+        var subEl = card.querySelector('[data-lock-sub]');
+        var clockEl = card.querySelector('[data-lock-clock]');
+        var payBtn = view.querySelector('.dine-outlet[data-outlet="' + outlet.id + '"] [data-pay-btn]');
+        var lock = outlet.reservation.lock;
+        var deadline = new Date(lock.unlocksAt).getTime();
 
         everySecond(view, function () {
           var secondsLeft = Math.max(0, Math.round((deadline - Date.now()) / 1000));
           if (secondsLeft > 0) {
             lockRow.classList.remove('dine-lock--open');
             titleEl.textContent = 'Billing locked';
-            subEl.textContent = 'Your ' + reserved.discountPercent + '% discount unlocks at ' +
-              reservation.lock.unlockLabel + '.';
+            subEl.textContent = 'Your ' + reserved.discountPercent + '% ' + outlet.name +
+              ' discount unlocks at ' + lock.unlockLabel + '.';
             clockEl.textContent = mmss(secondsLeft);
-            payBtn.disabled = true;
-            payBtn.textContent = 'Unlocks in ' + mmss(secondsLeft);
+            if (payBtn) {
+              payBtn.disabled = true;
+              payBtn.textContent = 'Unlocks in ' + mmss(secondsLeft);
+            }
           } else {
             lockRow.classList.add('dine-lock--open');
             titleEl.textContent = 'Ready to pay';
-            subEl.textContent = 'Your ' + reserved.discountPercent + '% reserved-table discount is active.';
+            subEl.textContent = 'Your ' + reserved.discountPercent + '% reserved-table discount is active at ' +
+              outlet.name + '.';
             clockEl.textContent = '';
-            payBtn.disabled = false;
-            payBtn.textContent = 'Pay bill with ' + reserved.discountPercent + '% off';
+            if (payBtn) {
+              payBtn.disabled = false;
+              payBtn.textContent = 'Pay ' + outlet.name + ' bill · ' + reserved.discountPercent + '% off';
+            }
           }
         });
-      }
+      });
 
       UI.actions(view, {
-        reserve: function () { App.navigate('/dine-in/reserve'); },
-        pay: function () { App.navigate('/dine-in/bill'); },
+        reserve: function (el) { App.navigate('/dine-in/reserve/' + el.getAttribute('data-id')); },
+        pay: function (el) { App.navigate('/dine-in/bill/' + el.getAttribute('data-id')); },
         signin: function () { App.navigate('/login'); },
         receipt: function (el) { App.navigate('/dine-in/paid/' + el.getAttribute('data-id')); },
-        'cancel-res': async function () {
+        'cancel-res': async function (el) {
+          var name = el.getAttribute('data-name');
           var ok = await UI.confirm({
-            title: 'Cancel this reservation?',
-            message: 'Your table will be released and you will lose the ' +
-              reserved.discountPercent + '% in-app billing discount.',
-            confirmLabel: 'Cancel reservation',
+            title: 'Cancel your ' + name + ' table?',
+            message: 'Your table at ' + name + ' will be released and you will lose the ' +
+              reserved.discountPercent + '% in-app billing discount there. Bookings at the other restaurant are not affected.',
+            confirmLabel: 'Cancel ' + name + ' table',
             cancelLabel: 'Keep it',
             danger: true,
           });
           if (!ok) return;
           try {
-            await API.cancelReservation(reservation.id);
-            UI.toast('Reservation cancelled');
+            await API.cancelReservation(el.getAttribute('data-id'));
+            UI.toast(name + ' reservation cancelled');
             App.render();
           } catch (err) { UI.toast(err.message, 'error'); }
         },
@@ -303,21 +445,96 @@
     },
   };
 
+  // ── "Which restaurant?" chooser ───────────────────────────────────────────
+  /* Reached by the bare /dine-in/reserve and /dine-in/bill paths — old links,
+     bookmarks, anything that arrives without naming a restaurant. It asks rather
+     than assuming, which is the same rule the API enforces. */
+  function outletPicker(config) {
+    return {
+      tab: 'dinein',
+      auth: true,
+      backTo: '/dine-in',
+      render: async function () {
+        var data = await API.dineIn();
+        var outlets = data.outlets || [];
+
+        var view = UI.h(
+          '<div class="screen">' +
+            UI.appbar({ title: config.title, back: true }) +
+            '<div class="scroll">' +
+
+              '<div class="dine-pick-intro">' +
+                '<h2>' + UI.esc(config.heading) + '</h2>' +
+                '<p>' + UI.esc(config.blurb) + '</p>' +
+              '</div>' +
+
+              '<div class="dine-picks">' +
+                outlets.map(function (o) {
+                  return '<button class="dine-pick dine-pick--' + (o.diet === 'nonveg' ? 'nonveg' : 'veg') + '"' +
+                      ' data-action="choose" data-id="' + UI.esc(o.id) + '"' +
+                      (o.active === false ? ' disabled' : '') + '>' +
+                    '<span class="dine-pick__top">' + dietMark(o.diet, o.dietLong) + dietTag(o) + '</span>' +
+                    '<span class="dine-pick__name">' + UI.esc(o.name) + '</span>' +
+                    (o.cuisine ? '<span class="dine-pick__cuisine">' + UI.esc(o.cuisine) + '</span>' : '') +
+                    (o.dietNote ? '<span class="dine-pick__note">' + UI.esc(o.dietNote) + '</span>' : '') +
+                    '<span class="dine-pick__hours">' + hoursLine(o) + '</span>' +
+                    (o.reservation
+                      ? '<span class="dine-pick__flag">' + UI.icon('check', 12) + ' You have a table here</span>'
+                      : '') +
+                    (o.active === false ? '<span class="dine-pick__shut">Not available right now</span>' : '') +
+                  '</button>';
+                }).join('') +
+              '</div>' +
+
+              '<div class="spacer-24"></div>' +
+            '</div>' +
+          '</div>'
+        );
+
+        UI.actions(view, {
+          choose: function (el) {
+            App.navigate(config.basePath + '/' + el.getAttribute('data-id'));
+          },
+        });
+
+        return view;
+      },
+    };
+  }
+
+  window.Screens.dineReservePick = outletPicker({
+    title: 'Reserve a table',
+    heading: 'Which restaurant?',
+    blurb: 'The resort has two, with separate kitchens and separate tables. Pick the one you want to eat at.',
+    basePath: '/dine-in/reserve',
+  });
+
+  window.Screens.dineBillPick = outletPicker({
+    title: 'Pay your bill',
+    heading: 'Which restaurant is the bill from?',
+    blurb: 'Check the top of your printed bill. The two restaurants are billed separately, so this has to match.',
+    basePath: '/dine-in/bill',
+  });
+
   // ── Reserve a table ───────────────────────────────────────────────────────
   window.Screens.dineReserve = {
     tab: 'dinein',
     auth: true,
     backTo: '/dine-in',
-    render: async function () {
-      var data = await API.dineIn();
+    render: async function (params) {
+      var loaded = await loadOutlet(params.outletId);
+      if (!loaded) return UI.h('<div class="screen"><div class="scroll"></div></div>');
+      var data = loaded.data;
+      var outlet = loaded.outlet;
       var s = data.settings;
-      var slotData = await API.dineSlots();
+      var slotData = await API.dineSlots(outlet.id);
 
       var state = {
         date: slotData.date,
         time: null,
         partySize: 2,
-        area: (s.areas && s.areas[0]) || '',
+        // Seating areas belong to the restaurant — Dolphin has a rooftop, Rangoli does not.
+        area: (outlet.areas && outlet.areas[0]) || '',
         slots: slotData.slots,
       };
 
@@ -338,7 +555,7 @@
       function slotChips() {
         if (!state.slots.length) {
           return '<p style="padding:0 16px;margin:0;font-size:13px;color:var(--muted)">' +
-            'No slots left for this date — try another day.</p>';
+            'No slots left at ' + UI.esc(outlet.name) + ' for this date — try another day.</p>';
         }
         return '<div class="chips">' + state.slots.map(function (slot) {
           return '<button class="chip chip--sm" data-action="slot" data-time="' + UI.esc(slot.time) + '"' +
@@ -349,9 +566,9 @@
       }
 
       function areaChips() {
-        if (!s.areas || !s.areas.length) return '';
-        return '<div class="section"><div class="subhead">Seating</div><div class="chips">' +
-          s.areas.map(function (area) {
+        if (!outlet.areas || !outlet.areas.length) return '';
+        return '<div class="section"><div class="subhead">Seating at ' + UI.esc(outlet.name) + '</div><div class="chips">' +
+          outlet.areas.map(function (area) {
             return '<button class="chip chip--sm" data-action="area" data-area="' + UI.esc(area) + '"' +
               ' aria-pressed="' + (area === state.area ? 'true' : 'false') + '">' + UI.esc(area) + '</button>';
           }).join('') + '</div></div>';
@@ -362,18 +579,31 @@
           UI.appbar({ title: 'Reserve a table', back: true }) +
           '<div class="scroll">' +
 
+            /* Which restaurant, pinned to the top of the screen. */
+            outletIdentity(outlet, data.venue.name, {
+              sub: 'Booking a table here · ' + outlet.dietLong,
+            }) +
+
+            (outlet.dietNote
+              ? '<p class="dine-ident-note">' + UI.esc(outlet.dietNote) + '</p>'
+              : '') +
+
             noticeBanner(
               'Book at least ' + s.lockMinutes + ' minutes before you arrive — that is what unlocks ' +
-              data.tiers.reserved.discountPercent + '% off when you pay your bill in the app.',
+              data.tiers.reserved.discountPercent + '% off when you pay your ' + outlet.name +
+              ' bill in the app.',
               'info',
-              'margin-top:14px'
+              'margin-top:12px'
             ) +
 
             '<div class="section"><div class="subhead">Date</div>' +
               '<div class="chips" data-dates>' + dateChips() + '</div></div>' +
 
-            '<div class="section"><div class="subhead">Time</div>' +
+            '<div class="section"><div class="subhead">Time · ' + UI.esc(outlet.name) +
+              ' serves ' + UI.esc(outlet.openTime) + '–' + UI.esc(outlet.closeTime) + '</div>' +
               '<div data-slots>' + slotChips() + '</div></div>' +
+
+            areaChips() +
 
             '<div class="guests">' +
               '<div class="stepper-row">' +
@@ -399,7 +629,8 @@
               '<div class="field__control">' +
                 '<textarea id="dine-notes" placeholder="Birthday, high chair, seating preference..."></textarea></div></div>' +
 
-            '<div class="section"><button class="btn" data-action="confirm">Reserve table</button></div>' +
+            '<div class="section"><button class="btn" data-action="confirm">Reserve at ' +
+              UI.esc(outlet.name) + '</button></div>' +
             '<div class="spacer-24"></div>' +
           '</div>' +
         '</div>'
@@ -415,7 +646,7 @@
         var box = view.querySelector('[data-slots]');
         box.innerHTML = UI.spinnerBlock();
         try {
-          var fresh = await API.dineSlots(state.date);
+          var fresh = await API.dineSlots(outlet.id, state.date);
           state.slots = fresh.slots;
           state.time = null;
           box.innerHTML = slotChips();
@@ -426,6 +657,7 @@
       }
 
       UI.actions(view, {
+        'switch-outlet': bindSwitch(view, data, outlet, '/dine-in/reserve'),
         date: function (el) {
           state.date = el.getAttribute('data-key');
           syncPressed('[data-action="date"]', 'data-key', state.date);
@@ -456,6 +688,7 @@
           btn.textContent = 'Reserving…';
           try {
             var res = await API.reserveTable({
+              outletId: outlet.id,
               date: state.date,
               time: state.time,
               partySize: state.partySize,
@@ -464,12 +697,16 @@
               guestPhone: view.querySelector('#dine-phone').value.trim(),
               notes: view.querySelector('#dine-notes').value.trim(),
             });
-            UI.toast('Table reserved — billing unlocks at ' + res.reservation.lock.unlockLabel, 'success');
+            UI.toast(
+              'Table booked at ' + outlet.name + ' (' + outlet.dietLabel + ') — billing unlocks at ' +
+                res.reservation.lock.unlockLabel,
+              'success'
+            );
             App.navigate('/dine-in');
           } catch (err) {
             UI.toast(err.message, 'error');
             btn.disabled = false;
-            btn.textContent = 'Reserve table';
+            btn.textContent = 'Reserve at ' + outlet.name;
           }
         },
       });
@@ -483,10 +720,20 @@
     tab: 'dinein',
     auth: true,
     backTo: '/dine-in',
-    render: async function () {
-      var data = await API.dineIn();
+    render: async function (params) {
+      var loaded = await loadOutlet(params.outletId);
+      if (!loaded) return UI.h('<div class="screen"><div class="scroll"></div></div>');
+      var data = loaded.data;
+      var outlet = loaded.outlet;
       var s = data.settings;
-      var reservation = data.reservation;
+
+      /* Only THIS restaurant's table can discount this bill. */
+      var reservation = outlet.reservation;
+      /* A table at the other one is still worth mentioning — a guest who booked
+         Rangoli and is paying at Dolphin is about to wonder where their 30% went. */
+      var elsewhere = (data.outlets || []).filter(function (o) {
+        return o.id !== outlet.id && o.reservation;
+      });
 
       /* Whether the reserved tier is currently unbillable. Start a locked guest
          on the walk-in tier so the bill they see is one they can actually pay;
@@ -516,8 +763,36 @@
           UI.appbar({ title: 'Pay your bill', back: true }) +
           '<div class="scroll">' +
 
+            /* Sticky: whatever the guest scrolls to, the restaurant stays on screen. */
+            outletIdentity(outlet, data.venue.name, {
+              sub: 'Paying this restaurant · ' + outlet.dietLong,
+            }) +
+
+            /* Named check before anything else, because settling the wrong
+               restaurant's bill is the expensive mistake here. */
+            /* The text is wrapped in one span so the flex row has exactly two
+               children — otherwise the <strong> becomes its own flex item and the
+               sentence breaks apart mid-line. */
+            '<p class="dine-bill-check">' + UI.icon('info', 14) +
+              '<span>Make sure your printed bill says <strong>' + UI.esc(outlet.name) + '</strong>. ' +
+              'The two restaurants are billed separately.</span></p>' +
+
+            /* Holding a table at the other restaurant. */
+            (elsewhere.length
+              ? '<div class="dine-elsewhere">' +
+                  dietMark(elsewhere[0].diet, elsewhere[0].dietLabel) +
+                  '<span class="dine-elsewhere__text">' +
+                    '<strong>Your ' + reservedPct + '% table is at ' + UI.esc(elsewhere[0].name) + '</strong>' +
+                    '<span>It does not apply to a ' + UI.esc(outlet.name) + ' bill. If you ate at ' +
+                      UI.esc(elsewhere[0].name) + ', switch over to use it.</span>' +
+                  '</span>' +
+                  '<button class="dine-elsewhere__btn" data-action="go-outlet" data-id="' +
+                    UI.esc(elsewhere[0].id) + '">Switch</button>' +
+                '</div>'
+              : '') +
+
             '<div class="dine-amount">' +
-              '<div class="dine-amount__label">Enter the total on your restaurant bill</div>' +
+              '<div class="dine-amount__label">Enter the total on your ' + UI.esc(outlet.name) + ' bill</div>' +
               '<div class="dine-amount__field">' +
                 '<span class="dine-amount__currency">' + UI.CURRENCY + '</span>' +
                 '<input class="dine-amount__input" data-amount type="number" inputmode="numeric" ' +
@@ -530,7 +805,7 @@
 
             '<div data-save></div>' +
 
-            /* Tier picker: only meaningful when the guest holds a reservation. */
+            /* Tier picker: only meaningful with a table at THIS restaurant. */
             (reservation
               ? '<div class="section"><div class="subhead">Discount</div><div data-modes></div></div>'
               : '') +
@@ -570,7 +845,8 @@
 
           '<div class="actionbar">' +
             '<div class="actionbar__price">' +
-              '<div class="actionbar__label">You pay</div>' +
+              /* The restaurant name rides on the pay bar itself. */
+              '<div class="actionbar__label">' + UI.esc(outlet.name) + ' · you pay</div>' +
               '<div class="actionbar__value" data-total>' + UI.money(0) + '</div>' +
             '</div>' +
             '<button class="btn" data-action="pay" disabled>Pay bill</button>' +
@@ -605,7 +881,7 @@
             (locked ? ' disabled' : '') + '>' +
             '<span class="option__icon">' + UI.icon(locked ? 'lock' : 'check', 20) + '</span>' +
             '<span class="option__text">' +
-              '<span class="option__title">Use my reservation</span>' +
+              '<span class="option__title">Use my ' + UI.esc(outlet.name) + ' table</span>' +
               '<span class="option__sub" data-mode-sub>' +
                 (locked
                   ? 'Unlocks at ' + UI.esc(reservation.lock.unlockLabel)
@@ -691,6 +967,7 @@
         var mySeq = ++state.seq;
         try {
           var quote = await API.dineQuote({
+            outletId: outlet.id,
             billAmount: amount,
             mode: state.mode || undefined,
             offerCode: state.offerCode || undefined,
@@ -729,7 +1006,7 @@
             reservation.lock.locked = false;
             state.mode = null;
             refreshQuote();
-            UI.toast('Your ' + reservedPct + '% reserved-table discount is now active', 'success');
+            UI.toast('Your ' + reservedPct + '% ' + outlet.name + ' discount is now active', 'success');
           } else if (!released && modesEl) {
             var sub = modesEl.querySelector('[data-mode-sub]');
             if (sub) sub.textContent = 'Unlocks in ' + mmss(left / 1000);
@@ -739,7 +1016,47 @@
 
       renderModes();
 
+      /**
+       * The last gate before money moves: name the restaurant, show its mark, and
+       * make the guest agree. A wrong-restaurant payment cannot be undone by them,
+       * so one deliberate tap here is worth the friction.
+       */
+      function confirmOutlet(total) {
+        return new Promise(function (resolve) {
+          var settled = false;
+          var body = UI.h(
+            '<div style="padding:0 16px 8px">' +
+              '<div class="dine-confirm dine-confirm--' + (outlet.diet === 'nonveg' ? 'nonveg' : 'veg') + '">' +
+                dietMark(outlet.diet, outlet.dietLong) +
+                '<span><strong>' + UI.esc(outlet.name) + '</strong>' +
+                  '<small>' + UI.esc(outlet.dietLong) + '</small></span>' +
+              '</div>' +
+              '<p style="margin:14px 0 20px;font-size:14.5px;line-height:1.6;color:var(--ink-soft)">' +
+                'You are paying <strong>' + UI.money(total) + '</strong> to <strong>' +
+                UI.esc(outlet.name) + '</strong>. Is that the restaurant you ate at?' +
+              '</p>' +
+              '<button class="btn" data-yes>Yes, pay ' + UI.esc(outlet.name) + '</button>' +
+              '<div style="height:10px"></div>' +
+              '<button class="btn-outline btn-outline--lg" data-no>No, go back</button>' +
+            '</div>'
+          );
+          var sheet = UI.sheet({
+            title: 'Confirm the restaurant',
+            body: body,
+            onClose: function () { if (!settled) { settled = true; resolve(false); } },
+          });
+          body.querySelector('[data-yes]').addEventListener('click', function () {
+            settled = true; resolve(true); sheet.close();
+          });
+          body.querySelector('[data-no]').addEventListener('click', function () {
+            settled = true; resolve(false); sheet.close();
+          });
+        });
+      }
+
       UI.actions(view, {
+        'switch-outlet': bindSwitch(view, data, outlet, '/dine-in/bill'),
+        'go-outlet': function (el) { App.navigate('/dine-in/bill/' + el.getAttribute('data-id')); },
         mode: function (el) {
           state.mode = el.getAttribute('data-mode') === 'walkin' ? 'walkin' : null;
           refreshQuote();
@@ -759,7 +1076,12 @@
 
           btn.disabled = true;
           try {
-            await API.validateDineOffer({ code: code, billAmount: amount, mode: state.mode || undefined });
+            await API.validateDineOffer({
+              code: code,
+              outletId: outlet.id,
+              billAmount: amount,
+              mode: state.mode || undefined,
+            });
             state.offerCode = code;
             offerMsg.style.color = 'var(--success)';
             offerMsg.textContent = code + ' applied';
@@ -784,10 +1106,13 @@
           }
           var amount = q.amounts.billAmount;
 
+          if (!(await confirmOutlet(q.amounts.total))) return;
+
           btn.disabled = true;
           btn.textContent = 'Paying…';
           try {
             var res = await API.payDineBill({
+              outletId: outlet.id,
               billAmount: amount,
               mode: state.mode || undefined,
               offerCode: state.offerCode || undefined,
@@ -818,6 +1143,7 @@
       var data = await API.dineBill(params.id);
       var bill = data.bill;
       var pending = bill.payment && bill.payment.status === 'pending';
+      var where = bill.outlet;
 
       var view = UI.h(
         '<div class="screen">' +
@@ -828,11 +1154,29 @@
               '<div class="success-hero__ring">' + UI.icon('check', 34) + '</div>' +
               '<h2>' + (pending ? 'Show this at the counter' : 'Payment successful') + '</h2>' +
               '<p>You saved ' + UI.money(bill.amounts.discount) + ' on a ' +
-                UI.money(bill.amounts.billAmount) + ' bill at ' + UI.esc(bill.restaurantName) + '.</p>' +
+                UI.money(bill.amounts.billAmount) + ' bill at ' + UI.esc(outletName(bill)) + '.</p>' +
             '</div>' +
+
+            /* Which restaurant, with its mark — the receipt has to answer this on
+               its own months later, without the app's help. */
+            (where
+              ? '<div class="section">' +
+                  outletIdentity(where, bill.venueName, {
+                    sub: 'Bill settled here · ' + (where.dietLabel || ''),
+                    switchable: false,
+                  }) +
+                '</div>'
+              : '') +
 
             '<div class="section">' +
               '<div class="card card__body">' +
+                '<div class="kv"><span class="kv__key">Restaurant</span>' +
+                  '<span class="kv__val">' + UI.esc(outletName(bill)) +
+                  (where ? ' · ' + UI.esc(where.dietLabel) : '') + '</span></div>' +
+                (bill.venueName
+                  ? '<div class="kv"><span class="kv__key">Venue</span>' +
+                    '<span class="kv__val">' + UI.esc(bill.venueName) + '</span></div>'
+                  : '') +
                 '<div class="kv"><span class="kv__key">Reference</span>' +
                   '<span class="kv__val">' + UI.esc(bill.reference) + '</span></div>' +
                 '<div class="kv"><span class="kv__key">Paid</span>' +
@@ -871,16 +1215,19 @@
 
   // ── Restaurant reservations (from the Account tab) ─────────────────────────
   /* The guest's own restaurant history: tables they have booked, and bills they
-     have settled in the app. Reached from Account rather than from the Dine-In
-     tab, which is for the booking-and-paying flow itself. */
+     have settled in the app. Grouped BY RESTAURANT, because "which one was that?"
+     is the question this list gets asked, and an undifferentiated pile of
+     bookings is what made it unanswerable. */
   window.Screens.restaurantBookings = {
     auth: true,
     backTo: '/account',
     render: async function () {
       var res = await Promise.all([API.dineReservations(), API.dineBills()]);
       var reservations = res[0].reservations || [];
+      var outlets = res[0].outlets || [];
       var bills = res[1].bills || [];
       var totalSaved = res[1].totalSaved || 0;
+      var byOutlet = res[1].byOutlet || [];
 
       function reservationCard(r) {
         var pill = r.status === 'cancelled'
@@ -895,7 +1242,9 @@
           '<button class="ticket__main" data-action="open-tab">' +
             '<div class="ticket__text">' +
               '<h3 class="ticket__title">' + UI.esc(slotLabel(r)) + '</h3>' +
-              '<p class="ticket__sub">' + UI.esc(partyLine(r)) + '</p>' +
+              '<p class="ticket__sub">' +
+                (r.outlet ? dietMark(r.outlet.diet, r.outlet.dietLabel) + UI.esc(r.outlet.name) + ' · ' : '') +
+                UI.esc(partyLine(r)) + '</p>' +
               '<p class="ticket__seats">' + UI.esc(r.reference) + '</p>' +
               '<div style="margin-top:7px">' + pill + '</div>' +
             '</div>' +
@@ -909,7 +1258,9 @@
           '<button class="ticket__main" data-action="open-bill" data-id="' + UI.esc(b.id) + '">' +
             '<div class="ticket__text">' +
               '<h3 class="ticket__title">' + UI.money(b.amounts.total) + ' paid</h3>' +
-              '<p class="ticket__sub">' + UI.esc(UI.shortDate(b.paidAt || b.createdAt)) +
+              '<p class="ticket__sub">' +
+                (b.outlet ? dietMark(b.outlet.diet, b.outlet.dietLabel) : '') +
+                UI.esc(outletName(b)) + ' · ' + UI.esc(UI.shortDate(b.paidAt || b.createdAt)) +
                 ' · ' + (b.mode === 'reserved' ? 'Reserved table' : 'Walk-in') +
                 ' · ' + b.amounts.discountPercent + '% off</p>' +
               '<p class="ticket__seats">' + UI.esc(b.reference) +
@@ -918,6 +1269,36 @@
             '<span class="row__chevron">' + UI.icon('chevron-right', 20) + '</span>' +
           '</button>' +
         '</article>';
+      }
+
+      /** A restaurant heading, mark included, over the rows that belong to it. */
+      function groupHead(outlet) {
+        return '<div class="dine-group-head">' + dietMark(outlet.diet, outlet.dietLabel) +
+          '<strong>' + UI.esc(outlet.name) + '</strong>' +
+          '<span>' + UI.esc(outlet.dietLabel) + '</span></div>';
+      }
+
+      /** Rows for one restaurant, plus any that predate the split. */
+      function groupsOf(rows) {
+        var out = outlets.map(function (o) {
+          return { outlet: o, rows: rows.filter(function (r) { return r.outletId === o.id; }) };
+        }).filter(function (g) { return g.rows.length; });
+        var untagged = rows.filter(function (r) { return !r.outletId; });
+        if (untagged.length) out.push({ outlet: null, rows: untagged });
+        return out;
+      }
+
+      function renderGroups(rows, cardFn) {
+        return groupsOf(rows).map(function (g) {
+          return '<div class="dine-group">' +
+            (g.outlet
+              ? groupHead(g.outlet)
+              : '<div class="dine-group-head dine-group-head--unknown">' +
+                '<strong>Restaurant not recorded</strong>' +
+                '<span>booked before the two restaurants were listed separately</span></div>') +
+            '<div class="stack">' + g.rows.map(cardFn).join('') + '</div>' +
+          '</div>';
+        }).join('');
       }
 
       var view = UI.h(
@@ -935,9 +1316,26 @@
                 })
               : '') +
 
+            /* Spend per restaurant, so the split is visible at a glance. */
+            (byOutlet.some(function (o) { return o.bills; })
+              ? '<div class="section">' + UI.sectionHead('Where you have eaten') +
+                  '<div class="dine-split">' +
+                    byOutlet.map(function (o) {
+                      return '<div class="dine-split__cell">' +
+                        '<div class="dine-split__head">' + dietMark(o.diet, o.dietLabel) +
+                          '<strong>' + UI.esc(o.name) + '</strong></div>' +
+                        '<div class="dine-split__amt">' + UI.money(o.paid) + '</div>' +
+                        '<div class="dine-split__meta">' + o.bills + ' bill' + (o.bills === 1 ? '' : 's') +
+                          (o.saved ? ' · saved ' + UI.money(o.saved) : '') + '</div>' +
+                      '</div>';
+                    }).join('') +
+                  '</div>' +
+                '</div>'
+              : '') +
+
             (reservations.length
               ? '<div class="section">' + UI.sectionHead('Table reservations') +
-                  '<div class="stack">' + reservations.map(reservationCard).join('') + '</div>' +
+                  renderGroups(reservations, reservationCard) +
                 '</div>'
               : '') +
 
@@ -946,7 +1344,7 @@
                   (totalSaved
                     ? noticeBanner('You have saved ' + UI.money(totalSaved) + ' on restaurant bills so far.')
                     : '') +
-                  '<div class="stack" style="margin-top:12px">' + bills.map(billCard).join('') + '</div>' +
+                  renderGroups(bills, billCard) +
                 '</div>'
               : '') +
 
