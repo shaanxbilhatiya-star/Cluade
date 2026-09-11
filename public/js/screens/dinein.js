@@ -28,7 +28,10 @@
 
   function noticeBanner(text, kind, style) {
     if (!text) return '';
-    return '<div class="notice' + (kind === 'warn' ? ' notice--warn' : '') + '"' +
+    var cls = 'notice';
+    if (kind === 'warn') cls += ' notice--warn';
+    if (kind === 'info') cls += ' notice--info';
+    return '<div class="' + cls + '"' +
       (style ? ' style="' + style + '"' : '') + '>' + UI.esc(text) + '</div>';
   }
 
@@ -170,9 +173,11 @@
                         reserved.discountPercent + '% off</button>' +
                       '<div style="height:8px"></div>' +
                       '<button class="btn-outline" data-action="cancel-res">Cancel reservation</button>' +
+                      /* Reserved notice: green/info style to feel like a confirmation, not a warning */
+                      (current.notice ? '<div style="height:10px"></div>' + noticeBanner(current.notice, 'info') : '') +
                     '</div>'
 
-                  /* NO RESERVATION — walk-in rate card + upgrade nudge */
+                  /* NO RESERVATION — walk-in rate card + notice + upgrade nudge */
                   : '<div class="dine-elig-card dine-elig-card--walkin">' +
                       '<div class="dine-elig-card__header">' +
                         '<div class="dine-elig-card__pct dine-elig-card__pct--plain">' +
@@ -187,6 +192,8 @@
                       '<button class="btn" data-action="pay">Pay bill · ' +
                         walkin.discountPercent + '% off</button>' +
                     '</div>' +
+                    /* Walk-in notice sits right under the 10% card */
+                    noticeBanner(current.notice, current.noticeKind) +
                     /* Upgrade nudge */
                     '<div class="dine-upgrade-card">' +
                       '<div class="dine-upgrade-card__pct">' + reserved.discountPercent + '%</div>' +
@@ -200,8 +207,6 @@
                     '</div>'
               ) +
             '</div>' +
-
-            noticeBanner(current.notice, current.noticeKind) +
 
             /* Past bills, so the savings are visible over time. */
             (data.recentBills && data.recentBills.length

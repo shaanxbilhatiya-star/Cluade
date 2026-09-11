@@ -1055,6 +1055,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .notice--warn { background: rgba(217, 119, 6, .12); color: #92400E; }
 [data-theme="dark"] .notice--warn { color: #FCD34D; }
+.notice--info { background: rgba(22, 163, 74, .1); color: #166534; font-weight: 600; }
+[data-theme="dark"] .notice--info { color: #86EFAC; }
 
 .skeleton {
   background: linear-gradient(90deg, var(--bg-sunken) 25%, var(--line) 37%, var(--bg-sunken) 63%);
