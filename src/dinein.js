@@ -30,23 +30,6 @@ const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const MS_PER_MIN = 60 * 1000;
 
 /**
- * Kingfisher Resort has two separate restaurants under one roof. Everything in
- * this module is now scoped to one of these — there is no "the restaurant"
- * anymore, only "which one". A venueId travels with every reservation and
- * bill record so a guest, and the admin panel, always know which outlet a
- * booking belongs to.
- */
-const VENUES = {
-  rangoli: { key: 'rangoli', diet: 'veg', label: 'Pure Veg' },
-  dolphin: { key: 'dolphin', diet: 'non-veg', label: 'Pure Non-Veg' },
-};
-const VENUE_IDS = Object.keys(VENUES);
-
-function isVenueId(id) {
-  return Object.prototype.hasOwnProperty.call(VENUES, id);
-}
-
-/**
  * Shipped defaults. `settings()` merges the admin's saved values over these, so
  * a field the admin has never touched keeps working after an upgrade.
  *
@@ -59,7 +42,6 @@ const DEFAULTS = {
 
   // ── Restaurant identity ──
   restaurantName: 'Kingfisher Restaurant',
-  diet: 'veg', // 'veg' | 'non-veg' — overridden per venue below
   tagline: 'Pay your bill from the table and save instantly',
   address: 'Kingfisher Resort, Mandla',
   phone: '7648913272',
@@ -127,20 +109,6 @@ const DEFAULTS = {
     'before you reach {restaurant} next time and save {reservedDiscount}% instead.',
 };
 
-/** Per-venue overrides applied on top of DEFAULTS. */
-const VENUE_DEFAULTS = {
-  rangoli: {
-    restaurantName: 'Rangoli',
-    diet: 'veg',
-    tagline: 'Pure vegetarian dining — pay your bill from the table and save instantly',
-  },
-  dolphin: {
-    restaurantName: 'Dolphin',
-    diet: 'non-veg',
-    tagline: 'Pure non-vegetarian dining — pay your bill from the table and save instantly',
-  },
-};
-
 /** Numeric fields, with the bounds the admin form is validated against. */
 const NUMERIC_FIELDS = {
   reservedDiscountPercent: { min: 0, max: 100 },
@@ -169,23 +137,13 @@ const NOTICE_FIELDS = [
 
 // ── Settings ────────────────────────────────────────────────────────────────
 /** Current settings: shipped defaults with the admin's saved values merged over. */
-/**
- * @param {string} venueId 'rangoli' or 'dolphin'. Required — there is no
- *   longer a single "the restaurant" to fall back to.
- */
-function settings(venueId) {
-  if (!isVenueId(venueId)) throw new HttpError(400, 'Unknown venue — pick Rangoli or Dolphin');
-  const base = Object.assign({}, DEFAULTS, VENUE_DEFAULTS[venueId]);
-  const store = db.get('meta').dineInVenues || {};
-  const saved = store[venueId] || {};
-  const merged = Object.assign({}, base, saved);
-  // diet is a fixed identity of the venue, never admin-overridable per outlet swap.
-  merged.diet = base.diet;
-  merged.venueId = venueId;
-  merged.areas = (saved.areas || base.areas || DEFAULTS.areas).slice();
-  merged.photos = (saved.photos || base.photos || DEFAULTS.photos).slice();
-  merged.amenities = (saved.amenities || base.amenities || DEFAULTS.amenities).slice();
-  merged.policies = (saved.policies || base.policies || DEFAULTS.policies).slice();
+function settings() {
+  const saved = db.get('meta').dineIn || {};
+  const merged = Object.assign({}, DEFAULTS, saved);
+  merged.areas = (saved.areas || DEFAULTS.areas).slice();
+  merged.photos = (saved.photos || DEFAULTS.photos).slice();
+  merged.amenities = (saved.amenities || DEFAULTS.amenities).slice();
+  merged.policies = (saved.policies || DEFAULTS.policies).slice();
   return merged;
 }
 
@@ -199,9 +157,8 @@ function clampNumber(value, bounds, fallback) {
  * Validates and persists a settings patch. Only known keys are written, so a
  * stray field in the request body can never end up in the stored record.
  */
-function saveSettings(venueId, patch = {}) {
-  if (!isVenueId(venueId)) throw new HttpError(400, 'Unknown venue — pick Rangoli or Dolphin');
-  const current = settings(venueId);
+function saveSettings(patch = {}) {
+  const current = settings();
   const next = Object.assign({}, current);
 
   for (const [key, bounds] of Object.entries(NUMERIC_FIELDS)) {
@@ -302,19 +259,16 @@ function saveSettings(venueId, patch = {}) {
   }
 
   const meta = db.get('meta');
-  if (!meta.dineInVenues) meta.dineInVenues = {};
-  meta.dineInVenues[venueId] = next;
+  meta.dineIn = next;
   // Debounced write, like every other request-path mutation in the app.
   db.markDirty('meta');
   return next;
 }
 
 /** The slice of settings the customer app is allowed to see. */
-function publicSettings(s) {
+function publicSettings(s = settings()) {
   return {
     active: s.active !== false,
-    venueId: s.venueId,
-    diet: s.diet,
     restaurantName: s.restaurantName,
     tagline: s.tagline,
     address: s.address,
@@ -410,10 +364,10 @@ function durationLabel(minutes) {
  * its bill is 'completed' but is very much still at the table, so those count
  * too — only a cancellation frees the seats.
  */
-function reservationsOn(key, venueId) {
+function reservationsOn(key) {
   return db.find(
     'dineReservations',
-    (r) => r.venueId === venueId && r.date === key && (r.status === 'confirmed' || r.status === 'completed')
+    (r) => r.date === key && (r.status === 'confirmed' || r.status === 'completed')
   );
 }
 
@@ -422,7 +376,7 @@ function reservationsOn(key, venueId) {
  * date are dropped, and a slot too close to now to clear the lock is flagged so
  * the UI can be honest about it up front.
  */
-function slotsFor(key, s) {
+function slotsFor(key, s = settings()) {
   const date = parseKey(key);
   if (!date) throw new HttpError(400, 'Pick a valid date (YYYY-MM-DD)');
 
@@ -433,7 +387,7 @@ function slotsFor(key, s) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const taken = reservationsOn(key, s.venueId).reduce((map, r) => {
+  const taken = reservationsOn(key).reduce((map, r) => {
     map[r.time] = (map[r.time] || 0) + (Number(r.partySize) || 0);
     return map;
   }, {});
@@ -503,7 +457,7 @@ function noticeTokens(s, extra = {}) {
  *
  * Together they enforce the real rule: book ahead, then pay when you dine.
  */
-function unlockTimeOf(reservation, s) {
+function unlockTimeOf(reservation, s = settings()) {
   const lockMs = Math.max(0, Number(s.lockMinutes) || 0) * MS_PER_MIN;
   const slotMs = new Date(reservation.startsAt || reservation.createdAt).getTime();
   const bookedMs = new Date(reservation.reservedAt || reservation.createdAt).getTime();
@@ -518,7 +472,7 @@ function unlockTimeOf(reservation, s) {
 }
 
 /** Lock state of a single reservation right now. */
-function lockState(reservation, s, now = Date.now()) {
+function lockState(reservation, s = settings(), now = Date.now()) {
   const unlocksAt = unlockTimeOf(reservation, s);
   const msLeft = unlocksAt.getTime() - now;
   return {
@@ -531,14 +485,14 @@ function lockState(reservation, s, now = Date.now()) {
 }
 
 /** When a reservation stops being billable (grace period after the slot). */
-function expiryOf(reservation, s) {
+function expiryOf(reservation, s = settings()) {
   const slot = new Date(reservation.startsAt || reservation.createdAt).getTime();
   const graceMs = Math.max(0, Number(s.graceHours) || 0) * 60 * MS_PER_MIN;
   return new Date((Number.isFinite(slot) ? slot : Date.now()) + graceMs);
 }
 
 /** Adds lock/eligibility state to a stored reservation for the client. */
-function decorateReservation(reservation, s, now = Date.now()) {
+function decorateReservation(reservation, s = settings(), now = Date.now()) {
   const lock = lockState(reservation, s, now);
   const expiresAt = expiryOf(reservation, s);
   const expired = expiresAt.getTime() < now;
@@ -566,9 +520,9 @@ function decorateReservation(reservation, s, now = Date.now()) {
 }
 
 /** The reservation a guest should be billed against: soonest usable one. */
-function activeReservationFor(userId, venueId, s, now = Date.now()) {
+function activeReservationFor(userId, s = settings(), now = Date.now()) {
   const mine = db
-    .find('dineReservations', (r) => r.userId === userId && r.venueId === venueId && r.status === 'confirmed' && !r.billId)
+    .find('dineReservations', (r) => r.userId === userId && r.status === 'confirmed' && !r.billId)
     .map((r) => decorateReservation(r, s, now))
     .filter((r) => !r.expired)
     // Billable ones first, then the one that unlocks soonest.
@@ -587,7 +541,7 @@ function activeReservationFor(userId, venueId, s, now = Date.now()) {
  * @param {boolean} input.walkinRequested  guest explicitly chose to pay at the walk-in rate
  * @returns tier descriptor including the rendered, admin-authored notice
  */
-function resolveTier({ reservation = null, walkinRequested = false, s, now = Date.now() } = {}) {
+function resolveTier({ reservation = null, walkinRequested = false, s = settings(), now = Date.now() } = {}) {
   const reserved = Number(s.reservedDiscountPercent) || 0;
   const walkin = Number(s.walkinDiscountPercent) || 0;
 
@@ -648,7 +602,7 @@ function resolveTier({ reservation = null, walkinRequested = false, s, now = Dat
 }
 
 /** Renders the notice for a tier, filling in live amounts and countdown. */
-function tierNotice(tier, s, amounts = null) {
+function tierNotice(tier, s = settings(), amounts = null) {
   const tokens = noticeTokens(s, {
     minutesLeft: tier.lock ? durationLabel(tier.lock.minutesLeft) : '0 minutes',
     unlockTime: tier.lock ? tier.lock.unlockLabel : '',
@@ -660,7 +614,7 @@ function tierNotice(tier, s, amounts = null) {
 }
 
 /** Notice shown on the receipt after a bill is paid. */
-function paidNotice(bill, s) {
+function paidNotice(bill, s = settings()) {
   const key = bill.mode === 'reserved' ? 'paidReservedNotice' : 'paidWalkinNotice';
   return renderNotice(
     s[key],
@@ -674,9 +628,6 @@ function paidNotice(bill, s) {
 
 module.exports = {
   DEFAULTS,
-  VENUES,
-  VENUE_IDS,
-  isVenueId,
   NOTICE_FIELDS,
   DATE_RE,
   TIME_RE,

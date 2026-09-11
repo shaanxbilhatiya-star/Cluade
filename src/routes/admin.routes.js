@@ -778,37 +778,26 @@ router.delete('/admin/experiences/:id', auth.requireAdmin, (ctx) => {
  * a preview of each notice with its {tokens} already substituted, and the
  * reservation/bill ledgers.
  */
-/** Resolves and validates :venueId for the admin dine-in routes. */
-function adminVenue(ctx) {
-  const venueId = String(ctx.params.venueId || '');
-  if (!dine.isVenueId(venueId)) throw new HttpError(404, 'Unknown restaurant — pick Rangoli or Dolphin');
-  return venueId;
-}
-
-router.get('/admin/dine-in/:venueId', auth.requireAdmin, (ctx) => {
-  const venueId = adminVenue(ctx);
-  const s = dine.settings(venueId);
+router.get('/admin/dine-in', auth.requireAdmin, () => {
+  const s = dine.settings();
   const customerName = (userId) => {
     const user = db.byId('users', userId);
     return user ? user.name : 'Unknown';
   };
 
   const reservations = [...db.get('dineReservations')]
-    .filter((r) => r.venueId === venueId)
     .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt))
     .slice(0, 200)
     .map((r) => Object.assign(dine.decorateReservation(r, s), { customerName: customerName(r.userId) }));
 
   const bills = [...db.get('dineBills')]
-    .filter((b) => b.venueId === venueId)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 200)
     .map((b) => Object.assign({}, b, { customerName: customerName(b.userId) }));
 
   return {
     settings: s,
-    defaults: Object.assign({}, dine.DEFAULTS, dine.VENUES[venueId]),
-    venues: dine.VENUE_IDS,
+    defaults: dine.DEFAULTS,
     /** Token reference shown under the notice inputs in the admin form. */
     noticeTokens: Object.keys(dine.noticeTokens(s)),
     /** Live render of each notice, so the admin sees exactly what a guest reads. */
@@ -832,13 +821,13 @@ router.get('/admin/dine-in/:venueId', auth.requireAdmin, (ctx) => {
       ),
     },
     stats: {
-      bills: bills.length,
-      revenue: db.get('dineBills').filter((b) => b.venueId === venueId).reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
-      discountGiven: db.get('dineBills').filter((b) => b.venueId === venueId).reduce((sum, b) => sum + (b.amounts?.discount || 0), 0),
-      reservations: reservations.length,
+      bills: db.get('dineBills').length,
+      revenue: db.get('dineBills').reduce((sum, b) => sum + (b.amounts?.total || 0), 0),
+      discountGiven: db.get('dineBills').reduce((sum, b) => sum + (b.amounts?.discount || 0), 0),
+      reservations: db.get('dineReservations').length,
       upcoming: db.find(
         'dineReservations',
-        (r) => r.venueId === venueId && r.status === 'confirmed' && new Date(r.startsAt).getTime() > Date.now()
+        (r) => r.status === 'confirmed' && new Date(r.startsAt).getTime() > Date.now()
       ).length,
     },
     reservations,
@@ -847,34 +836,31 @@ router.get('/admin/dine-in/:venueId', auth.requireAdmin, (ctx) => {
 });
 
 /**
- * Updates discounts, the lock window and the notice copy for one outlet. Takes
- * effect on the very next customer request to that venue - both the amount
- * they are charged and the wording of the notice they are shown come from here.
+ * Updates discounts, the lock window and the notice copy. Takes effect on the
+ * very next customer request - both the amount they are charged and the wording
+ * of the notice they are shown come from here.
  */
-router.put('/admin/dine-in/:venueId/settings', auth.requireAdmin, (ctx) => {
-  const venueId = adminVenue(ctx);
+router.put('/admin/dine-in/settings', auth.requireAdmin, (ctx) => {
   const body = Object.assign({}, ctx.body);
-  if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('dinein', `dinein-${venueId}`, body.coverPhoto);
-  const photos = resolvePhotoList(body.photos, 'dinein', `dinein-${venueId}`);
+  if (isDataUrl(body.coverPhoto)) body.coverPhoto = saveUploadedImage('dinein', 'dinein', body.coverPhoto);
+  const photos = resolvePhotoList(body.photos, 'dinein', 'dinein');
   if (photos !== undefined) body.photos = photos;
 
-  const settings = dine.saveSettings(venueId, body);
+  const settings = dine.saveSettings(body);
   return { settings, previews: { walkin: dine.renderNotice(settings.walkinNotice, dine.noticeTokens(settings)) } };
 });
 
-/** Restores the shipped notice wording for one outlet, leaving the numbers alone. */
-router.post('/admin/dine-in/:venueId/notices/reset', auth.requireAdmin, (ctx) => {
-  const venueId = adminVenue(ctx);
+/** Restores the shipped notice wording, leaving the numbers alone. */
+router.post('/admin/dine-in/notices/reset', auth.requireAdmin, () => {
   const patch = {};
   for (const key of dine.NOTICE_FIELDS) patch[key] = dine.DEFAULTS[key];
-  return { settings: dine.saveSettings(venueId, patch) };
+  return { settings: dine.saveSettings(patch) };
 });
 
 router.post('/admin/dine-in/reservations/:id/cancel', auth.requireAdmin, (ctx) => {
   const reservation = db.byId('dineReservations', ctx.params.id);
   if (!reservation) throw new HttpError(404, 'Reservation not found');
   if (reservation.status !== 'confirmed') throw new HttpError(400, 'That reservation is not active');
-  const s = dine.settings(dine.isVenueId(reservation.venueId) ? reservation.venueId : 'rangoli');
   const updated = db.update('dineReservations', ctx.params.id, {
     status: 'cancelled',
     cancelledAt: new Date().toISOString(),
@@ -885,11 +871,11 @@ router.post('/admin/dine-in/reservations/:id/cancel', auth.requireAdmin, (ctx) =
   notify(
     reservation.userId,
     'Reservation cancelled',
-    `Your table at ${s.restaurantName} on ${reservation.date} at ${reservation.time} ` +
+    `Your table at ${dine.settings().restaurantName} on ${reservation.date} at ${reservation.time} ` +
       'was cancelled by the restaurant. Please call us to rebook.',
     'booking'
   );
-  return { reservation: dine.decorateReservation(updated, s) };
+  return { reservation: dine.decorateReservation(updated) };
 });
 
 router.delete('/admin/dine-in/reservations/:id', auth.requireAdmin, (ctx) => {

@@ -129,19 +129,17 @@
     bookHotel: function (payload) { return request('POST', '/hotels/bookings', payload); },
 
     // ── Dine-In ──
-    /** Both outlets (Rangoli veg / Dolphin non-veg), for the venue picker. */
-    dineVenues: function () { return request('GET', '/dine-in/venues'); },
-    /** Tab payload for one outlet: live discount tiers, my reservation + its billing lock. */
-    dineIn: function (venueId) { return request('GET', '/dine-in/' + venueId); },
-    dineSlots: function (venueId, date) { return request('GET', '/dine-in/' + venueId + '/slots' + (date ? '?date=' + encodeURIComponent(date) : '')); },
-    dineReservations: function (venueId) { return request('GET', '/dine-in/' + venueId + '/reservations'); },
-    reserveTable: function (venueId, payload) { return request('POST', '/dine-in/' + venueId + '/reservations', payload); },
+    /** Tab payload: live discount tiers, my reservation + its billing lock. */
+    dineIn: function () { return request('GET', '/dine-in'); },
+    dineSlots: function (date) { return request('GET', '/dine-in/slots' + (date ? '?date=' + encodeURIComponent(date) : '')); },
+    dineReservations: function () { return request('GET', '/dine-in/reservations'); },
+    reserveTable: function (payload) { return request('POST', '/dine-in/reservations', payload); },
     cancelReservation: function (id) { return request('POST', '/dine-in/reservations/' + id + '/cancel', {}); },
     /** Server decides the tier, the lock state and the notice wording. */
-    dineQuote: function (venueId, payload) { return request('POST', '/dine-in/' + venueId + '/quote', payload); },
-    validateDineOffer: function (venueId, payload) { return request('POST', '/dine-in/' + venueId + '/offers/validate', payload); },
-    payDineBill: function (venueId, payload) { return request('POST', '/dine-in/' + venueId + '/bills', payload); },
-    dineBills: function (venueId) { return request('GET', '/dine-in/' + venueId + '/bills'); },
+    dineQuote: function (payload) { return request('POST', '/dine-in/quote', payload); },
+    validateDineOffer: function (payload) { return request('POST', '/dine-in/offers/validate', payload); },
+    payDineBill: function (payload) { return request('POST', '/dine-in/bills', payload); },
+    dineBills: function () { return request('GET', '/dine-in/bills'); },
     dineBill: function (id) { return request('GET', '/dine-in/bills/' + id); },
 
     // ── Water park ──

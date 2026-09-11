@@ -1816,12 +1816,6 @@
 
   // ── Dine-In (discounts, notices, reservations, bills) ─────────────────────
 
-  /* Two separate restaurants share this page — Rangoli (veg) and Dolphin
-     (non-veg). Everything here operates on whichever one is currently
-     selected; switching outlets just re-runs the page against a different
-     venueId, the same way navigate('dinein') already re-runs it. */
-  var dineVenue = 'rangoli';
-
   /* This section owns the two numbers the whole Dine-In tab turns on: the
      discount for a guest who reserved ahead, and the discount for a walk-in.
      Both, the length of the billing lock, and the wording of every customer
@@ -1832,23 +1826,12 @@
      copy without anyone having to retype it. */
   async function pageDineIn(content, topActions) {
     topActions.innerHTML =
-      '<div class="seg" style="margin-right:10px;display:inline-flex">' +
-        '<button class="btn ' + (dineVenue === 'rangoli' ? '' : 'btn--ghost') + ' btn--sm" data-venue="rangoli">Rangoli · Veg</button>' +
-        '<button class="btn ' + (dineVenue === 'dolphin' ? '' : 'btn--ghost') + ' btn--sm" data-venue="dolphin">Dolphin · Non-Veg</button>' +
-      '</div>' +
       '<button class="btn btn--ghost" data-action="edit-property">' + icon('building', 17) + ' Property details</button> ' +
       '<button class="btn btn--ghost" data-action="reset-notices">' + icon('refresh', 17) + ' Reset notices</button> ' +
       '<button class="btn" data-action="edit-settings">' + icon('edit', 17) + ' Edit discounts &amp; notices</button>';
 
-    topActions.querySelectorAll('[data-venue]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        dineVenue = btn.getAttribute('data-venue');
-        navigate('dinein');
-      });
-    });
-
     content.innerHTML = '<div class="boot"><div class="spinner"></div></div>';
-    var data = await API.get('/admin/dine-in/' + dineVenue);
+    var data = await API.get('/admin/dine-in');
     var s = data.settings;
     var st = data.stats;
 
@@ -2016,7 +1999,7 @@
       bindGalleryField(m.body, 'photos');
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
-          var res = await API.put('/admin/dine-in/' + dineVenue + '/settings', propertyPayload(m.body));
+          var res = await API.put('/admin/dine-in/settings', propertyPayload(m.body));
           s = res.settings;
           toast('Property details saved — live for customers now', 'success');
           navigate('dinein');
@@ -2137,7 +2120,7 @@
       var m = modal({ title: 'Dine-In discounts & notices', body: settingsForm(), confirmLabel: 'Save changes' });
       m.confirmBtn.addEventListener('click', function () {
         submitModal(m, async function () {
-          await API.put('/admin/dine-in/' + dineVenue + '/settings', payloadFrom(m.body));
+          await API.put('/admin/dine-in/settings', payloadFrom(m.body));
           toast('Dine-In settings saved — live for customers now', 'success');
           navigate('dinein');
         });
@@ -2152,7 +2135,7 @@
       );
       if (!ok) return;
       try {
-        await API.post('/admin/dine-in/' + dineVenue + '/notices/reset', {});
+        await API.post('/admin/dine-in/notices/reset', {});
         toast('Notices reset', 'success');
         navigate('dinein');
       } catch (err) { toast(err.message, 'error'); }
