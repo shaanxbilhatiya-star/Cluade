@@ -27,17 +27,41 @@ const { Router, HttpError } = require('../router');
 
 const router = new Router();
 
+// ── Venue picker ─────────────────────────────────────────────────────────────
+/** Both outlets, minimal info — this is what the picker screen shows before
+ *  the guest has chosen a restaurant, so nothing here is venue-scoped yet. */
+router.get('/dine-in/venues', () => ({
+  venues: dine.VENUE_IDS.map((venueId) => {
+    const s = dine.settings(venueId);
+    return {
+      venueId,
+      diet: s.diet,
+      restaurantName: s.restaurantName,
+      tagline: s.tagline,
+      address: s.address,
+      active: s.active !== false,
+    };
+  }),
+}));
+
 // ── helpers ──────────────────────────────────────────────────────────────────
-/** Refuses every dine-in request while the admin has the tab switched off. */
-function activeSettings() {
-  const s = dine.settings();
-  if (s.active === false) throw new HttpError(503, 'Dine-In is not available right now');
+/** Every dine-in request names which outlet (Rangoli or Dolphin) it's for. */
+function venueSettings(ctx) {
+  const venueId = String(ctx.params.venueId || '');
+  if (!dine.isVenueId(venueId)) throw new HttpError(404, 'Unknown restaurant — pick Rangoli or Dolphin');
+  return dine.settings(venueId);
+}
+
+/** Refuses every dine-in request while the admin has this outlet switched off. */
+function activeSettings(ctx) {
+  const s = venueSettings(ctx);
+  if (s.active === false) throw new HttpError(503, `${s.restaurantName} is not available right now`);
   return s;
 }
 
 function myReservation(ctx, s) {
   if (!ctx.user) return null;
-  return dine.activeReservationFor(ctx.user.id, s);
+  return dine.activeReservationFor(ctx.user.id, s.venueId, s);
 }
 
 /**
@@ -53,7 +77,7 @@ function reservationForBill(ctx, body, s) {
   if (!ctx.user) return null;
   if (body.reservationId) {
     const found = db.byId('dineReservations', body.reservationId);
-    if (!found || found.userId !== ctx.user.id) {
+    if (!found || found.userId !== ctx.user.id || found.venueId !== s.venueId) {
       throw new HttpError(404, 'Reservation not found');
     }
     return dine.decorateReservation(found, s);
@@ -134,8 +158,8 @@ function quotePayload({ tier, amounts, reservation }, s) {
  * "30% with a reservation / 10% walk-in" cards always match the live settings)
  * along with the caller's reservation and its countdown, when signed in.
  */
-router.get('/dine-in', (ctx) => {
-  const s = dine.settings();
+router.get('/dine-in/:venueId', (ctx) => {
+  const s = venueSettings(ctx);
   const reservation = ctx.user ? myReservation(ctx, s) : null;
 
   // Previewed with no bill so the copy is right even before an amount is typed.
@@ -144,7 +168,7 @@ router.get('/dine-in', (ctx) => {
 
   const recentBills = ctx.user
     ? db
-        .find('dineBills', (b) => b.userId === ctx.user.id)
+        .find('dineBills', (b) => b.userId === ctx.user.id && b.venueId === s.venueId)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5)
     : [];
@@ -180,6 +204,7 @@ router.get('/dine-in', (ctx) => {
           'dineReservations',
           (r) =>
             r.userId === ctx.user.id &&
+            r.venueId === s.venueId &&
             r.status === 'confirmed' &&
             new Date(r.startsAt).getTime() > Date.now()
         ).length
@@ -190,24 +215,24 @@ router.get('/dine-in', (ctx) => {
 });
 
 // ── Slots ────────────────────────────────────────────────────────────────────
-router.get('/dine-in/slots', (ctx) => {
-  const s = activeSettings();
+router.get('/dine-in/:venueId/slots', (ctx) => {
+  const s = activeSettings(ctx);
   const date = ctx.query.date || dine.today();
   return { date, slotMinutes: s.slotMinutes, slots: dine.slotsFor(date, s) };
 });
 
 // ── Reservations ─────────────────────────────────────────────────────────────
-router.get('/dine-in/reservations', auth.requireAuth, (ctx) => {
-  const s = dine.settings();
+router.get('/dine-in/:venueId/reservations', auth.requireAuth, (ctx) => {
+  const s = venueSettings(ctx);
   const list = db
-    .find('dineReservations', (r) => r.userId === ctx.user.id)
+    .find('dineReservations', (r) => r.userId === ctx.user.id && r.venueId === s.venueId)
     .map((r) => dine.decorateReservation(r, s))
     .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
   return { count: list.length, reservations: list };
 });
 
-router.post('/dine-in/reservations', auth.requireAuth, (ctx) => {
-  const s = activeSettings();
+router.post('/dine-in/:venueId/reservations', auth.requireAuth, (ctx) => {
+  const s = activeSettings(ctx);
   const body = ctx.body || {};
 
   const date = String(body.date || '');
@@ -244,6 +269,7 @@ router.post('/dine-in/reservations', auth.requireAuth, (ctx) => {
     id: db.id('dres'),
     reference: db.reference('DR'),
     userId: ctx.user.id,
+    venueId: s.venueId,
     status: 'confirmed',
     date,
     time,
@@ -295,7 +321,7 @@ router.post('/dine-in/reservations/:id/cancel', auth.requireAuth, (ctx) => {
     cancelledAt: new Date().toISOString(),
   });
   notify(ctx.user.id, 'Reservation cancelled', `Your table on ${reservation.date} at ${reservation.time} was cancelled.`, 'booking');
-  return { reservation: dine.decorateReservation(updated) };
+  return { reservation: dine.decorateReservation(updated, dine.settings(reservation.venueId)) };
 });
 
 // ── Pricing ──────────────────────────────────────────────────────────────────
@@ -303,14 +329,14 @@ router.post('/dine-in/reservations/:id/cancel', auth.requireAuth, (ctx) => {
  * Price preview. Returns the tier, the lock countdown and the rendered notice,
  * so the bill screen never has to work out a discount for itself.
  */
-router.post('/dine-in/quote', (ctx) => {
-  const s = activeSettings();
+router.post('/dine-in/:venueId/quote', (ctx) => {
+  const s = activeSettings(ctx);
   const resolved = resolveBillRequest(ctx, ctx.body || {}, s);
   return quotePayload(resolved, s);
 });
 
-router.post('/dine-in/offers/validate', (ctx) => {
-  const s = activeSettings();
+router.post('/dine-in/:venueId/offers/validate', (ctx) => {
+  const s = activeSettings(ctx);
   const body = Object.assign({}, ctx.body, { offerCode: ctx.body.code });
   const resolved = resolveBillRequest(ctx, body, s);
   if (!resolved.offer) throw new HttpError(400, 'That code is not valid for this bill');
@@ -325,8 +351,8 @@ router.post('/dine-in/offers/validate', (ctx) => {
 });
 
 // ── Paying the bill ──────────────────────────────────────────────────────────
-router.post('/dine-in/bills', auth.requireAuth, (ctx) => {
-  const s = activeSettings();
+router.post('/dine-in/:venueId/bills', auth.requireAuth, (ctx) => {
+  const s = activeSettings(ctx);
   const body = ctx.body || {};
   const { billAmount, reservation, tier, amounts } = resolveBillRequest(ctx, body, s);
 
@@ -355,6 +381,7 @@ router.post('/dine-in/bills', auth.requireAuth, (ctx) => {
     id: db.id('dbil'),
     reference: db.reference('DB'),
     userId: ctx.user.id,
+    venueId: s.venueId,
     /* 'Pay at the counter' is not money in hand, so the bill only claims to be
        paid when the payment record does. */
     status: payment.status === 'paid' ? 'paid' : 'pending',
@@ -396,9 +423,10 @@ router.post('/dine-in/bills', auth.requireAuth, (ctx) => {
   return { bill: Object.assign({}, bill, { notice: dine.paidNotice(bill, s) }) };
 });
 
-router.get('/dine-in/bills', auth.requireAuth, (ctx) => {
+router.get('/dine-in/:venueId/bills', auth.requireAuth, (ctx) => {
+  const s = venueSettings(ctx);
   const list = db
-    .find('dineBills', (b) => b.userId === ctx.user.id)
+    .find('dineBills', (b) => b.userId === ctx.user.id && b.venueId === s.venueId)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   return {
     count: list.length,
@@ -413,7 +441,10 @@ router.get('/dine-in/bills/:id', auth.requireAuth, (ctx) => {
   if (bill.userId !== ctx.user.id && ctx.user.role !== 'admin') {
     throw new HttpError(403, 'That bill belongs to someone else');
   }
-  const s = dine.settings();
+  // Old bills predating the venue split have no venueId — fall back to Rangoli
+  // for display only; this never affects money already charged (appliedSettings
+  // is frozen on the bill itself).
+  const s = dine.settings(dine.isVenueId(bill.venueId) ? bill.venueId : 'rangoli');
   return { bill: Object.assign({}, bill, { notice: dine.paidNotice(bill, s) }) };
 });
 

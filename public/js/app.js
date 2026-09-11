@@ -29,10 +29,11 @@
     ['/hotel/confirmed/:bookingId', 'hotelConfirmation'],
     ['/hotel/room/:id', 'hotelRoom'],
     // Literal dine-in paths must precede /dine-in/:anything patterns.
-    ['/dine-in', 'dineIn'],
-    ['/dine-in/reserve', 'dineReserve'],
-    ['/dine-in/bill', 'dineBill'],
-    ['/dine-in/paid/:id', 'dinePaid'],
+    ['/dine-in', 'dineVenuePicker'],
+    ['/dine-in/:venueId/reserve', 'dineReserve'],
+    ['/dine-in/:venueId/bill', 'dineBill'],
+    ['/dine-in/:venueId/paid/:id', 'dinePaid'],
+    ['/dine-in/:venueId', 'dineIn'],
     // Literal water park paths must precede /waterpark/:anything patterns.
     ['/waterpark', 'waterpark'],
     ['/waterpark/book', 'waterparkBook'],
@@ -199,7 +200,9 @@
 
     // Shared behaviours available to every screen
     view.querySelectorAll('[data-action="back"]').forEach(function (btn) {
-      btn.addEventListener('click', function () { back(screen.backTo); });
+      btn.addEventListener('click', function () {
+        back(typeof screen.backTo === 'function' ? screen.backTo(route.params) : screen.backTo);
+      });
     });
     UI.initCarousels(view);
 
