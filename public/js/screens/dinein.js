@@ -120,59 +120,86 @@
             '<div class="dine-hero">' +
               '<div class="dine-hero__meta">' + UI.icon('clock', 15) +
                 '<span>Open ' + UI.esc(s.openTime) + ' – ' + UI.esc(s.closeTime) + '</span></div>' +
-              '<div class="dine-hero__actions">' +
-                '<button class="dine-hero__btn dine-hero__btn--solid" data-action="reserve">' +
-                  UI.icon('calendar', 17) + 'Reserve a table</button>' +
-                '<button class="dine-hero__btn" data-action="pay">' +
-                  UI.icon('wallet', 17) + 'Pay bill</button>' +
-              '</div>' +
             '</div>' +
 
-            /* The two tiers, straight from the admin's live settings. */
-            '<div class="dine-tiers">' +
-              '<div class="dine-tier dine-tier--best">' +
-                '<span class="dine-tier__flag">Best deal</span>' +
-                '<span class="dine-tier__off">' + reserved.discountPercent + '% OFF</span>' +
-                '<span class="dine-tier__label">With a reservation</span>' +
-                '<span class="dine-tier__hint">Book at least ' + reserved.lockMinutes +
-                  ' min before you arrive, then pay in the app.</span>' +
-              '</div>' +
-              '<div class="dine-tier dine-tier--plain">' +
-                '<span class="dine-tier__off">' + walkin.discountPercent + '% OFF</span>' +
-                '<span class="dine-tier__label">Walk in &amp; pay</span>' +
-                '<span class="dine-tier__hint">No booking needed — pay your bill instantly.</span>' +
-              '</div>' +
-            '</div>' +
-
-            (data.signedIn ? '' : signInPrompt(
-              'Sign in to reserve a table and pay your bill with an instant discount.')) +
-
-            /* Live reservation + its billing lock. */
-            (reservation
-              ? '<div class="card dine-res" data-res>' +
-                  '<div class="dine-res__head">' +
-                    '<div>' +
-                      '<div class="dine-res__when">' + UI.esc(slotLabel(reservation)) + '</div>' +
-                      '<div class="dine-res__meta">' + UI.esc(partyLine(reservation)) + '</div>' +
-                      '<div class="dine-res__ref">' + UI.esc(reservation.reference) + '</div>' +
+            /* ── Eligibility status: one card that answers "what discount do I get?" ── */
+            '<div class="dine-elig-section">' +
+              (!data.signedIn
+                /* Not signed in — show both tiers as reference, prompt to sign in. */
+                ? '<div class="dine-tiers">' +
+                    '<div class="dine-tier dine-tier--best">' +
+                      '<span class="dine-tier__flag">Best deal</span>' +
+                      '<span class="dine-tier__off">' + reserved.discountPercent + '% OFF</span>' +
+                      '<span class="dine-tier__label">With a reservation</span>' +
+                      '<span class="dine-tier__hint">Book at least ' + reserved.lockMinutes + ' min before you arrive, then pay in the app.</span>' +
                     '</div>' +
-                    '<span class="status-pill status-pill--confirmed">Reserved</span>' +
+                    '<div class="dine-tier dine-tier--plain">' +
+                      '<span class="dine-tier__off">' + walkin.discountPercent + '% OFF</span>' +
+                      '<span class="dine-tier__label">Walk in &amp; pay</span>' +
+                      '<span class="dine-tier__hint">No booking needed — pay your bill instantly.</span>' +
+                    '</div>' +
                   '</div>' +
-                  '<div class="dine-lock" data-lock>' +
-                    UI.icon('lock', 20) +
-                    '<span class="dine-lock__text">' +
-                      '<span class="dine-lock__title" data-lock-title></span>' +
-                      '<span class="dine-lock__sub" data-lock-sub></span>' +
-                    '</span>' +
-                    '<span class="dine-lock__clock" data-lock-clock></span>' +
-                  '</div>' +
-                  '<div style="height:12px"></div>' +
-                  '<button class="btn" data-action="pay" data-pay-btn>Pay bill with ' +
-                    reserved.discountPercent + '% off</button>' +
-                  '<div style="height:8px"></div>' +
-                  '<button class="btn-outline" data-action="cancel-res">Cancel reservation</button>' +
-                '</div>'
-              : '') +
+                  signInPrompt('Sign in to reserve a table and pay your bill with an instant discount.')
+
+                : reservation
+                  /* HAS A RESERVATION — unified card: discount badge + lock countdown + pay button */
+                  ? '<div class="dine-elig-card dine-elig-card--best" data-res>' +
+                      '<div class="dine-elig-card__header">' +
+                        '<div class="dine-elig-card__pct">' +
+                          reserved.discountPercent + '<span class="dine-elig-card__pct-off">%&nbsp;OFF</span>' +
+                        '</div>' +
+                        '<div class="dine-elig-card__info">' +
+                          '<div class="dine-elig-card__badge">' + UI.icon('check', 12) + ' Your discount</div>' +
+                          '<div class="dine-elig-card__title">Reserved table discount</div>' +
+                          '<div class="dine-elig-card__meta">' +
+                            UI.esc(slotLabel(reservation)) + ' · ' + UI.esc(partyLine(reservation)) +
+                          '</div>' +
+                          '<div class="dine-elig-card__ref">' + UI.esc(reservation.reference) + '</div>' +
+                        '</div>' +
+                      '</div>' +
+                      '<div class="dine-lock" data-lock>' +
+                        UI.icon('lock', 20) +
+                        '<span class="dine-lock__text">' +
+                          '<span class="dine-lock__title" data-lock-title></span>' +
+                          '<span class="dine-lock__sub" data-lock-sub></span>' +
+                        '</span>' +
+                        '<span class="dine-lock__clock" data-lock-clock></span>' +
+                      '</div>' +
+                      '<div style="height:14px"></div>' +
+                      '<button class="btn" data-action="pay" data-pay-btn>Pay bill with ' +
+                        reserved.discountPercent + '% off</button>' +
+                      '<div style="height:8px"></div>' +
+                      '<button class="btn-outline" data-action="cancel-res">Cancel reservation</button>' +
+                    '</div>'
+
+                  /* NO RESERVATION — walk-in rate card + upgrade nudge */
+                  : '<div class="dine-elig-card dine-elig-card--walkin">' +
+                      '<div class="dine-elig-card__header">' +
+                        '<div class="dine-elig-card__pct dine-elig-card__pct--plain">' +
+                          walkin.discountPercent + '<span class="dine-elig-card__pct-off">%&nbsp;OFF</span>' +
+                        '</div>' +
+                        '<div class="dine-elig-card__info">' +
+                          '<div class="dine-elig-card__badge dine-elig-card__badge--walkin">Walk-in rate</div>' +
+                          '<div class="dine-elig-card__title">No booking needed</div>' +
+                          '<div class="dine-elig-card__meta">Pay your bill instantly.</div>' +
+                        '</div>' +
+                      '</div>' +
+                      '<button class="btn" data-action="pay">Pay bill · ' +
+                        walkin.discountPercent + '% off</button>' +
+                    '</div>' +
+                    /* Upgrade nudge */
+                    '<div class="dine-upgrade-card">' +
+                      '<div class="dine-upgrade-card__pct">' + reserved.discountPercent + '%</div>' +
+                      '<div class="dine-upgrade-card__body">' +
+                        '<strong>Reserve to save more</strong>' +
+                        '<span>Book at least ' + reserved.lockMinutes + ' min before you arrive — get ' +
+                          reserved.discountPercent + '% off instead of ' + walkin.discountPercent + '%.</span>' +
+                      '</div>' +
+                      '<button class="dine-hero__btn dine-hero__btn--solid dine-upgrade-card__btn" data-action="reserve">' +
+                        UI.icon('calendar', 15) + 'Reserve</button>' +
+                    '</div>'
+              ) +
+            '</div>' +
 
             noticeBanner(current.notice, current.noticeKind) +
 
