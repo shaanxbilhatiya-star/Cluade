@@ -353,7 +353,7 @@
           UI.sheet({ title: 'All Reviews', body: body });
         },
         share: async function () {
-          var text = movie.title + ' — ' + (movie.tagline || 'now on CineFlex');
+          var text = movie.title + ' — ' + (movie.tagline || 'now on Ruralift');
           if (navigator.share) {
             try { await navigator.share({ title: movie.title, text: text, url: window.location.href }); return; } catch (_e) {}
           }

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Start the CineFlex movie booking server.
+# Start the Ruralift movie booking server.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 echo ""
 echo "  ================================================"
-echo "   CineFlex - Movie Ticket Booking System"
+echo "   Ruralift - Movie Ticket Booking System"
 echo "  ================================================"
 echo ""
 

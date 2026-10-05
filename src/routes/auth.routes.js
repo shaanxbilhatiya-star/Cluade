@@ -52,7 +52,7 @@ router.post('/auth/register', (ctx) => {
   db.insert('notifications', {
     id: db.id('ntf'),
     userId: user.id,
-    title: 'Welcome to CineFlex 🎬',
+    title: 'Welcome to Ruralift 🎬',
     body: 'Your account is ready. Browse now playing movies and book your first show.',
     kind: 'system',
     read: false,

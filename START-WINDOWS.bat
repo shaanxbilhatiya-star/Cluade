@@ -1,10 +1,10 @@
 @echo off
-title CineFlex Movie Booking System
+title Ruralift Movie Booking System
 cd /d "%~dp0"
 
 echo.
 echo   ================================================
-echo    CineFlex - Movie Ticket Booking System
+echo    Ruralift - Movie Ticket Booking System
 echo   ================================================
 echo.
 

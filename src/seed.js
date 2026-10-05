@@ -563,7 +563,7 @@ function seedNotifications() {
     { userId: 'usr_andrew', title: '50% off every Wednesday', body: 'Use code CINEWED and save up to \u20B9250 on tickets.', kind: 'offer', read: false },
     { userId: 'usr_andrew', title: 'Animal tickets open soon', body: 'Booking opens 3 days before release. We will remind you.', kind: 'release', read: true },
     { userId: 'usr_andrew', title: 'Popcorn Party is live', body: 'Buy one jumbo tub, get one free this weekend.', kind: 'offer', read: true },
-    { userId: 'usr_priya', title: 'Welcome to CineFlex', body: 'Your account is ready. Get 10% off your first booking.', kind: 'system', read: false },
+    { userId: 'usr_priya', title: 'Welcome to Ruralift', body: 'Your account is ready. Get 10% off your first booking.', kind: 'system', read: false },
   ];
   items.forEach((n, i) =>
     db.insert('notifications', {
@@ -592,7 +592,7 @@ function run() {
 
   const meta = db.get('meta');
   meta.seededAt = new Date().toISOString();
-  meta.appName = 'CineFlex';
+  meta.appName = 'Ruralift';
   meta.currency = 'INR';
   meta.currencySymbol = '\u20B9';
   db.markDirty('meta');

@@ -202,7 +202,7 @@
       ? '<button class="icon-btn" data-action="back" aria-label="Go back">' + icon('arrow-left', 23) + '</button>'
       : o.logo === false
         ? '<span class="appbar__spacer"></span>'
-        : '<img class="appbar__logo" src="/img/logo.svg" alt="CineFlex">';
+        : '<img class="appbar__logo" src="/img/logo.svg" alt="Ruralift">';
 
     return '<header class="appbar' + (o.plain ? ' appbar--plain' : '') + (o.bordered ? ' appbar--bordered' : '') + '">' +
       left +

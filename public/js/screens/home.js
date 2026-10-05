@@ -280,7 +280,7 @@
             '<button class="icon-btn" data-clear aria-label="Clear" style="width:26px;height:26px;display:none">' + UI.icon('close', 17) + '</button>' +
           '</div>' +
           '<div class="scroll" data-results>' +
-            UI.empty({ icon: 'search', title: 'Search CineFlex', text: 'Find a movie, a cinema near you, or something to eat.' }) +
+            UI.empty({ icon: 'search', title: 'Search Ruralift', text: 'Find a movie, a cinema near you, or something to eat.' }) +
           '</div>' +
         '</div>'
       );
@@ -322,7 +322,7 @@
         clear.style.display = query ? '' : 'none';
         window.clearTimeout(timer);
         if (!query) {
-          results.innerHTML = UI.empty({ icon: 'search', title: 'Search CineFlex', text: 'Find a movie, a cinema near you, or something to eat.' });
+          results.innerHTML = UI.empty({ icon: 'search', title: 'Search Ruralift', text: 'Find a movie, a cinema near you, or something to eat.' });
           return;
         }
         timer = window.setTimeout(async function () {
