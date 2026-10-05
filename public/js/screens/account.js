@@ -107,7 +107,7 @@
             '<div class="list__group-label">About</div>' +
             '<div class="list">' +
               UI.row({ icon: 'file', label: 'Help Center', action: 'help' }) +
-              UI.row({ icon: 'info', label: 'About CineFlex', action: 'about' }) +
+              UI.row({ icon: 'info', label: 'About Ruralift', action: 'about' }) +
               UI.row({ icon: 'logout', label: 'Log Out', action: 'logout', danger: true }) +
             '</div>' +
 
@@ -256,7 +256,7 @@
         '<div class="screen">' +
           UI.appbar({ title: 'Notification', back: true }) +
           '<div class="scroll">' +
-            '<p class="prose" style="padding-top:14px">Choose what CineFlex may notify you about.</p>' +
+            '<p class="prose" style="padding-top:14px">Choose what Ruralift may notify you about.</p>' +
             '<div class="list" style="margin-top:8px">' +
               ITEMS.map(function (item) {
                 return UI.row({ icon: item.icon, label: item.label, action: 'toggle:' + item.key, toggle: prefs[item.key] !== false });
@@ -448,11 +448,11 @@
 
       var view = UI.h(
         '<div class="screen">' +
-          UI.appbar({ title: 'About CineFlex', back: true }) +
+          UI.appbar({ title: 'About Ruralift', back: true }) +
           '<div class="scroll">' +
             '<div style="text-align:center;padding:30px 24px 10px">' +
               '<img src="/img/logo.svg" alt="" width="76" height="76" style="margin:0 auto;border-radius:20px">' +
-              '<h2 style="margin:16px 0 0;font-size:22px;font-weight:800">CineFlex</h2>' +
+              '<h2 style="margin:16px 0 0;font-size:22px;font-weight:800">Ruralift</h2>' +
               '<p style="margin:6px 0 0;font-size:13.5px;color:var(--muted)">Version ' + UI.esc(health ? health.version : '1.0.0') + '</p>' +
             '</div>' +
             '<p class="prose" style="padding-top:12px">A complete movie ticket booking system — browse what is playing, pick your exact seats, pre-order snacks and carry your ticket as a scannable barcode.</p>' +

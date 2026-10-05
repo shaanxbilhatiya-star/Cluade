@@ -17,7 +17,7 @@
 
   function brandHeader(title, subtitle) {
     return '<div style="text-align:center;padding:38px 24px 26px">' +
-      '<img src="/img/logo.svg" alt="CineFlex" width="70" height="70" style="margin:0 auto;border-radius:18px">' +
+      '<img src="/img/logo.svg" alt="Ruralift" width="70" height="70" style="margin:0 auto;border-radius:18px">' +
       '<h1 style="margin:18px 0 0;font-size:26px;font-weight:800;letter-spacing:-.5px">' + UI.esc(title) + '</h1>' +
       '<p style="margin:8px 0 0;font-size:14.5px;color:var(--muted);line-height:1.5">' + UI.esc(subtitle) + '</p>' +
       '</div>';
@@ -53,7 +53,7 @@
               '<div style="padding:6px 16px 0"><button class="btn" type="submit" data-submit>Sign In</button></div>' +
             '</form>' +
             '<p class="text-center" style="margin:22px 0 0;font-size:14.5px;color:var(--muted)">' +
-              'New to CineFlex? <button class="link-btn" data-action="register">Create an account</button>' +
+              'New to Ruralift? <button class="link-btn" data-action="register">Create an account</button>' +
             '</p>' +
             '<div class="divider"></div>' +
             '<div style="padding:0 16px">' +
@@ -104,7 +104,7 @@
         '<div class="screen">' +
           UI.appbar({ title: 'Create account', back: true }) +
           '<div class="scroll">' +
-            brandHeader('Join CineFlex', 'One account for tickets, snacks and offers.') +
+            brandHeader('Join Ruralift', 'One account for tickets, snacks and offers.') +
             '<form data-form novalidate>' +
               field({ name: 'name', label: 'Full name', icon: 'user', placeholder: 'Your name', autocomplete: 'name' }) +
               field({ name: 'email', label: 'Email', icon: 'mail', type: 'email', placeholder: 'you@example.com', autocomplete: 'email' }) +
@@ -145,7 +145,7 @@
         submitting(button, true, 'Create Account');
         try {
           var result = await API.register(payload);
-          UI.toast('Account created. Welcome to CineFlex!', 'success');
+          UI.toast('Account created. Welcome to Ruralift!', 'success');
           App.afterAuth(result);
         } catch (err) {
           showError(view, err.message);

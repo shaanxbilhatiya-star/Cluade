@@ -344,7 +344,7 @@
               : 'pickup ' + (b.pickup ? b.pickup.slot : '');
           var text = b.title + ' — ' + detail + ' (booking ' + b.reference + ')';
           if (navigator.share) {
-            try { await navigator.share({ title: 'CineFlex booking', text: text }); return; } catch (_e) { /* cancelled */ }
+            try { await navigator.share({ title: 'Ruralift booking', text: text }); return; } catch (_e) { /* cancelled */ }
           }
           if (navigator.clipboard) {
             try { await navigator.clipboard.writeText(text); UI.toast('Ticket details copied', 'success'); return; } catch (_e) {}

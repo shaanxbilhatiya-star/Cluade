@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260">
+  <defs>
+    <clipPath id="cl"><rect width="197" height="260"/></clipPath>
+    <clipPath id="cr"><rect x="203" width="197" height="260"/></clipPath>
+  </defs>
+  <image href="data:image/jpeg;base64,SG9zdCBub3QgaW4gYWxsb3dsaXN0OiBpbWFnZXMudW5zcGxhc2guY29tLiBBZGQgdGhpcyBob3N0IHRvIHlvdXIgbmV0d29yayBlZ3Jlc3Mgc2V0dGluZ3MgdG8gYWxsb3cgYWNjZXNzLg==" width="197" height="260" preserveAspectRatio="xMidYMid slice" clip-path="url(#cl)"/>
+  <image href="data:image/jpeg;base64,SG9zdCBub3QgaW4gYWxsb3dsaXN0OiBpbWFnZXMudW5zcGxhc2guY29tLiBBZGQgdGhpcyBob3N0IHRvIHlvdXIgbmV0d29yayBlZ3Jlc3Mgc2V0dGluZ3MgdG8gYWxsb3cgYWNjZXNzLg==" x="203" width="197" height="260" preserveAspectRatio="xMidYMid slice" clip-path="url(#cr)"/>
+  <rect x="198" width="4" height="260" fill="white"/>
+</svg>

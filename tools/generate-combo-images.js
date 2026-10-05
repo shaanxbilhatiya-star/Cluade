@@ -48,7 +48,7 @@ const COMBO_ITEMS = {
 function fetchBuffer(url) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith('https') ? https : http;
-    lib.get(url, { headers: { 'User-Agent': 'CineFlex/1.0' } }, (res) => {
+    lib.get(url, { headers: { 'User-Agent': 'Ruralift/1.0' } }, (res) => {
       // Follow up to 5 redirects
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
         return fetchBuffer(res.headers.location).then(resolve).catch(reject);

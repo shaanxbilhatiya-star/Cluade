@@ -1,6 +1,6 @@
 'use strict';
 /**
- * CineFlex - Movie Ticket Booking System
+ * Ruralift - Movie Ticket Booking System
  * Zero-dependency Node.js server (HTTP API + static app hosting).
  *
  *   node server.js            -> http://localhost:3000
@@ -161,7 +161,7 @@ function localAddresses() {
 server.listen(PORT, HOST, () => {
   const lan = localAddresses();
   console.log('');
-  console.log('  \x1b[35m\u2588\u2588\x1b[0m  CineFlex Movie Booking System');
+  console.log('  \x1b[35m\u2588\u2588\x1b[0m  Ruralift Movie Booking System');
   console.log('  ---------------------------------------------');
   console.log(`  Customer app :  http://localhost:${PORT}/`);
   console.log(`  Admin panel  :  http://localhost:${PORT}/admin/`);

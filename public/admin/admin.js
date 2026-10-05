@@ -1,4 +1,4 @@
-/* CineFlex admin panel. Reuses /js/api.js for auth + requests. */
+/* Ruralift admin panel. Reuses /js/api.js for auth + requests. */
 (function () {
   'use strict';
 
@@ -126,7 +126,7 @@
         '<aside class="side">' +
           '<div class="side__brand">' +
             '<img src="/img/logo.svg" alt="">' +
-            '<div><strong>CineFlex</strong><span>Admin console</span></div>' +
+            '<div><strong>Ruralift</strong><span>Admin console</span></div>' +
           '</div>' +
           NAV.map(function (item) {
             return '<button class="side__link" data-page="' + item.id + '">' + icon(item.icon, 18) + item.label + '</button>';
@@ -469,7 +469,7 @@
     // ── Property details (the cinema itself — same shape as Dine-In/Water Park/Hotel) ──
     function propertyForm() {
       return h('<div class="form-grid">' +
-        field('Cinema name', 'name', s.name, { span: true, placeholder: 'CineFlex: Kingfisher' }) +
+        field('Cinema name', 'name', s.name, { span: true, placeholder: 'Ruralift: Kingfisher' }) +
         field('Tagline', 'tagline', s.tagline, { span: true, placeholder: 'The best way to watch the movies you love' }) +
         field('Area', 'area', s.area, { placeholder: 'Nagpur Road' }) +
         field('City', 'city', s.city || 'Mandla') +
@@ -4024,7 +4024,7 @@
       '<div class="login-wrap"><div class="login-card">' +
         '<img src="/img/logo.svg" alt="">' +
         '<h1>Admin sign in</h1>' +
-        '<p>CineFlex management console</p>' +
+        '<p>Ruralift management console</p>' +
         '<form data-form>' +
           '<div class="form-row"><label class="label" for="email">Email</label>' +
             '<input class="input" id="email" name="email" type="email" value="admin@cineflex.com" autocomplete="username"></div>' +

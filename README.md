@@ -1,4 +1,4 @@
-# 🎬 CineFlex — Movie Ticket Booking System
+# 🎬 Ruralift — Movie Ticket Booking System
 
 A complete movie booking platform: a **mobile-only customer app**, a **desktop admin console**, and a **REST API** — all served by a single Node.js process with **zero npm dependencies**.
 

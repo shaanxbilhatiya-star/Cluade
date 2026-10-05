@@ -54,7 +54,7 @@ function titleOf(booking, { movie, room, hotel }) {
     return `${roomName} · ${(hotel && hotel.name) || booking.stay?.hotelName || 'Hotel'}`;
   }
   if (booking.type === 'food') return 'Food & Beverages';
-  return 'CineFlex booking';
+  return 'Ruralift booking';
 }
 
 function imageOf(booking, { movie, room }) {

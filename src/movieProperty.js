@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Property details for the cinema itself (the multiplex CineFlex operates),
+ * Property details for the cinema itself (the multiplex Ruralift operates),
  * shown as the hero at the top of the Movies/Cinemas experience — the same
  * shape as the Dine-In, Water Park and Hotel property panels, so every
  * admin-managed venue looks and behaves the same way.
@@ -14,7 +14,7 @@ const { HttpError } = require('./router');
 
 const DEFAULTS = {
   active: true,
-  name: 'CineFlex: Kingfisher',
+  name: 'Ruralift: Kingfisher',
   tagline: 'The best way to watch the movies you love',
   area: '',
   city: 'Mandla',

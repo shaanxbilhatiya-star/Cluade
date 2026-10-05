@@ -214,7 +214,7 @@ async function getReviewsFor(movie) {
         rating: r.rating,
         text: r.text,
         createdAt: r.createdAt,
-        author: u ? { name: u.name, avatarUrl: u.avatarUrl } : { name: 'CineFlex user', avatarUrl: '/img/avatars/guest.svg' },
+        author: u ? { name: u.name, avatarUrl: u.avatarUrl } : { name: 'Ruralift user', avatarUrl: '/img/avatars/guest.svg' },
         source: 'local',
       };
     })

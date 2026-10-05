@@ -1,7 +1,7 @@
 {
   "name": "cineflex-movie-booking",
   "version": "1.0.0",
-  "description": "CineFlex - Movie Ticket Booking System (mobile-first customer app + admin panel). Zero external dependencies - runs on plain Node.js.",
+  "description": "Ruralift - Movie Ticket Booking System (mobile-first customer app + admin panel). Zero external dependencies - runs on plain Node.js.",
   "main": "server.js",
   "engines": {
     "node": ">=18.0.0"
